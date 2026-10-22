@@ -14,6 +14,11 @@ const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
 const MAX_PER_DAY = Number(Deno.env.get("AI_DAILY_LIMIT") ?? "40");
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 6000;
+// The project's PUBLIC key (the same one that is in the website's code). Supabase provides it as an
+// environment variable; the fallback makes the function work with both the old and the new key system.
+const PROJECT_URL = "https://mvonovmjnxkyrmdewnxm.supabase.co";
+const PUBLIC_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ||
+  "sb_publishable_I3hWAEvW1rprdth5bIgt9A_Lj_LZMKj";
 
 // CORS: the browser only lets the page read this answer if the server says the page may.
 const CORS = {
@@ -36,7 +41,7 @@ Deno.serve(async (req) => {
 
   // 1. Who is asking? A client that acts AS this user, so auth.uid() works in the database.
   const auth = req.headers.get("Authorization") ?? "";
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+  const db = createClient(Deno.env.get("SUPABASE_URL") ?? PROJECT_URL, PUBLIC_KEY, {
     global: { headers: { Authorization: auth } },
   });
   const { data: userData, error: userErr } = await db.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
