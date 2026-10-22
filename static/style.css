@@ -942,3 +942,43 @@ kbd { font: 600 11px/1 ui-monospace, monospace; padding: 2px 6px; border-radius:
 .boot { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); color: var(--muted); font: 15px Inter, system-ui, sans-serif; }
 .boot b { display: block; color: var(--text); font: 700 24px 'Space Grotesk', system-ui, sans-serif; margin-bottom: 6px; text-align: center; }
 .boot b span { color: var(--accent); }
+
+/* ---------------------------------------------------------------- accounts */
+#accountSlot { margin-bottom: 8px; }
+.acct { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; text-decoration: none; border: 1px solid var(--line); background: var(--surface); }
+.acct:hover { border-color: var(--accent-line); }
+.acct .ava { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 700;
+  background: var(--accent); color: var(--accent-ink); }
+.acct.guest .ava { background: var(--surface-3); }
+.acct .who { display: flex; flex-direction: column; min-width: 0; }
+.acct b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct em { font-style: normal; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.acct em.offline { color: var(--coral); }
+.authwrap { display: grid; place-items: start center; padding-top: 48px; }
+.authcard { width: min(440px, 100%); padding: 32px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
+.authcard h1 { margin: 0; font: 700 26px/1.2 var(--display); }
+.authcard > p { margin: 0; }
+.authlogo { display: flex; align-items: center; justify-content: center; gap: 8px; font: 700 20px var(--display); }
+.authtabs { justify-content: center; }
+.authform { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.authform label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.authform label.check { flex-direction: row; align-items: flex-start; gap: 8px; }
+.authform .pw { position: relative; display: block; }
+.authform .pw .field { width: 100%; padding-right: 56px; }
+.authform .pw .linkbtn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); }
+.authform .btn.big { width: 100%; justify-content: center; margin-top: 4px; }
+.authform #forgot { align-self: center; color: var(--muted); }
+.authmsg { min-height: 0; font-size: 13px; color: var(--coral); }
+.authmsg:empty { display: none; }
+.authmsg.ok { color: var(--teal); }
+.btn.google { justify-content: center; gap: 10px; width: 100%; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.guestline { margin-top: 4px !important; }
+.bigava { width: 72px; height: 72px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; font: 700 30px var(--display);
+  background: var(--accent); color: var(--accent-ink); }
+.acctstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.acctstats div { display: flex; flex-direction: column; padding: 12px; border-radius: 14px; background: var(--surface-2); }
+.acctstats b { font: 700 22px var(--display); } .acctstats span { font-size: 12px; color: var(--muted); }
+.danger-zone { text-align: left; border-top: 1px solid var(--line); padding-top: 12px; }
+.danger-zone summary { cursor: pointer; color: var(--muted); font-size: 13px; }

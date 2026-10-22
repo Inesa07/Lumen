@@ -3,7 +3,7 @@
 
 // Where did you come from? Used for the back arrow on pages you opened from a link.
 const PAGE_NAMES = { '#/': 'Home', '#/review': 'Review', '#/classes': 'Classes', '#/ai': 'Ask AI', '#/stats': 'Statistics',
-  '#/week': 'Weekly report', '#/history': 'History', '#/check': 'Accuracy check', '#/settings': 'Settings' };
+  '#/week': 'Weekly report', '#/history': 'History', '#/check': 'Accuracy check', '#/settings': 'Settings', '#/account': 'Account' };
 let prevHash = null, curHash = null, viaMenu = false;
 document.addEventListener('click', (e) => { if (e.target.closest('#sidebar nav a')) viaMenu = true; }, true);
 let fromInfo = null;                 // decided at the moment you navigate (pages draw later)
@@ -31,6 +31,8 @@ function route() {
   if (h === '#/ai') return viewAI();
   if (h.startsWith('#/ai/')) return viewAI(h.slice('#/ai/'.length));
   if (h === '#/settings') return viewSettings();
+  if (h === '#/account') return viewAccount();
+  if (h.startsWith('#/account/')) return viewAccount(h.slice('#/account/'.length));
   if (h === '#/week') return viewWeek();
   if (h === '#/history') return viewHistory();
   if (h === '#/check') return viewCheckIntro();

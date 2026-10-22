@@ -187,7 +187,7 @@ function buildSidebar() {
     <div class="side-head"><a class="brand" href="#/">${LOGO}<span>Lumen</span></a>
       <button class="icon-btn" id="hideNav" type="button" aria-label="Hide menu (M)" title="Hide menu (M)">${COLLAPSE}</button></div>
     <nav>${NAV.map(([key, href, label]) => `<a href="${href}" data-nav="${key}">${icon(key)}<span>${label}</span>${key === 'review' ? '<em class="badge" id="reviewBadge" hidden></em>' : ''}${key === 'classes' ? '<em class="badge soft" id="pausedBadge" hidden title="paused lessons"></em>' : ''}</a>`).join('')}</nav>
-    <div class="side-foot"><div id="livePill"></div>
+    <div class="side-foot"><div id="livePill"></div><div id="accountSlot"></div>
       <div class="lookwrap"><button class="pill lookbtn" id="lookBtn" type="button" aria-expanded="false" aria-controls="lookPop">🎨 Colours</button>
         <div class="lookpop card" id="lookPop" hidden><div class="eyebrow">Background</div>${themeSwatches(true)}
           <div class="eyebrow" style="margin-top:12px">Accent</div>${accentSwatches()}</div></div>
@@ -205,6 +205,7 @@ function buildSidebar() {
   $('#menuBtn').onclick = () => toggleNav(false);
   $('#backdrop').onclick = () => toggleNav(true);
   side.addEventListener('click', (e) => { if (isSmall() && e.target.closest('nav a')) toggleNav(true); });
+  if (typeof renderAccountSlot === 'function') renderAccountSlot();
 }
 
 function navHidden() {
