@@ -1,0 +1,12 @@
+{
+  "name": "lumen-web",
+  "version": "0.1.0",
+  "description": "Lumen: a study and focus coach that runs in the browser. The camera is processed on your own computer.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 5173",
+    "test": "node --test"
+  },
+  "author": "Inesa Sargsyan"
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumen · Camera lab</title>
+  <meta name="description" content="Test Lumen's in-browser focus and mood detection. Video never leaves your computer.">
+  <link rel="stylesheet" href="lab.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo" aria-hidden="true">◎</span><span>Lumen</span><em>camera lab</em></div>
+    <div class="pill" id="status" role="status">Not started</div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro card" id="intro">
+      <h1>Does the camera work in your browser?</h1>
+      <p>This page runs the same face and phone detection as the Python version, but inside the browser
+        (MediaPipe + WebAssembly). <b>Your video never leaves this computer</b>: only numbers are computed.</p>
+      <button class="btn" id="startBtn">▶ Start camera</button>
+      <p class="small muted" id="hint"></p>
+    </section>
+
+    <section class="grid" id="live" hidden>
+      <div class="cam card">
+        <div class="stage">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div class="badge" id="phoneBadge" hidden>📱 phone</div>
+          <div class="badge left" id="faceBadge">no face</div>
+        </div>
+        <div class="row small muted"><span id="fps">– fps</span><span id="delegate"></span>
+          <button class="linkbtn" id="stopBtn">Stop</button></div>
+      </div>
+
+      <div class="panel">
+        <div class="card">
+          <h2>Attention</h2>
+          <dl class="kv" id="attn"></dl>
+        </div>
+        <div class="card">
+          <h2>Expression <span class="muted small">(raw blendshapes, 0–1)</span></h2>
+          <div class="mood" id="mood">😐</div>
+          <div id="bars"></div>
+        </div>
+        <div class="card">
+          <h2>Background tab test</h2>
+          <p class="small muted">Switch to another tab for ~20 seconds, then come back.
+            Tracking should keep running (about the same samples per second).</p>
+          <p id="bgResult" class="small">Not tested yet.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="lab.js"></script>
+</body>
+</html>

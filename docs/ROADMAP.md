@@ -1,0 +1,33 @@
+# Roadmap
+
+## Architecture
+
+```
+Browser (everything heavy happens here)            Supabase (later)
+┌───────────────────────────────────────┐         ┌──────────────────────────┐
+│ camera → MediaPipe (WASM/GPU)          │         │ Auth: email, Google       │
+│ → features → tracker (focus, mood…)    │  JSON   │ PostgreSQL: sessions,    │
+│ → UI pages                             │ ──────▶ │ classes, todos, notes,   │
+│ local storage (guest mode)             │         │ reviews, chats           │
+│                                        │         │ Edge Function: AI tutor  │
+└───────────────────────────────────────┘         └──────────────────────────┘
+        video never leaves the browser               Row Level Security:
+                                                     every user sees only their rows
+```
+
+## Steps
+
+1. **Camera lab** — prove that face, gaze, head pose, phone and expressions work in the browser. ✅
+2. **Tracker port** — `tracker.py`, `stats.py`, `reviews.py` → JavaScript, with the same unit-tested behaviour.
+3. **Accounts** — Supabase project, tables + Row Level Security, sign up / log in / Google, guest mode that
+   moves its data into the account after sign-up.
+4. **Pages** — port the existing UI; replace calls to the Python server with a data layer (local or Supabase).
+5. **AI tutor** — Gemini through a Supabase Edge Function so the API key is never in the browser; daily limits per user.
+6. **Publish** — GitHub Pages or Vercel; a custom domain later.
+7. **Quality** — privacy policy (children!), parental consent, tests on Chrome / Safari / Edge and slow laptops.
+
+## Later
+
+- Own backend (Node.js + PostgreSQL) as a learning project, replacing Supabase step by step.
+- PWA: install as an app, offline mode.
+- New name.
