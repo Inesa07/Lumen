@@ -15,7 +15,7 @@ browser ──question + login token──▶ Edge Function "tutor" ──secret
 
 1. **SQL Editor** → run `supabase/migrations/002_ai_usage.sql`.
 2. **Edge Functions → Secrets** → add `GEMINI_API_KEY` = your key from https://aistudio.google.com/apikey
-   (optional: `AI_DAILY_LIMIT` = questions per student per day, `GEMINI_MODEL` = e.g. `gemini-2.5-flash`).
+   (optional: `AI_DAILY_LIMIT` = questions per student per day; `GEMINI_MODEL` to force one model, otherwise the newest Flash model is picked automatically).
 3. **Edge Functions → Deploy a new function → Via Editor** → name it `tutor` →
    paste `supabase/functions/tutor/index.ts` → **Deploy**.
 

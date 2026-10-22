@@ -10,7 +10,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta";
-const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+// Model: GEMINI_MODEL if you set that secret, otherwise the newest "Flash" model this key may use.
+// (Google retires old models; picking automatically keeps the tutor working.)
+const FIXED_MODEL = Deno.env.get("GEMINI_MODEL") || "";
+let pickedModel: string | null = null;     // remembered while this server instance lives
 const MAX_PER_DAY = Number(Deno.env.get("AI_DAILY_LIMIT") ?? "40");
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 6000;
@@ -31,6 +34,29 @@ const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
 type Msg = { role: string; content: string };
+
+/** Ask Google which models the key may use; pick the newest stable "flash" model (e.g. gemini-3.8-flash). */
+async function pickModel(key: string): Promise<string> {
+  const r = await fetch(`${GEMINI_URL}/models?pageSize=200`, { headers: { "x-goog-api-key": key } });
+  if (!r.ok) throw new Error(`model list: ${r.status}`);
+  const skip = ["lite", "image", "tts", "audio", "live", "embedding", "exp", "preview", "thinking", "vision"];
+  let best = "", bestVer = -1;
+  for (const m of (await r.json()).models ?? []) {
+    const name = String(m.name ?? "").split("/").pop()!;
+    if (!(m.supportedGenerationMethods ?? []).includes("generateContent")) continue;
+    if (!name.startsWith("gemini-") || !name.includes("flash") || skip.some((x) => name.includes(x))) continue;
+    const ver = parseFloat(name.split("-")[1]);
+    if (!Number.isNaN(ver) && ver > bestVer) { best = name; bestVer = ver; }
+  }
+  if (!best) throw new Error("no flash model available for this key");
+  return best;
+}
+
+async function model(key: string, fresh = false): Promise<string> {
+  if (FIXED_MODEL && !fresh) return FIXED_MODEL;
+  if (!pickedModel || fresh) pickedModel = await pickModel(key);
+  return pickedModel;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -65,7 +91,7 @@ Deno.serve(async (req) => {
   }
 
   // 4. Ask Gemini and stream the answer straight through to the browser (Server-Sent Events)
-  const upstream = await fetch(`${GEMINI_URL}/models/${MODEL}:streamGenerateContent?alt=sse`, {
+  const ask = async (m: string) => fetch(`${GEMINI_URL}/models/${m}:streamGenerateContent?alt=sse`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
@@ -74,6 +100,13 @@ Deno.serve(async (req) => {
       generationConfig: { maxOutputTokens: 2048 },
     }),
   });
+  let upstream: Response;
+  try {
+    upstream = await ask(await model(key));
+    if (upstream.status === 404) upstream = await ask(await model(key, true));   // model retired: pick again
+  } catch (e) {
+    return json({ error: `Could not reach the AI: ${(e as Error).message}` }, 502);
+  }
   if (!upstream.ok || !upstream.body) {
     const detail = (await upstream.text()).slice(0, 300);
     const status = upstream.status === 429 ? 429 : 502;
