@@ -709,10 +709,12 @@ async function viewSettings() {
     <section class="card" id="aiSet">
       <h2 style="margin:0 0 4px;font-size:17px">✨ AI tutor</h2>
       <p class="muted small" style="margin:0 0 14px">${ai.ready
-        ? `Connected: <strong>${ai.provider === 'claude' ? 'Claude' : ai.provider === 'gemini' ? 'Gemini (free)' : ai.provider === 'ollama' ? 'Ollama, on this Mac' : 'test mode'}</strong> · ${esc(ai.model)}${ai.key_hint ? ` · key ${esc(ai.key_hint)}` : ''}`
-        : 'Not connected yet. The easiest: Option 1, free Gemini.'}</p>
+        ? (ai.provider === 'lumen'
+          ? `✨ <strong>Lumen AI is on</strong>, free with your account (up to ${ai.usage ? ai.usage.limit : 40} questions a day${ai.usage ? `, ${ai.usage.used} used today` : ''}). You don't need a key. The options below are only if you want to use your own.`
+          : `Connected: <strong>${ai.provider === 'claude' ? 'Claude' : ai.provider === 'gemini' ? 'Gemini (your key)' : 'test mode'}</strong> · ${esc(ai.model)}${ai.key_hint ? ` · key ${esc(ai.key_hint)}` : ''}`)
+        : '<a href="#/account">Sign in</a> to use the free Lumen AI tutor, or connect your own key below.'}</p>
       <form id="geminiForm" class="note" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-        <b>Option 1 · Gemini by Google (free, recommended)</b>
+        <b>Option 1 · Your own Gemini key (free)</b>
         <span class="small muted">Free, no credit card. Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>,
           sign in with Google, press <b>Create API key</b>, copy it and paste it here. There is a free daily limit (plenty for studying).
           Google's terms require the account owner to be 18+, so a parent or teacher can create the key once.</span>

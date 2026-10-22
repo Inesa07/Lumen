@@ -89,7 +89,12 @@ async function boot() {
     localStorage.setItem(`lumen.moved.${user.id}`, '1');
     await offerGuestMove(db);
   }
-  const server = new LocalServer({ db, fake, speed });
+  // the shared AI tutor (an Edge Function) is for signed-in students; it needs the login token
+  const cloudAI = user && client && !fake ? {
+    url: SUPABASE_URL, key: SUPABASE_KEY,
+    token: async () => { const { data } = await client.auth.getSession(); return data.session ? data.session.access_token : null; },
+  } : null;
+  const server = new LocalServer({ db, fake, speed, cloudAI });
 
   window.Lumen = {
     db, server, fake, client, user,

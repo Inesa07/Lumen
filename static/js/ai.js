@@ -238,12 +238,15 @@ function chatBox(container, opts = {}) {
   };
 
   const setupCard = () => `<div class="m-setup">
-      <b>Connect the free AI (1 minute, once)</b>
+      <b>✨ The AI tutor is free with a Lumen account</b>
+      <span class="small">Create an account (30 seconds) and ask up to 40 questions every day, no key needed.</span>
+      <a class="btn primary" href="#/account" style="align-self:flex-start">Sign in or create an account</a>
+      <details class="small"><summary>Or use your own Gemini key</summary>
       <ol class="small"><li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with a personal Google account.</li>
         <li>Press <b>Create API key</b> and copy it. It's free, no card needed.</li><li>Paste it here:</li></ol>
       <form data-connect class="btnrow" style="flex-wrap:nowrap"><input class="field" type="password" placeholder="AIza…" autocomplete="off" aria-label="Gemini API key" style="flex:1">
         <button class="btn primary" type="submit">Connect</button></form>
-      <span class="muted small connect-msg">The key stays in this browser. Other options (free offline AI, Claude): <a href="#/settings">Settings → AI tutor</a>.</span></div>`;
+      <span class="muted small connect-msg">The key stays in this browser.</span></details></div>`;
 
   const setBusy = (on) => {
     sendBtn.innerHTML = on ? STOP_ICON : SEND_ICON;
@@ -349,7 +352,8 @@ async function viewAI(chatId = null) {
   const ai = list.ai;
   let current = chatId ? list.chats.find((c) => c.id === chatId) : null;
   const classes = d.classes.map((c) => c.name);
-  const provider = ai.ready ? `${ai.provider === 'claude' ? 'Claude' : ai.provider === 'gemini' ? 'Gemini' : ai.provider === 'ollama' ? 'Ollama' : 'Test'} · ${esc(ai.model)}` : 'Not connected';
+  const provider = ai.ready ? (ai.provider === 'lumen' ? 'Lumen AI · free'
+    : `${ai.provider === 'claude' ? 'Claude' : ai.provider === 'gemini' ? 'Gemini' : 'Test'} · ${esc(ai.model)}`) : 'Sign in for free AI';
 
   // Like every AI app: the page itself never scrolls, only the conversation does,
   // so the question box always stays in the same place at the bottom.

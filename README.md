@@ -18,8 +18,8 @@ This repository is the **web version** of Lumen (the first version was a local P
 | 2 | Tracker, stats, reviews, AI tutor and all pages running in the browser (guest mode, data in IndexedDB) | ✅ |
 | 3 | Accounts with Supabase: sign up, sign in, password reset, guest data moves into the account, offline-first sync | ✅ |
 | 4 | Google sign-in, polishing sync | ⏳ |
-| 5 | AI tutor through a server function (key hidden, per-user limits) | ⏳ |
-| 6 | Publishing (public link) | ⏳ |
+| 5 | Free AI tutor for signed-in students: Supabase Edge Function, secret key on the server, daily limit | ✅ (deploy: docs/AI.md) |
+| 6 | Publishing: https://inesa07.github.io/Lumen/ (GitHub Pages) | ✅ |
 | 7 | Privacy policy, testing on many devices | ⏳ |
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for details and [docs/AUTH.md](docs/AUTH.md) for how accounts and security work.
@@ -66,6 +66,7 @@ src/
     fake-supabase.js    stand-in cloud for tests (?fake=1)
     stores.js           to-dos, sticky notes, chats, review cards
 supabase/migrations/    the database schema with Row Level Security
+supabase/functions/     server code (Edge Functions): the shared AI tutor
   server/
     local-server.js     the old Python server.py, now running inside the tab (same /api/... paths)
 static/                 the pages (HTML/CSS/JS from the first version)

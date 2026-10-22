@@ -1,10 +1,11 @@
 // ai.js: the AI tutor (port of ai.py), talking to the AI directly from the browser.
 //
 // Providers (whichever is set up, in this order):
-//   1. Claude (Anthropic API) - your own API key
-//   2. Gemini (Google)        - a FREE key from https://aistudio.google.com/apikey
-// The key is kept only in this browser (it is never uploaded to Lumen's servers).
-// Step 5 of the roadmap moves the AI behind a server function, so students won't need a key at all.
+//   1. Claude (Anthropic API) - your own API key (optional)
+//   2. Gemini (Google)        - your own FREE key from https://aistudio.google.com/apikey (optional)
+//   3. Lumen AI               - for everybody who is signed in: the "tutor" Edge Function on Supabase
+//                               asks Gemini with Lumen's secret key (supabase/functions/tutor), daily limit
+// Your own keys are kept only in this browser (they are never uploaded).
 //
 // Streaming: the model writes one token at a time, and the API sends every piece immediately as
 // Server-Sent Events ("data: {...}" lines). We read the HTTP response body piece by piece with a
@@ -79,7 +80,11 @@ async function post(url, body, headers, signal) {
 
 export class Tutor {
   /** @param {import('../data/db.js').DocDB} db  @param {{fake?: boolean}} opts */
-  constructor(db, { fake = false } = {}) { this.db = db; this.fake = fake; }
+  /**
+   * @param {{fake?: boolean, cloud?: {url: string, key: string, token: () => Promise<string|null>}}} opts
+   *   cloud: how to reach the shared tutor (only when signed in)
+   */
+  constructor(db, { fake = false, cloud = null } = {}) { this.db = db; this.fake = fake; this.cloud = cloud; }
 
   config() {
     return { api_key: '', model: DEFAULT_CLAUDE_MODEL, gemini_key: '', gemini_model: '', ...(this.db.getValue('ai') || {}) };
@@ -104,7 +109,8 @@ export class Tutor {
     if (this.fake) return { ready: true, provider: 'test', model: 'echo' };
     if (cfg.api_key) return { ready: true, provider: 'claude', model: cfg.model, key_hint: hint(cfg.api_key), gemini_hint: cfg.gemini_key ? hint(cfg.gemini_key) : null };
     if (cfg.gemini_key) return { ready: true, provider: 'gemini', model: cfg.gemini_model || GEMINI_FALLBACK, gemini_hint: hint(cfg.gemini_key) };
-    return { ready: false, provider: null, web: true };
+    if (this.cloud) return { ready: true, provider: 'lumen', model: 'Lumen AI', usage: this.usage || null };
+    return { ready: false, provider: null, web: true, signin: true };
   }
 
   async ask(messages, context = '', isHint = false) {
@@ -116,7 +122,7 @@ export class Tutor {
   /** Async generator: yields the answer in small pieces while the model is still writing. */
   async* askStream(messages, context = '', isHint = false, signal = undefined) {
     const st = this.status();
-    if (!st.ready) throw new AIError('No AI is connected yet. Open Settings → AI tutor.');
+    if (!st.ready) throw new AIError('Sign in to use the free AI tutor (menu → Guest → Create account), or add your own key in Settings → AI tutor.');
     const system = SYSTEM + (context ? `\n\n${context}` : '') + (isHint ? `\n\n${HINT}` : '');
     const msgs = messages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content }));
     if (st.provider === 'test') {
@@ -130,6 +136,7 @@ export class Tutor {
       return;
     }
     if (st.provider === 'claude') yield* this._claude(system, msgs, st.model, signal);
+    else if (st.provider === 'lumen') yield* this._lumen(system, msgs, signal);
     else yield* this._gemini(system, msgs, st.model, signal);
   }
 
@@ -195,6 +202,44 @@ export class Tutor {
     if (!got && !(signal && signal.aborted)) throw new AIError('Gemini did not answer this question (it may have been blocked by its safety filter).');
   }
 }
+
+/** Answers stream back in Gemini's format, so the same reader works for both. */
+async function* geminiPieces(resp, signal) {
+  let got = false;
+  for await (const ev of sse(resp, signal)) {
+    for (const c of ev.candidates || []) {
+      for (const part of (c.content || {}).parts || []) {
+        if (part.text && !part.thought) { got = true; yield part.text; }
+      }
+    }
+  }
+  if (!got && !(signal && signal.aborted)) throw new AIError('The AI did not answer this question (it may have been blocked by its safety filter).');
+}
+
+Tutor.prototype._lumen = async function* lumen(system, msgs, signal) {
+  const token = await this.cloud.token();
+  if (!token) throw new AIError('Please sign in again to use the AI tutor.');
+  let resp;
+  try {
+    resp = await fetch(`${this.cloud.url}/functions/v1/tutor`, {
+      method: 'POST', signal,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, apikey: this.cloud.key },
+      body: JSON.stringify({ system, messages: msgs }),
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    throw new AIError('Could not reach the AI tutor. Check your internet connection.');
+  }
+  if (!resp.ok) {
+    let msg = '';
+    try { msg = (await resp.json()).error || ''; } catch { /* not JSON */ }
+    if (resp.status === 404) throw new AIError('The free AI tutor is not switched on yet (the "tutor" function is not deployed).');
+    throw new AIError(msg || `AI error ${resp.status}`);
+  }
+  const used = Number(resp.headers.get('X-AI-Used')), limit = Number(resp.headers.get('X-AI-Limit'));
+  if (limit) this.usage = { used, limit };
+  yield* geminiPieces(resp, signal);
+};
 
 /** What the tutor should know about where the question comes from. */
 export function lessonContext(cls = null, lesson = null, tasks = [], notes = [], questions = []) {

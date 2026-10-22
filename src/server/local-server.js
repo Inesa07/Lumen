@@ -69,14 +69,15 @@ export class LocalServer {
    * @param {import('../data/db.js').DocDB} o.db
    * @param {boolean} [o.fake]   simulated student instead of the camera
    * @param {number} [o.speed]   simulation speed (simulated seconds per real second)
+   * @param {object} [o.cloudAI] how to reach the shared AI tutor when signed in (see core/ai.js)
    */
-  constructor({ db, fake = false, speed = 30 }) {
+  constructor({ db, fake = false, speed = 30, cloudAI = null }) {
     Object.assign(this, { db, fake, speed });
     this.todos = new TodoStore(db);
     this.notes = new NoteStore(db);
     this.chats = new ChatStore(db);
     this.reviews = new ReviewStore(db);
-    this.tutor = new Tutor(db, { fake });
+    this.tutor = new Tutor(db, { fake, cloud: cloudAI });
     this.tracker = null; this.check = null; this.worker = null;
     this.sessionId = null; this.checkId = null;
     this.lastReportId = null; this.lastCheckId = null; this.lastStatus = null;
