@@ -15,9 +15,9 @@ This repository is the **web version** of Lumen (the first version was a local P
 | Step | What | State |
 |---|---|---|
 | 1 | Camera in the browser: face, eyes, head, phone, expressions | ✅ lab page |
-| 2 | Session tracker ported from Python (focus, tiredness, mood, breaks) | ⏳ |
+| 2 | Tracker, stats, reviews, AI tutor and all pages running in the browser (guest mode, data in IndexedDB) | ✅ |
 | 3 | Accounts with Supabase (sign up, log in, Google) | ⏳ |
-| 4 | All pages: Home, Session, Classes, Review, Stats, Reports, Settings | ⏳ |
+| 4 | Sync between devices through the account | ⏳ |
 | 5 | AI tutor through a server function (key hidden, per-user limits) | ⏳ |
 | 6 | Publishing (public link) | ⏳ |
 | 7 | Privacy policy, testing on many devices | ⏳ |
@@ -30,7 +30,8 @@ No build step and no `npm install` needed: the browser loads plain JavaScript mo
 
 ```bash
 python3 -m http.server 5173
-# open http://localhost:5173/lab/
+# the app:         http://localhost:5173/
+# the camera lab:  http://localhost:5173/lab/
 ```
 
 The camera only works on `https://` or `http://localhost`.
@@ -42,17 +43,31 @@ Add `?fake=1` to the address to test with a simulated student instead of a camer
 node --test
 ```
 
+`tests/fixtures/*_golden.json` were produced by the original Python code on the same simulated lesson.
+The JavaScript tracker and statistics must give **exactly the same** results.
+
 ## Project structure
 
 ```
-index.html            landing page
-lab/                  camera lab (step 1 test page)
-src/vision/
-  camera.js           webcam + MediaPipe FaceLandmarker + ObjectDetector -> one "sample" per frame
-  features.js         pure maths: eye aspect ratio, head angles, gaze, blendshapes
-  fake.js             simulated student for tests
-tests/                unit tests (node:test)
-docs/                 roadmap and architecture notes
+index.html              the app
+src/
+  main.js               start-up: open the data, start the in-browser server, load the pages
+  vision/               camera + MediaPipe -> one "sample" per frame (and a simulated student)
+  core/
+    tracker.js          the "brain": attention, looking away, tiredness, mood, breaks, the lesson report
+    stats.js            numbers for Home, Classes, Statistics, Weekly report
+    validate.js         the accuracy check
+    ai.js               AI tutor (Gemini / Claude, streaming)
+    util.js             helpers that behave exactly like Python (rounding, median, Counter)
+  data/
+    db.js               documents in memory + IndexedDB (later: Supabase)
+    stores.js           to-dos, sticky notes, chats, review cards
+  server/
+    local-server.js     the old Python server.py, now running inside the tab (same /api/... paths)
+static/                 the pages (HTML/CSS/JS from the first version)
+lab/                    camera lab (step 1 test page)
+tests/                  unit tests; the tracker and stats are checked against the Python results
+docs/                   roadmap and architecture notes
 ```
 
 ## How it works (short)

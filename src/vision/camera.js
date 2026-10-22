@@ -35,6 +35,48 @@ function workerTicker(fps, onTick) {
   return () => { w.postMessage(0); w.terminate(); URL.revokeObjectURL(url); };
 }
 
+// The models are loaded ONCE per page and kept: starting the next lesson is then instant.
+let modelsPromise = null;
+function loadModels(withPhone, status) {
+  if (!modelsPromise) {
+    modelsPromise = (async () => {
+      const { FilesetResolver, FaceLandmarker, ObjectDetector } = await import(`${MP_URL}/vision_bundle.mjs`);
+      const fileset = await FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+      const faceOpts = (delegate) => ({
+        baseOptions: { modelAssetPath: FACE_MODEL, delegate },
+        runningMode: 'VIDEO', numFaces: 1,
+        outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
+        minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
+      });
+      let face, delegate;
+      // GPU is much faster; some computers don't support it, then we fall back to the CPU
+      try {
+        face = await FaceLandmarker.createFromOptions(fileset, faceOpts('GPU'));
+        delegate = 'GPU';
+      } catch (e) {
+        console.warn('GPU not available for the face model, using CPU', e);
+        face = await FaceLandmarker.createFromOptions(fileset, faceOpts('CPU'));
+        delegate = 'CPU';
+      }
+      let objects = null;
+      if (withPhone) {
+        status('Loading the phone detector…');
+        try {
+          objects = await ObjectDetector.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: OBJECT_MODEL, delegate },
+            runningMode: 'VIDEO', scoreThreshold: 0.3, maxResults: 3, categoryAllowlist: ['cell phone'],
+          });
+        } catch (e) {
+          console.warn('Phone detector not available, phone detection is off', e);
+        }
+      }
+      return { face, objects, delegate };
+    })();
+    modelsPromise.catch(() => { modelsPromise = null; });     // a failed download can be retried
+  }
+  return modelsPromise;
+}
+
 export class CameraVision {
   /**
    * @param {object} o
@@ -67,35 +109,8 @@ export class CameraVision {
     await video.play();
 
     this.onStatus({ stage: 'models', text: 'Loading the face model (~4 MB, once)…' });
-    const { FilesetResolver, FaceLandmarker, ObjectDetector } = await import(`${MP_URL}/vision_bundle.mjs`);
-    const fileset = await FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
-    const faceOpts = (delegate) => ({
-      baseOptions: { modelAssetPath: FACE_MODEL, delegate },
-      runningMode: 'VIDEO', numFaces: 1,
-      outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
-      minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
-    });
-    // GPU is much faster; some computers don't support it, then we fall back to the CPU
-    try {
-      this.face = await FaceLandmarker.createFromOptions(fileset, faceOpts('GPU'));
-      this.delegate = 'GPU';
-    } catch (e) {
-      console.warn('GPU not available for the face model, using CPU', e);
-      this.face = await FaceLandmarker.createFromOptions(fileset, faceOpts('CPU'));
-      this.delegate = 'CPU';
-    }
-    if (this.usePhone) {
-      this.onStatus({ stage: 'models', text: 'Loading the phone detector…' });
-      try {
-        this.objects = await ObjectDetector.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: this.delegate },
-          runningMode: 'VIDEO', scoreThreshold: 0.3, maxResults: 3, categoryAllowlist: ['cell phone'],
-        });
-      } catch (e) {
-        console.warn('Phone detector not available, phone detection is off', e);
-        this.objects = null;
-      }
-    }
+    const m = await loadModels(this.usePhone, (text) => this.onStatus({ stage: 'models', text }));
+    Object.assign(this, { face: m.face, objects: m.objects, delegate: m.delegate });
 
     this.small = document.createElement('canvas');      // 64x48 copy for "is the camera covered?"
     this.small.width = 64; this.small.height = 48;
@@ -104,6 +119,7 @@ export class CameraVision {
     this.t0 = performance.now();
     this.frame = 0;
     this.lastTs = -1;
+    this.tsBase = Math.round(performance.now());      // shared models need ever-growing timestamps
     this.phoneSeen = -1e9;
     this.covered = false;
     this.fpsWindow = [];
@@ -118,12 +134,13 @@ export class CameraVision {
     let ts = Math.round(nowMs - this.t0);
     if (ts <= this.lastTs) ts = this.lastTs + 1;       // VIDEO mode needs strictly growing timestamps
     this.lastTs = ts;
-    const t = ts / 1000;
+    const t = ts / 1000;                               // seconds since this lesson started
+    const mpTs = this.tsBase + ts;                     // timestamp for MediaPipe (grows across lessons)
     const w = v.videoWidth, h = v.videoHeight;
 
     let res;
     try {
-      res = this.face.detectForVideo(v, ts);
+      res = this.face.detectForVideo(v, mpTs);
     } catch (e) {
       this.onStatus({ stage: 'error', text: `Face model stopped: ${e.message || e}` });
       return;
@@ -131,7 +148,7 @@ export class CameraVision {
 
     if (this.objects && this.frame % PHONE_EVERY === 0) {
       try {
-        const det = this.objects.detectForVideo(v, ts);
+        const det = this.objects.detectForVideo(v, mpTs);
         const hit = det.detections && det.detections[0];
         if (hit) { this.phoneSeen = t; this.lastPhoneBox = hit.boundingBox; } else this.lastPhoneBox = null;
       } catch (e) { console.warn('phone detector error', e); }
@@ -165,9 +182,8 @@ export class CameraVision {
   stop() {
     if (this.stopTicker) this.stopTicker();
     this.stopTicker = null;
-    if (this.stream) this.stream.getTracks().forEach((tr) => tr.stop());
-    if (this.face) this.face.close();
-    if (this.objects) this.objects.close();
-    this.face = this.objects = this.stream = null;
+    if (this.stream) this.stream.getTracks().forEach((tr) => tr.stop());   // camera light goes off
+    if (this.video) this.video.srcObject = null;
+    this.face = this.objects = this.stream = null;      // the models stay loaded for the next lesson
   }
 }
