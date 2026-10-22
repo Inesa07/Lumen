@@ -23,3 +23,9 @@ browser ──question + login token──▶ Edge Function "tutor" ──secret
 
 The free Gemini tier has its own limits per key (requests per minute and per day). With many students, the
 shared key reaches them sooner: then switch the Google project to a paid plan or lower `AI_DAILY_LIMIT`.
+
+## When Google is busy
+
+At peak times a model may answer 503 ("high demand"). The function then waits a moment and tries again,
+then tries the next newest Flash model. If everything is busy, the student gets a friendly message and the
+question is **not** counted (`refund_ai_quota()`, `supabase/migrations/003_ai_refund.sql`).

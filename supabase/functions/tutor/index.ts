@@ -13,7 +13,7 @@ const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta";
 // Model: GEMINI_MODEL if you set that secret, otherwise the newest "Flash" model this key may use.
 // (Google retires old models; picking automatically keeps the tutor working.)
 const FIXED_MODEL = Deno.env.get("GEMINI_MODEL") || "";
-let pickedModel: string | null = null;     // remembered while this server instance lives
+let pickedModels: string[] | null = null;  // remembered while this server instance lives
 const MAX_PER_DAY = Number(Deno.env.get("AI_DAILY_LIMIT") ?? "40");
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 6000;
@@ -35,28 +35,29 @@ const json = (obj: unknown, status = 200) =>
 
 type Msg = { role: string; content: string };
 
-/** Ask Google which models the key may use; pick the newest stable "flash" model (e.g. gemini-3.8-flash). */
-async function pickModel(key: string): Promise<string> {
+/** Ask Google which models the key may use: stable "flash" models, newest first (e.g. gemini-3.8-flash). */
+async function flashModels(key: string): Promise<string[]> {
   const r = await fetch(`${GEMINI_URL}/models?pageSize=200`, { headers: { "x-goog-api-key": key } });
   if (!r.ok) throw new Error(`model list: ${r.status}`);
   const skip = ["lite", "image", "tts", "audio", "live", "embedding", "exp", "preview", "thinking", "vision"];
-  let best = "", bestVer = -1;
+  const found: [number, string][] = [];
   for (const m of (await r.json()).models ?? []) {
     const name = String(m.name ?? "").split("/").pop()!;
     if (!(m.supportedGenerationMethods ?? []).includes("generateContent")) continue;
     if (!name.startsWith("gemini-") || !name.includes("flash") || skip.some((x) => name.includes(x))) continue;
     const ver = parseFloat(name.split("-")[1]);
-    if (!Number.isNaN(ver) && ver > bestVer) { best = name; bestVer = ver; }
+    if (!Number.isNaN(ver)) found.push([ver, name]);
   }
-  if (!best) throw new Error("no flash model available for this key");
-  return best;
+  if (!found.length) throw new Error("no flash model available for this key");
+  return found.sort((a, b) => b[0] - a[0]).map(([, n]) => n).slice(0, 3);
 }
 
-async function model(key: string, fresh = false): Promise<string> {
-  if (FIXED_MODEL && !fresh) return FIXED_MODEL;
-  if (!pickedModel || fresh) pickedModel = await pickModel(key);
-  return pickedModel;
+/** The models to try, in order: your fixed model (if set), then the newest flash models. */
+async function models(key: string, fresh = false): Promise<string[]> {
+  if (!pickedModels || fresh) pickedModels = await flashModels(key);
+  return FIXED_MODEL ? [FIXED_MODEL, ...pickedModels.filter((m) => m !== FIXED_MODEL)] : pickedModels;
 }
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -100,17 +101,34 @@ Deno.serve(async (req) => {
       generationConfig: { maxOutputTokens: 2048 },
     }),
   });
-  let upstream: Response;
+  // A busy model (503 / 500 / 429) is common at peak times: wait a moment and try again,
+  // then try the next model. A retired model (404): ask Google for the current list.
+  const refund = () => db.rpc("refund_ai_quota").then(() => {}, () => {});   // a failed question is free
+  let upstream: Response | null = null;
+  let lastStatus = 0, refreshed = false;
   try {
-    upstream = await ask(await model(key));
-    if (upstream.status === 404) upstream = await ask(await model(key, true));   // model retired: pick again
+    let list = await models(key);
+    for (let i = 0; i < list.length && !upstream; i++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const r = await ask(list[i]);
+        if (r.ok && r.body) { upstream = r; break; }
+        lastStatus = r.status;
+        await r.body?.cancel();
+        if (r.status === 404 && !refreshed) { refreshed = true; list = await models(key, true); i = -1; break; }
+        if (![429, 500, 503].includes(r.status)) break;
+        await sleep(800 * (attempt + 1));
+      }
+      if (lastStatus && ![404, 429, 500, 503].includes(lastStatus)) break;   // a real error: don't hide it
+    }
   } catch (e) {
+    await refund();
     return json({ error: `Could not reach the AI: ${(e as Error).message}` }, 502);
   }
-  if (!upstream.ok || !upstream.body) {
-    const detail = (await upstream.text()).slice(0, 300);
-    const status = upstream.status === 429 ? 429 : 502;
-    return json({ error: upstream.status === 429 ? "The AI is busy right now. Try again in a minute." : `AI error ${upstream.status}: ${detail}` }, status);
+  if (!upstream) {
+    await refund();
+    const busy = [429, 500, 503].includes(lastStatus);
+    return json({ error: busy ? "The AI is very busy right now. Please try again in a minute."
+      : `AI error ${lastStatus}. Please try again later.` }, busy ? 503 : 502);
   }
   return new Response(upstream.body, {
     headers: { ...CORS, "Content-Type": "text/event-stream", "Cache-Control": "no-store", "X-AI-Used": String(q.used), "X-AI-Limit": String(MAX_PER_DAY) },
