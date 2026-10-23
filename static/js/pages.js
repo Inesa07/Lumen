@@ -130,7 +130,7 @@ async function viewHome(prefillClass = '') {
           </div>
         </section>
         <section class="card weekcard">
-          <div class="block-head" style="margin-bottom:10px"><h2 class="caps" style="margin:0">This week</h2><a class="more" style="margin:0" href="#/week">Report →</a></div>
+          <div class="block-head" style="margin-bottom:10px"><h2 class="caps" style="margin:0">This week</h2><a class="more" style="margin:0" href="#/stats/week">Report →</a></div>
           ${dayBars(week, 96)}
           <div class="kpis"><div><b>${hm(t.week_focused)}</b><span>focused</span></div>
             <div><b>${t.week_avg ?? '–'}${t.week_avg != null ? '%' : ''}</b><span>avg attention</span></div></div>
@@ -257,49 +257,6 @@ async function viewClass(name) {
 }
 
 // ---------------------------------------------------------------- Statistics
-async function viewStats() {
-  closeStream();
-  const d = await loadOverview();
-  const t = d.totals;
-  const maxClass = Math.max(1, ...d.classes.map((c) => c.study_min));
-  app.innerHTML = shell('stats', `
-  ${pageHead(`${t.sessions} sessions · ${hm(t.all_study)} studied`, 'How focused am I?', '<a class="btn ghost" href="#/week">Weekly report</a>')}
-  <main class="wrap" style="display:flex;flex-direction:column;gap:24px">
-    <section class="stats">
-      <div class="card"><span class="eyebrow">Focused today</span><b>${hm(t.today_focused)}</b><span class="eyebrow">of ${hm(t.today_study)} studied</span></div>
-      <div class="card"><span class="eyebrow">Focused this week</span><b>${hm(t.week_focused)}</b><span class="eyebrow">of ${hm(t.week_study)} studied</span></div>
-      <div class="card"><span class="eyebrow">Average attention</span><b>${t.all_avg ?? '–'}${t.all_avg != null ? '%' : ''}</b><span class="eyebrow">all time</span></div>
-      <div class="card"><span class="eyebrow">Longest focus streak</span><b>${t.longest_focus} min</b><span class="eyebrow">without drifting</span></div>
-      <div class="card"><span class="eyebrow">🎯 Plan tasks done</span><b>${d.intentions.tasks_total ? Math.round(100 * d.intentions.tasks_done / d.intentions.tasks_total) + '%' : '–'}</b>
-        <span class="eyebrow">${d.intentions.tasks_total ? `${d.intentions.tasks_done} of ${d.intentions.tasks_total} tasks · ${d.intentions.yes} full plans` : 'add tasks when you start a session'}</span></div>
-    </section>
-    ${t.sessions ? `
-    <section class="card">
-      <div class="block-head"><h2 class="display" style="font-size:20px;margin:0">Last 14 days</h2>
-        <div class="legend"><span><i style="background:var(--bar)"></i>studied</span><span><i style="background:var(--teal)"></i>focused</span></div></div>
-      ${dayBars(d.days, 180)}
-    </section>
-    <div class="row">
-      <section class="card" style="flex:1 1 380px;min-width:0">
-        <h2 class="display" style="font-size:20px">Best time of day</h2>
-        <p class="muted small" style="margin:0 0 14px">Average attention by part of the day.</p>
-        ${hbars(d.time_of_day.map((x) => ({ label: x.name, pct: x.avg ?? 0, color: attColor(x.avg),
-          value: x.avg == null ? '–' : `${x.avg}%${x.name === d.best_time ? ' ★' : ''}` })))}
-      </section>
-      <section class="card" style="flex:1 1 380px;min-width:0">
-        <h2 class="display" style="font-size:20px">Time per class</h2>
-        <p class="muted small" style="margin:0 0 14px">Bar = time studied. Number = share of it you were focused.</p>
-        ${hbars(d.classes.map((c) => ({ label: esc(c.name), pct: 100 * c.study_min / maxClass,
-          value: `${c.study_min ? Math.round(100 * c.focused_min / c.study_min) : 0}%`, color: 'var(--accent)' })))}
-      </section>
-    </div>
-    ${d.mood ? moodCard(d.mood, 'Mood while studying') : ''}
-    <section class="card">
-      <h2 class="display" style="font-size:20px">What Lumen learned about you</h2>
-      <div class="grid2">${d.insights.map((x) => `<div class="note">${x}</div>`).join('')}</div>
-    </section>` : '<p class="empty">Statistics appear after your first session.</p>'}
-  </main>`);
-}
 
 // mood: one stacked bar + legend with percentages
 function moodCard(mood, title) {
@@ -860,53 +817,6 @@ async function viewSettings() {
 }
 
 // ---------------------------------------------------------------- Weekly report
-async function viewWeek() {
-  closeStream();
-  const [d, w] = await Promise.all([loadOverview(), api('/api/week')]);
-  const t = w.this, p = w.prev;
-  const delta = (a, b, unit = '', better = 'up') => {
-    if (a == null || b == null || b === 0) return '<span class="muted small">no data last week</span>';
-    const diff = a - b, good = better === 'up' ? diff >= 0 : diff <= 0;
-    return `<span class="small" style="color:${good ? 'var(--teal)' : 'var(--coral)'}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(diff * 10) / 10)}${unit} vs last week</span>`;
-  };
-  const maxC = Math.max(1, ...w.classes.map((c) => c.study_min));
-  app.innerHTML = shell('week', `
-  ${pageHead(`${esc(w.from)} – ${esc(w.to)}`, 'Weekly report', '<button class="btn ghost" id="printBtn">Save as PDF</button>')}
-  <main class="wrap" style="display:flex;flex-direction:column;gap:24px">
-    <section class="card weekhero">
-      <div><div class="eyebrow">Focused study this week</div>
-        <div class="display huge">${hm(t.focused_min)}</div>
-        <div>${w.change_pct == null ? '<span class="muted small">First week with data</span>'
-          : `<span style="color:${w.change_pct >= 0 ? 'var(--teal)' : 'var(--coral)'}">${w.change_pct >= 0 ? '▲' : '▼'} ${Math.abs(w.change_pct)}%</span> <span class="muted small">vs last week (${hm(p.focused_min)})</span>`}</div></div>
-      <div class="weekkpis">
-        <div><b>${hm(t.study_min)}</b><span>studied</span>${delta(t.study_min, p.study_min, ' min')}</div>
-        <div><b>${t.avg ?? '–'}${t.avg != null ? '%' : ''}</b><span>average attention</span>${delta(t.avg, p.avg, ' pts')}</div>
-        <div><b>${t.sessions}</b><span>sessions</span></div>
-        <div><b>${d.goal.streak} 🔥</b><span>day streak</span></div>
-      </div>
-    </section>
-    <div class="row">
-      <section class="card" style="flex:999 1 480px;min-width:0">
-        <h2 class="display" style="font-size:20px">Day by day</h2>
-        ${dayBars(w.days, 160)}
-        <p class="muted small" style="margin:12px 0 0">${w.best_day ? `Best day: <strong>${esc(w.best_day.label)} ${esc(w.best_day.date)}</strong>, ${hm(w.best_day.focused_min)} focused.` : ''}</p>
-      </section>
-      <section class="card" style="flex:1 1 320px;min-width:0">
-        <h2 class="display" style="font-size:20px">Classes</h2>
-        ${w.classes.length ? hbars(w.classes.map((c) => ({ label: esc(c.name), pct: 100 * c.study_min / maxC, color: 'var(--accent)',
-          value: hm(c.study_min) }))) : '<p class="empty">No classes this week.</p>'}
-      </section>
-    </div>
-    <section class="stats">
-      <div class="card"><span class="eyebrow">Questions written</span><b>${w.questions_new}</b><span class="eyebrow">${w.reviews_understood} understood on review</span></div>
-      <div class="card"><span class="eyebrow">Eye rests</span><b>${t.eye_rests}</b><span class="eyebrow">20-20-20</span></div>
-      <div class="card"><span class="eyebrow">Posture reminders</span><b>${t.posture_alerts}</b>${delta(t.posture_alerts, p.posture_alerts, '', 'down')}</div>
-      <div class="card"><span class="eyebrow">Phone pickups / hour</span><b>${t.pickups_h ?? '–'}</b>${delta(t.pickups_h, p.pickups_h, '', 'down')}</div>
-      <div class="card"><span class="eyebrow">Longest focus</span><b>${t.longest_focus} min</b>${delta(t.longest_focus, p.longest_focus, ' min')}</div>
-    </section>
-  </main>`);
-  $('#printBtn').onclick = () => window.print();
-}
 
 // ---- the session plan (task list) on the start form
 let draftTasks = [];          // [{text, todo_id?}]

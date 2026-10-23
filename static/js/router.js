@@ -2,7 +2,7 @@
 'use strict';
 
 // Where did you come from? Used for the back arrow on pages you opened from a link.
-const PAGE_NAMES = { '#/': 'Home', '#/review': 'Review', '#/classes': 'Classes', '#/ai': 'Ask AI', '#/stats': 'Statistics',
+const PAGE_NAMES = { '#/': 'Home', '#/review': 'Review', '#/classes': 'Classes', '#/ai': 'Ask AI', '#/stats': 'Progress',
   '#/week': 'Weekly report', '#/history': 'History', '#/check': 'Accuracy check', '#/settings': 'Settings', '#/account': 'Account' };
 let prevHash = null, curHash = null, viaMenu = false;
 document.addEventListener('click', (e) => { if (e.target.closest('#sidebar nav a')) viaMenu = true; }, true);
@@ -26,18 +26,19 @@ function route() {
   if (h === '#/classes') return viewClasses();
   if (h.startsWith('#/class/')) return viewClass(h.slice('#/class/'.length));
   if (h.startsWith('#/start/')) return viewHome(h.slice('#/start/'.length));
-  if (h === '#/stats') return viewStats();
+  if (h === '#/stats') return viewProgress();
+  if (h.startsWith('#/stats/')) return viewProgress(h.slice('#/stats/'.length));
   if (h === '#/review') return viewReview();
   if (h === '#/ai') return viewAI();
   if (h.startsWith('#/ai/')) return viewAI(h.slice('#/ai/'.length));
   if (h === '#/settings') return viewSettings();
   if (h === '#/account') return viewAccount();
   if (h.startsWith('#/account/')) return viewAccount(h.slice('#/account/'.length));
-  if (h === '#/week') return viewWeek();
+  if (h === '#/week') { location.replace('#/stats/week'); return undefined; }
   if (h === '#/history') return viewHistory();
   if (h === '#/check') return viewCheckIntro();
   if (h === '#/check/run') return viewCheckRun();
-  if (h.startsWith('#/check/')) return viewCheckResult(h.slice('#/check/'.length));
+  if (h.startsWith('#/check/')) { const [cid, sub] = h.slice('#/check/'.length).split('/'); return viewCheckResult(cid, sub || ''); }
   return viewHome();
 }
 

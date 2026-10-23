@@ -453,6 +453,13 @@ export class LocalServer {
     }
     if (p === '/api/overview' || p === '/api/sessions') return this.overview();
     if (p.startsWith('/api/sessions/')) { const r = this.db.get('sessions', p.split('/').at(-1)); return r ? [r] : [{ error: 'not found' }, 404]; }
+    if (p === '/api/checks') {
+      // every saved accuracy check, newest first (small summaries, for the list and comparisons)
+      const list = this.db.list('checks').sort((x, y) => y.started_at - x.started_at).map((c) => ({
+        id: c.id, started_at: c.started_at, accuracy: c.accuracy, balanced_accuracy: c.balanced_accuracy, n: c.n,
+        personal: !!(c.profile_used && Object.keys(c.profile_used).length) }));
+      return { checks: list };
+    }
     if (p.startsWith('/api/checks/')) { const c = this.db.get('checks', p.split('/').at(-1)); return c ? [c] : [{ error: 'not found' }, 404]; }
     if (p === '/api/profile') return { profile: this.profile() };
     if (p === '/api/reviews') return this.reviews.overview();

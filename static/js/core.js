@@ -167,8 +167,7 @@ const NAV = [
   ['review', '#/review', 'Review'],
   ['classes', '#/classes', 'Classes'],
   ['ai', '#/ai', 'Ask AI'],
-  ['stats', '#/stats', 'Statistics'],
-  ['week', '#/week', 'Weekly report'],
+  ['stats', '#/stats', 'Progress'],
   ['history', '#/history', 'History'],
   ['check', '#/check', 'Accuracy check'],
   ['settings', '#/settings', 'Settings'],
@@ -305,3 +304,37 @@ function statusChip(l) {
 
 // (The Python version needed a "ping" to notice a closed tab. In the browser, closing the tab
 // pauses the lesson directly: see "pagehide" in local-server.js.)
+
+// ---------------------------------------------------------------- (i) explanations
+// info('key') draws a small (i) button. Clicking it opens a short explanation: what this is and why it matters.
+// The texts live in INFO (static/js/insights.js); a plain string can be passed instead of a key.
+function info(key, label = '') {
+  return `<button type="button" class="info" data-info="${esc(key)}" aria-label="What is ${esc(label || 'this')}?">i</button>`;
+}
+(() => {
+  let pop = null, owner = null;
+  const close = () => { if (pop) pop.remove(); pop = null; if (owner) owner.setAttribute('aria-expanded', 'false'); owner = null; };
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-info]');
+    if (!b) { if (pop && !e.target.closest('.infopop')) close(); return; }
+    e.preventDefault(); e.stopPropagation();
+    if (owner === b) { close(); return; }
+    close();
+    const entry = (typeof INFO !== 'undefined' && INFO[b.dataset.info]) || [null, esc(b.dataset.info)];
+    pop = document.createElement('div');
+    pop.className = 'infopop';
+    pop.setAttribute('role', 'dialog');
+    pop.innerHTML = `${entry[0] ? `<b>${entry[0]}</b>` : ''}<div>${entry[1]}</div>`;
+    document.body.appendChild(pop);
+    owner = b;
+    b.setAttribute('aria-expanded', 'true');
+    const r = b.getBoundingClientRect(), w = pop.offsetWidth;
+    const left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), window.innerWidth - w - 12);
+    const below = r.bottom + 8 + pop.offsetHeight < window.innerHeight;
+    pop.style.left = `${left + window.scrollX}px`;
+    pop.style.top = `${(below ? r.bottom + 8 : r.top - pop.offsetHeight - 8) + window.scrollY}px`;
+  }, true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  window.addEventListener('hashchange', close);
+  window.addEventListener('resize', close);
+})();
