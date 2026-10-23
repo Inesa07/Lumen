@@ -205,7 +205,8 @@ async function viewCheckResult(id) {
     ${r.diagnostics ? `<section class="card" style="overflow-x:auto">
       <h2 class="display" style="font-size:20px">What the camera measured</h2>
       <p class="muted" style="margin:0 0 14px;font-size:14px;line-height:1.5">Typical (median) values in each step, compared with your normal position.
-        <span style="color:var(--accent)">Amber</span> = beyond the limit, so Lumen calls it "looking away". Raw data for every moment: <code>checks/${esc(r.id)}_raw.csv</code></p>
+        <span style="color:var(--accent)">Amber</span> = beyond the limit, so Lumen calls it "looking away".
+        ${r.csv ? '<button class="linkbtn" id="csvBtn">Download the raw data (CSV)</button>' : ''}</p>
       <table class="cm diag">
         <tr><th>step</th><th>truth</th><th>face seen</th><th>head turn°<br><small>limit ${r.limits.yaw}</small></th><th>head tilt°<br><small>limit ${r.limits.pitch}</small></th>
           <th>eyes side<br><small>limit ${r.limits.gx}</small></th><th>eyes up/down<br><small>limit ${r.limits.gy}</small></th><th>eyes open</th><th>phone</th></tr>
@@ -221,6 +222,13 @@ async function viewCheckResult(id) {
     await api('/api/profile', { from_check: r.id });
     toast('Saved. Run the check again to verify.');
     ab.textContent = 'Applied'; ab.disabled = true;
+  };
+  const cb = $('#csvBtn');
+  if (cb) cb.onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([r.csv], { type: 'text/csv' }));
+    a.download = `lumen-check-${r.id}.csv`;
+    a.click();
   };
   const rb = $('#resetBtn');
   if (rb) rb.onclick = async () => { await api('/api/profile', { reset: true }); toast('Back to default settings'); viewCheckResult(id); };
