@@ -142,7 +142,7 @@ async function boot() {
     });
   }
 
-  for (const name of PAGE_SCRIPTS) await loadScript(`static/js/${name}.js`);
+  for (const name of PAGE_SCRIPTS) await loadScript(`static/js/${name}.js?v=${new URL(import.meta.url).searchParams.get('v') || ''}`);
   document.getElementById('boot').remove();
 }
 
