@@ -10,7 +10,13 @@ const THEMES = [
   ['ocean', 'Ocean', '#08131F', '#0E1C2C'],
   ['forest', 'Forest', '#0B120F', '#121C17'],
   ['plum', 'Plum', '#120D18', '#1B1424'],
-  ['paper', 'Paper (light)', '#F5F3EE', '#FFFFFF'],
+  ['aurora', 'Aurora', '#140F2E', '#1F1844'],
+  ['paper', 'Paper', '#F5F3EE', '#FFFFFF'],
+  ['sky', 'Sky', '#E8F2FF', '#FFFFFF'],
+  ['blossom', 'Blossom', '#FFEEF4', '#FFFFFF'],
+  ['mint', 'Mint', '#E6F8EF', '#FFFFFF'],
+  ['lavender', 'Lavender', '#F0EBFF', '#FFFFFF'],
+  ['sunny', 'Sunny', '#FFF6DD', '#FFFFFF'],
 ];
 const ACCENTS = [['#F2B544', 'Amber'], ['#4CC9B0', 'Mint'], ['#FF8A70', 'Coral'], ['#9B8CFF', 'Violet'], ['#5AA9FF', 'Sky'], ['#F06BA8', 'Rose']];
 let LOOK = { theme: 'midnight', accent: '#F2B544' };
