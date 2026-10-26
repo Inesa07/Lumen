@@ -35,14 +35,14 @@
 :root[data-theme="fireflies"] { --bg: #08111F; --sidebar: #060D18; --surface: #0F1B30; --surface-2: #14233C; --surface-3: #192A47;
   --line: #1D2C47; --line-2: #2F4566; --track: #1C2B45; --bar: #2B3F60; --text: #EEF3FF; --muted: #A3B2CF; --soft: #CCD6EA; --slate: #6C7FA3; --drift: #B0BEDA; }
 /* colourful dark theme */
-:root[data-theme="aurora"] { --bg: #120D2A; --sidebar: #0E0A22; --surface: #1C1640; --surface-2: #241C4E; --surface-3: #2B2259;
+:root[data-theme="aurora"], :root[data-theme="space"] { --bg: #120D2A; --sidebar: #0E0A22; --surface: #1C1640; --surface-2: #241C4E; --surface-3: #2B2259;
   --line: #2F2660; --line-2: #4A3F85; --track: #2C2458; --bar: #42387A; --text: #F3F0FF; --muted: #B7AEDD; --soft: #DAD3F5; --slate: #8076B0; --drift: #C2B9E6; }
 /* bright light themes: everything shared with Paper, only the tint differs */
-:root[data-theme="sky"], :root[data-theme="blossom"], :root[data-theme="mint"], :root[data-theme="lavender"], :root[data-theme="sunny"] {
+:root[data-theme="sky"], :root[data-theme="clouds"], :root[data-theme="blossom"], :root[data-theme="mint"], :root[data-theme="lavender"], :root[data-theme="sunny"] {
   --surface: #FFFFFF; --text: #1C1D24; --muted: #5F6472; --soft: #3A3D48; --slate: #8A8E9A; --drift: #737885;
   --teal: #179C80; --coral: #E0603F; --accent-ink: #1C1D21; --shadow: rgba(40, 45, 80, .16);
   --accent-text: color-mix(in srgb, var(--accent) 50%, var(--text)); }
-:root[data-theme="sky"] { --bg: #E8F2FF; --sidebar: #DCEBFF; --surface-2: #F1F7FF; --surface-3: #E6F0FD; --line: #D3E2F5; --line-2: #B5CBE6; --track: #DCE8F7; --bar: #BED2EA; }
+:root[data-theme="sky"], :root[data-theme="clouds"] { --bg: #E8F2FF; --sidebar: #DCEBFF; --surface-2: #F1F7FF; --surface-3: #E6F0FD; --line: #D3E2F5; --line-2: #B5CBE6; --track: #DCE8F7; --bar: #BED2EA; }
 :root[data-theme="blossom"] { --bg: #FFEEF4; --sidebar: #FFE2EC; --surface-2: #FFF4F8; --surface-3: #FDEAF1; --line: #F6D6E2; --line-2: #E8B8CA; --track: #F8DEE8; --bar: #EDC1D2; }
 :root[data-theme="mint"] { --bg: #E6F8EF; --sidebar: #D8F2E5; --surface-2: #F0FBF5; --surface-3: #E3F5EC; --line: #CDEBDC; --line-2: #A9D7C0; --track: #D6EFE2; --bar: #B4DDC8; }
 :root[data-theme="lavender"] { --bg: #F0EBFF; --sidebar: #E6DEFF; --surface-2: #F6F2FF; --surface-3: #EEE8FE; --line: #DDD3F7; --line-2: #C2B3EC; --track: #E4DCF9; --bar: #CBBDF0; }
@@ -50,7 +50,7 @@
 
 /* a colour palette used in every theme, so the app is never all one dark tone */
 :root { --c-blue: #5AA9FF; --c-violet: #9B8CFF; --c-pink: #F06BA8; --c-green: #3FCF8E; --c-orange: #FF9F5A; --c-yellow: #F2C14E; }
-:root[data-theme="paper"], :root[data-theme="sky"], :root[data-theme="blossom"], :root[data-theme="mint"], :root[data-theme="lavender"], :root[data-theme="sunny"] {
+:root[data-theme="paper"], :root[data-theme="sky"], :root[data-theme="clouds"], :root[data-theme="blossom"], :root[data-theme="mint"], :root[data-theme="lavender"], :root[data-theme="sunny"] {
   --c-blue: #2F7FE0; --c-violet: #7466E8; --c-pink: #D9468A; --c-green: #1FA56B; --c-orange: #E57A2E; --c-yellow: #C99A12; }
 
 * { box-sizing: border-box; }
@@ -455,7 +455,7 @@ html { scrollbar-gutter: stable; }   /* page width never changes when a scrollba
 
 /* ---------- mood ---------- */
 :root { --violet: #A58CFF; --sky: #5AA9FF; }
-:root[data-theme="paper"], :root[data-theme="sky"], :root[data-theme="blossom"], :root[data-theme="mint"], :root[data-theme="lavender"], :root[data-theme="sunny"] { --violet: #7B61E0; --sky: #2F7FD8; }
+:root[data-theme="paper"], :root[data-theme="sky"], :root[data-theme="clouds"], :root[data-theme="blossom"], :root[data-theme="mint"], :root[data-theme="lavender"], :root[data-theme="sunny"] { --violet: #7B61E0; --sky: #2F7FD8; }
 .moodstrip { display: flex; gap: 3px; height: 12px; margin-top: 14px; }
 .moodstrip i { flex: 1; border-radius: 3px; min-width: 2px; }
 .moodbar { display: flex; gap: 3px; height: 18px; border-radius: 9px; overflow: hidden; margin-top: 8px; }
@@ -1384,3 +1384,78 @@ p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px
   .journey-track { margin-right: 26px; }
 }
 @media (max-width: 640px) { .lumi-dock .lumi-btn svg { width: 52px; height: 52px; } .lumi-bubble { margin-bottom: 26px; font-size: 12.5px; } }
+
+
+/* ---------------------------------------------------------------- background scenes */
+/* each scene: a picture made of gradients on the page, plus slowly moving bits (.scene-bg) */
+:root[data-theme="fireflies"] body { background:
+  radial-gradient(900px 500px at 80% 110%, rgba(190, 220, 90, .10), transparent 70%),
+  radial-gradient(700px 400px at 10% -10%, rgba(90, 140, 255, .12), transparent 70%), linear-gradient(180deg, #0A1528, #07101D); background-attachment: fixed; }
+:root[data-theme="space"] body { background:
+  radial-gradient(600px 400px at 85% 15%, rgba(240, 107, 168, .16), transparent 70%),
+  radial-gradient(800px 500px at 15% 80%, rgba(90, 169, 255, .14), transparent 70%), linear-gradient(180deg, #120D2A, #0B0820); background-attachment: fixed; }
+:root[data-theme="ocean"] body { background:
+  radial-gradient(900px 400px at 50% -15%, rgba(120, 220, 255, .18), transparent 70%), linear-gradient(180deg, #0A2238, #061424 60%, #040E1A); background-attachment: fixed; }
+:root[data-theme="forest"] body { background:
+  radial-gradient(800px 400px at 50% 115%, rgba(80, 160, 90, .16), transparent 70%),
+  radial-gradient(600px 300px at 20% 0%, rgba(200, 230, 150, .07), transparent 70%), linear-gradient(180deg, #0D1A14, #08120D); background-attachment: fixed; }
+:root[data-theme="clouds"] body { background: linear-gradient(180deg, #CFE6FF, #E9F3FF 45%, #F6FAFF); background-attachment: fixed; }
+:root[data-theme="blossom"] body { background:
+  radial-gradient(700px 400px at 90% 0%, rgba(255, 170, 200, .35), transparent 70%), linear-gradient(180deg, #FFF0F5, #FFF7FA); background-attachment: fixed; }
+:root[data-theme="clouds"] .sidebar, :root[data-theme="blossom"] .sidebar { background: color-mix(in srgb, var(--sidebar) 80%, transparent); backdrop-filter: blur(8px); }
+
+.scene-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.scene-bg i { position: absolute; left: var(--x); top: var(--y); display: block; }
+/* fireflies (also the green ones in the forest) */
+.scene-bg .ff { width: calc(5px * var(--s)); height: calc(5px * var(--s)); border-radius: 50%; background: #F4F07A;
+  box-shadow: 0 0 10px 3px rgba(244, 240, 122, .55); animation: ffDrift var(--d) ease-in-out infinite; animation-delay: var(--dl); }
+.scene-bg .ff.green { background: #C8F27A; box-shadow: 0 0 10px 3px rgba(170, 240, 110, .5); }
+/* space */
+.scene-bg .star { width: calc(2.4px * var(--s)); height: calc(2.4px * var(--s)); border-radius: 50%; background: #fff; animation: twinkle3 var(--d) ease-in-out infinite; animation-delay: var(--dl); }
+@keyframes twinkle3 { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
+.scene-bg .shoot { top: calc(var(--y) * .4); width: 120px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255,255,255,.9), transparent);
+  transform: rotate(-25deg); opacity: 0; animation: shoot calc(var(--d) * 1.6) linear infinite; animation-delay: var(--dl); }
+@keyframes shoot { 0%, 92% { opacity: 0; translate: 0 0; } 93% { opacity: 1; } 100% { opacity: 0; translate: -340px 160px; } }
+/* ocean */
+.scene-bg .bubble { top: 105vh; width: calc(12px * var(--s)); height: calc(12px * var(--s)); border-radius: 50%; border: 1.5px solid rgba(170, 225, 255, .45);
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 60%); animation: rise var(--d) linear infinite; animation-delay: var(--dl); }
+@keyframes rise { from { transform: translate(0, 0); } 50% { transform: translate(18px, -60vh); } to { transform: translate(-6px, -120vh); } }
+.scene-bg .ray { top: -10vh; width: 120px; height: 90vh; background: linear-gradient(180deg, rgba(150, 220, 255, .10), transparent);
+  transform: skewX(-18deg); animation: rayMove calc(var(--d) * 1.5) ease-in-out infinite alternate; animation-delay: var(--dl); }
+@keyframes rayMove { from { opacity: .3; translate: -30px 0; } to { opacity: .8; translate: 30px 0; } }
+/* forest leaves and blossom petals: falling and swaying */
+.scene-bg .leaf, .scene-bg .petal { top: -6vh; width: calc(14px * var(--s)); height: calc(9px * var(--s)); animation: fall2 calc(var(--d) * 1.4) linear infinite; animation-delay: var(--dl); }
+.scene-bg .leaf { border-radius: 0 80% 0 80%; background: linear-gradient(135deg, #6FBF5A, #3E8E41); opacity: .55; }
+.scene-bg .petal { border-radius: 70% 0 70% 0; background: linear-gradient(135deg, #FFC2D6, #F48FB1); opacity: .8; }
+@keyframes fall2 { from { transform: translate(0, 0) rotate(0); } 25% { transform: translate(40px, 28vh) rotate(90deg); } 50% { transform: translate(-20px, 56vh) rotate(180deg); }
+  75% { transform: translate(30px, 84vh) rotate(270deg); } to { transform: translate(0, 112vh) rotate(360deg); } }
+/* clouds */
+.scene-bg .cloud { top: calc(var(--y) * .7); left: -30vw; width: calc(240px * var(--s)); height: calc(76px * var(--s)); border-radius: 999px; background: #fff;
+  filter: blur(4px) drop-shadow(0 8px 14px rgba(90, 140, 200, .25)); box-shadow: 60px -22px 0 12px #fff, -50px -12px 0 2px #fff;
+  animation: drift calc(var(--d) * 5) linear infinite; animation-delay: calc(var(--dl) * 6); }
+@keyframes drift { to { transform: translateX(160vw); } }
+@media (prefers-reduced-motion: reduce) { .scene-bg { display: none; } }
+
+/* the compact picker: round scene buttons, colour dots */
+.scenes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; max-width: 560px; }
+.scenes.compact { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.scene-opt { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px; border: 0; background: none; color: var(--text); }
+.scene-dot { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; font-size: 22px;
+  border: 2px solid var(--line-2); box-shadow: inset 0 0 0 3px rgba(0,0,0,.08); transition: transform .15s ease, border-color .15s; }
+.scenes.compact .scene-dot { width: 44px; height: 44px; font-size: 18px; }
+.scene-opt:hover .scene-dot { transform: scale(1.06); }
+.scene-opt.on .scene-dot { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.scene-name { font-size: 12px; color: var(--muted); }
+.scene-opt.on .scene-name { color: var(--text); font-weight: 600; }
+.prev-fireflies { background: radial-gradient(circle at 70% 75%, rgba(244,240,122,.5) 0 8%, transparent 9%), radial-gradient(circle at 30% 40%, rgba(244,240,122,.6) 0 6%, transparent 7%), linear-gradient(180deg, #13244A, #07101D); }
+.prev-space { background: radial-gradient(circle at 70% 30%, rgba(240,107,168,.5), transparent 50%), linear-gradient(180deg, #2A1F55, #0B0820); }
+.prev-ocean { background: linear-gradient(180deg, #1F6FA8, #0A2238 70%); }
+.prev-forest { background: linear-gradient(180deg, #2E5A3A, #0D1A14 75%); }
+.prev-clouds { background: linear-gradient(180deg, #9FD0FF, #EAF4FF); }
+.prev-blossom { background: linear-gradient(180deg, #FFB3CC, #FFF0F5); }
+.accents .acc { padding: 0; width: 34px; min-height: 34px; justify-content: center; }
+.accents .acc span { width: 20px; height: 20px; }
+.look-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 18px; }
+.motion-sw { display: inline-flex; align-items: center; gap: 10px; border: 0; background: none; color: var(--text); font-size: 13px; padding: 0; }
+.motion-sw .switch { pointer-events: none; transform: scale(.85); }
+@media (max-width: 640px) { .scenes:not(.compact) { grid-template-columns: repeat(3, 1fr); } }

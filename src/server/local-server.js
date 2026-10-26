@@ -18,8 +18,9 @@ import { CameraVision } from '../vision/camera.js';
 import { FakeVision } from '../vision/fake.js';
 
 export const DEFAULT_SETTINGS = { daily_goal_min: 60, streak_min: 10, rhythm: null, mood_sens: 'normal', eye_rest: true, posture: true, blink: true,
-  theme: 'midnight', accent: '#F2B544' };
-const THEMES = ['midnight', 'graphite', 'ocean', 'forest', 'plum', 'paper'];
+  theme: 'fireflies', accent: '#F2B544', motion: true };
+// background scenes (older theme names are mapped to the closest scene in the browser)
+const THEMES = ['fireflies', 'space', 'ocean', 'forest', 'clouds', 'blossom'];
 const ACCENTS = ['#F2B544', '#4CC9B0', '#FF8A70', '#9B8CFF', '#5AA9FF', '#F06BA8'];
 const ABSENT_SEC = 10 * 60;           // nobody in front of the camera for 10 minutes -> pause
 const DRAFT_EVERY_MS = 20000;         // a running lesson is saved as a draft every 20 s (crash / closed tab)
@@ -106,6 +107,7 @@ export class LocalServer {
     if ('rhythm' in nw) cur.rhythm = cleanRhythm(nw.rhythm);
     if (['low', 'normal', 'high'].includes(nw.mood_sens)) cur.mood_sens = nw.mood_sens;
     if (THEMES.includes(nw.theme)) cur.theme = nw.theme;
+    if (typeof nw.motion === 'boolean') cur.motion = nw.motion;
     if (ACCENTS.includes(String(nw.accent || '').toUpperCase())) cur.accent = String(nw.accent).toUpperCase();
     this.db.setValue('settings', cur);
     return cur;

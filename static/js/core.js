@@ -3,72 +3,88 @@
 
 const $ = (sel) => document.querySelector(sel);
 
-// ---- colours: background theme + accent colour (chosen in Settings)
-const THEMES = [
-  ['midnight', 'Midnight', '#0E1016', '#161A23'],
-  ['graphite', 'Graphite', '#111213', '#1A1B1D'],
-  ['ocean', 'Ocean', '#08131F', '#0E1C2C'],
-  ['forest', 'Forest', '#0B120F', '#121C17'],
-  ['plum', 'Plum', '#120D18', '#1B1424'],
-  ['aurora', 'Aurora', '#140F2E', '#1F1844'],
-  ['fireflies', 'Fireflies', '#0A1424', '#12203A'],
-  ['paper', 'Paper', '#F5F3EE', '#FFFFFF'],
-  ['sky', 'Sky', '#E8F2FF', '#FFFFFF'],
-  ['blossom', 'Blossom', '#FFEEF4', '#FFFFFF'],
-  ['mint', 'Mint', '#E6F8EF', '#FFFFFF'],
-  ['lavender', 'Lavender', '#F0EBFF', '#FFFFFF'],
-  ['sunny', 'Sunny', '#FFF6DD', '#FFFFFF'],
+// ---- look: a background scene + an accent colour (chosen in the 🎨 popover or in Settings)
+// Each scene is a colour theme (CSS variables in style.css) plus a few things moving slowly
+// behind the page: fireflies, stars, bubbles, leaves, clouds or petals.
+const SCENES = [
+  ['fireflies', 'Fireflies', '🌌'], ['space', 'Space', '✨'], ['ocean', 'Ocean', '🐠'],
+  ['forest', 'Forest', '🌲'], ['clouds', 'Clouds', '☁️'], ['blossom', 'Blossom', '🌸'],
 ];
+const OLD_THEME = { midnight: 'space', graphite: 'space', plum: 'space', aurora: 'space', paper: 'clouds', sky: 'clouds',
+  mint: 'clouds', sunny: 'clouds', lavender: 'blossom' };
 const ACCENTS = [['#F2B544', 'Amber'], ['#4CC9B0', 'Mint'], ['#FF8A70', 'Coral'], ['#9B8CFF', 'Violet'], ['#5AA9FF', 'Sky'], ['#F06BA8', 'Rose']];
-let LOOK = { theme: 'midnight', accent: '#F2B544' };
-function applyTheme(theme, accent) {
+let LOOK = { theme: 'fireflies', accent: '#F2B544', motion: true };
+
+// the moving things of each scene: how many, and the CSS class that animates them
+const SCENE_BITS = {
+  fireflies: [['ff', 22]], space: [['star', 70], ['shoot', 3]], ocean: [['bubble', 20], ['ray', 4]],
+  forest: [['ff green', 14], ['leaf', 9]], clouds: [['cloud', 7]], blossom: [['petal', 18]],
+};
+function drawScene() {
+  let el = document.getElementById('sceneBg');
+  if (!LOOK.motion) { if (el) el.remove(); return; }
+  if (el && el.dataset.scene === LOOK.theme) return;
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sceneBg'; el.setAttribute('aria-hidden', 'true');
+    document.body.prepend(el);
+  }
+  el.dataset.scene = LOOK.theme;
+  el.className = `scene-bg scene-${LOOK.theme}`;
+  let k = 0;
+  el.innerHTML = (SCENE_BITS[LOOK.theme] || []).map(([cls, n]) => Array.from({ length: n }, () => {
+    k += 1;
+    const r = (m) => { const v = Math.sin(k * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // stable pseudo-random 0..1
+    return `<i class="${cls}" style="--x:${(r(1) * 100).toFixed(1)}vw;--y:${(r(2) * 100).toFixed(1)}vh;--d:${(8 + r(3) * 14).toFixed(1)}s;--dl:-${(r(4) * 20).toFixed(1)}s;--s:${(0.6 + r(5) * 0.9).toFixed(2)}"></i>`;
+  }).join('')).join('');
+}
+function applyTheme(theme, accent, motion) {
   const root = document.documentElement;
-  LOOK = { theme: theme || LOOK.theme, accent: accent || LOOK.accent };
-  if (LOOK.theme !== 'midnight') root.dataset.theme = LOOK.theme; else delete root.dataset.theme;
+  theme = OLD_THEME[theme] || theme;
+  if (theme && !SCENES.some(([key]) => key === theme)) theme = 'fireflies';
+  LOOK = { theme: theme || LOOK.theme, accent: accent || LOOK.accent, motion: typeof motion === 'boolean' ? motion : LOOK.motion };
+  root.dataset.theme = LOOK.theme;
   root.style.setProperty('--accent', LOOK.accent);
-  // the Fireflies theme has little lights drifting behind the page
-  let ff = document.getElementById('ffBg');
-  if (LOOK.theme === 'fireflies' && !ff) {
-    ff = document.createElement('div');
-    ff.id = 'ffBg'; ff.className = 'ff-bg'; ff.setAttribute('aria-hidden', 'true');
-    ff.innerHTML = Array.from({ length: 22 }, (_, i) => `<i style="--x:${(i * 47) % 100}vw;--y:${(i * 31) % 100}vh;--d:${9 + (i % 7) * 2}s;--dl:-${i * 1.7}s;--s:${3 + (i % 3)}px"></i>`).join('');
-    document.body.prepend(ff);
-  } else if (LOOK.theme !== 'fireflies' && ff) ff.remove();
+  drawScene();
   try { localStorage.setItem('lumen.look', JSON.stringify(LOOK)); } catch { /* fine */ }
-  // mark the chosen swatches everywhere (sidebar popover + Settings) without redrawing the page
+  // mark the chosen buttons everywhere (sidebar popover + Settings) without redrawing the page
   document.querySelectorAll('[data-look-theme]').forEach((b) => {
     b.classList.toggle('on', b.dataset.lookTheme === LOOK.theme); b.setAttribute('aria-pressed', String(b.dataset.lookTheme === LOOK.theme));
   });
   document.querySelectorAll('[data-look-accent]').forEach((b) => {
     b.classList.toggle('on', b.dataset.lookAccent === LOOK.accent); b.setAttribute('aria-pressed', String(b.dataset.lookAccent === LOOK.accent));
   });
+  document.querySelectorAll('[data-look-motion]').forEach((b) => { b.classList.toggle('on', LOOK.motion); b.setAttribute('aria-checked', String(LOOK.motion)); });
 }
 // Change the look: instantly on screen, then tell the server in the background (no waiting, no redraw).
 function setLook(part) {
-  applyTheme(part.theme, part.accent);
+  applyTheme(part.theme, part.accent, part.motion);
   api('/api/settings', part).catch(() => {});
 }
-// one click handler for every swatch on the page (event delegation)
+// one click handler for every look button on the page (event delegation)
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-look-theme]'), a = e.target.closest('[data-look-accent]');
-  if (t) setLook({ theme: t.dataset.lookTheme });
+  const th = e.target.closest('[data-look-theme]'), a = e.target.closest('[data-look-accent]'), m = e.target.closest('[data-look-motion]');
+  if (th) setLook({ theme: th.dataset.lookTheme });
   if (a) setLook({ accent: a.dataset.lookAccent });
+  if (m) setLook({ motion: !LOOK.motion });
 });
 function themeSwatches(small = false) {
-  return `<div class="${small ? 'themes mini' : 'themes'}">${THEMES.map(([key, name, bg, surf]) => `<button type="button" class="theme-opt${LOOK.theme === key ? ' on' : ''}" data-look-theme="${key}" aria-pressed="${LOOK.theme === key}" title="${name}">
-      <span class="sw" style="background:${bg}"><i style="background:${surf}"></i><i style="background:${surf};width:40%"></i><b></b></span>
-      <span>${name}</span></button>`).join('')}</div>`;
+  return `<div class="scenes${small ? ' compact' : ''}">${SCENES.map(([key, name, emo]) => `<button type="button" class="scene-opt${LOOK.theme === key ? ' on' : ''}" data-look-theme="${key}" aria-pressed="${LOOK.theme === key}" title="${name}">
+      <span class="scene-dot prev-${key}">${emo}</span><span class="scene-name">${name}</span></button>`).join('')}</div>`;
+}
+function motionSwitch() {
+  return `<button type="button" class="motion-sw${LOOK.motion ? ' on' : ''}" data-look-motion role="switch" aria-checked="${LOOK.motion}"><span class="switch${LOOK.motion ? ' on' : ''}"><span></span></span><span>Moving background</span></button>`;
 }
 function langButtons() {
   return `<div class="langs" data-noi18n>${LANGS.map(([k, name]) => `<button type="button" class="langbtn${k === LANG ? ' on' : ''}" data-lang="${k}" aria-pressed="${k === LANG}">${name}</button>`).join('')}</div>`;
 }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (b && b.dataset.lang !== LANG) setLang(b.dataset.lang); });
 function accentSwatches() {
-  return `<div class="accents">${ACCENTS.map(([hex, name]) => `<button type="button" class="acc${LOOK.accent === hex ? ' on' : ''}" data-look-accent="${hex}" style="--c:${hex}" aria-pressed="${LOOK.accent === hex}" title="${name}"><span></span><em>${name}</em></button>`).join('')}</div>`;
+  return `<div class="accents">${ACCENTS.map(([hex, name]) => `<button type="button" class="acc${LOOK.accent === hex ? ' on' : ''}" data-look-accent="${hex}" style="--c:${hex}" aria-pressed="${LOOK.accent === hex}" title="${name}" aria-label="${name}"><span></span></button>`).join('')}</div>`;
 }
 // apply the remembered look immediately (no flash of the default colours), then sync with the server
-try { const look = JSON.parse(localStorage.getItem('lumen.look') || 'null'); if (look) applyTheme(look.theme, look.accent); } catch { /* fine */ }
-api('/api/settings').then((st) => applyTheme(st.theme, st.accent)).catch(() => {});
+try { const look = JSON.parse(localStorage.getItem('lumen.look') || 'null'); applyTheme(look ? look.theme : 'fireflies', look ? look.accent : null, look ? look.motion : true); } catch { applyTheme('fireflies'); }
+api('/api/settings').then((st) => applyTheme(st.theme, st.accent, st.motion)).catch(() => {});
 
 // ---- mood (facial expression)
 const MOOD = {
@@ -211,6 +227,7 @@ function buildSidebar() {
       <div class="lookwrap"><button class="pill lookbtn" id="lookBtn" type="button" aria-expanded="false" aria-controls="lookPop">🎨 Colours</button>
         <div class="lookpop card" id="lookPop" hidden><div class="eyebrow">Background</div>${themeSwatches(true)}
           <div class="eyebrow" style="margin-top:12px">Accent</div>${accentSwatches()}
+          <div style="margin-top:10px">${motionSwitch()}</div>
           <div class="eyebrow" style="margin-top:12px">Language</div>${langButtons()}</div></div>
       <a class="pill parentlink" href="#/parent">👪 Parents</a>
       <div class="pill" title="The camera is analysed inside your browser. Video never leaves your device.">${LOCK}Video stays on your device</div></div>`;

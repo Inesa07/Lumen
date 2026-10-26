@@ -646,11 +646,9 @@ async function viewSettings() {
   <main class="wrap narrow" style="display:flex;flex-direction:column;gap:20px">
     <section class="card">
       <h2 style="margin:0 0 4px;font-size:17px">Appearance</h2>
-      <p class="muted small" style="margin:0 0 14px">Background theme</p>
+      <p class="muted small" style="margin:0 0 12px">Background scene</p>
       ${themeSwatches()}
-      <p class="muted small" style="margin:18px 0 10px">Accent colour <span class="muted">(buttons, highlights, the attention ring)</span></p>
-      ${accentSwatches()}
-      <p class="muted small" style="margin:14px 0 0">My suggestion: <strong>Midnight + Amber</strong> for evening study (calm, little blue light), <strong>Paper + Sky</strong> for bright daytime rooms.</p>
+      <div class="look-row"><div><p class="muted small" style="margin:0 0 8px">Accent colour</p>${accentSwatches()}</div>${motionSwitch()}</div>
     </section>
     <section class="card setrow">
       <div><h2 style="margin:0 0 4px;font-size:17px">Language</h2><p class="muted small" style="margin:0">Menu, Home, lessons and Lumi. Other pages are being translated step by step.</p></div>
