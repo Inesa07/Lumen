@@ -8,7 +8,7 @@ const $ = (sel) => document.querySelector(sel);
 // behind the page: fireflies, stars, bubbles, leaves, clouds or petals.
 const SCENES = [
   ['fireflies', 'Fireflies', '🌌'], ['space', 'Space', '✨'], ['ocean', 'Ocean', '🐠'],
-  ['forest', 'Forest', '🌲'], ['clouds', 'Clouds', '☁️'], ['blossom', 'Blossom', '🌸'],
+  ['forest', 'Forest', '🌲'], ['clouds', 'Sky', '🎈'], ['blossom', 'Blossom', '🌸'],
 ];
 const OLD_THEME = { midnight: 'space', graphite: 'space', plum: 'space', aurora: 'space', paper: 'clouds', sky: 'clouds',
   mint: 'clouds', sunny: 'clouds', lavender: 'blossom' };
@@ -18,23 +18,76 @@ let LOOK = { theme: 'fireflies', accent: '#F2B544', motion: true };
 // the moving things of each scene: how many, and the CSS class that animates them
 const SCENE_BITS = {
   fireflies: [['ff', 22]], space: [['star', 70], ['shoot', 3]], ocean: [['bubble', 20], ['ray', 4]],
-  forest: [['ff green', 14], ['leaf', 9]], clouds: [['cloud', 7]], blossom: [['petal', 18]],
+  forest: [['ff green', 14], ['leaf', 9]], blossom: [['petal', 18]],     // clouds: see skySceneHTML
 };
+const rnd = (k, m) => { const v = Math.sin(k * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // stable pseudo-random 0..1
+
+// The sky scene is drawn in SVG: fluffy clouds (shapes blurred and torn by a noise filter) in a far
+// and a near layer, and hot-air balloons. Near things are bigger and move faster (parallax).
+function cloudSVG(k, w) {
+  const blobs = Array.from({ length: 6 }, (_, i) => {
+    const x = 40 + i * 42 + rnd(k, i + 10) * 20, r = 34 + rnd(k, i + 20) * 30 - Math.abs(i - 2.5) * 6;
+    return [x, 120 - r * 0.55, r];
+  });
+  return `<svg class="cloud-svg" width="${w}" viewBox="0 0 340 170" aria-hidden="true">
+    <defs><filter id="cf${k}" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4" seed="${k * 7}"/>
+      <feDisplacementMap in="SourceGraphic" scale="38"/><feGaussianBlur stdDeviation="2.2"/></filter>
+      <linearGradient id="cg${k}" x1="0" y1="0" x2="0" y2="1"><stop offset=".35" stop-color="#FFFFFF"/><stop offset="1" stop-color="#CADBEE"/></linearGradient></defs>
+    <g filter="url(#cf${k})">
+      <ellipse cx="170" cy="130" rx="150" ry="26" fill="#C3D4E8"/>
+      ${blobs.map(([x, y, r]) => `<circle cx="${x.toFixed(0)}" cy="${(y + 8).toFixed(0)}" r="${r.toFixed(0)}" fill="#C9D9EC"/>`).join('')}
+      ${blobs.map(([x, y, r]) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(r * 0.94).toFixed(0)}" fill="url(#cg${k})"/>`).join('')}
+    </g></svg>`;
+}
+function balloonSVG(k, w, colors) {
+  const [a, b] = colors;
+  const gores = Array.from({ length: 6 }, (_, i) => `<path d="M${16 + i * 13} 6 Q${10 + i * 13} 50 ${30 + i * 8} 92 L${36 + i * 8} 92 Q${26 + i * 13} 50 ${29 + i * 13} 6Z" fill="${i % 2 ? b : a}"/>`).join('');
+  return `<svg class="balloon-svg" width="${w}" viewBox="0 0 100 150" aria-hidden="true">
+    <defs><clipPath id="bc${k}"><path d="M50 4C22 4 6 24 6 46c0 22 18 36 28 48 4 5 6 8 7 12h18c1-4 3-7 7-12 10-12 28-26 28-48C94 24 78 4 50 4Z"/></clipPath>
+      <radialGradient id="bh${k}" cx=".32" cy=".28" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></radialGradient></defs>
+    <g clip-path="url(#bc${k})"><rect width="100" height="110" fill="${a}"/>${gores}<rect y="88" width="100" height="22" fill="${b}"/><rect width="100" height="110" fill="url(#bh${k})"/></g>
+    <path d="M41 106L43 124M59 106L57 124M46 106L46 124M54 106L54 124" stroke="#5B4636" stroke-width="1.1"/>
+    <rect x="41" y="123" width="18" height="14" rx="2.5" fill="#9A6B3F"/><rect x="41" y="123" width="18" height="4" rx="2" fill="#7A522E"/>
+  </svg>`;
+}
+const BALLOONS = [['#E8505B', '#FFD166'], ['#3A86FF', '#F1F5FF'], ['#8E5CF7', '#FF9F1C'], ['#2EC4B6', '#FF6B9A']];
+function skySceneHTML() {
+  const far = Array.from({ length: 5 }, (_, i) => {
+    const k = i + 1;
+    return `<div class="sky-cloud far" style="--y:${(4 + rnd(k, 1) * 40).toFixed(1)}vh;--d:${(200 + rnd(k, 2) * 120).toFixed(0)}s;--dl:-${(rnd(k, 3) * 300).toFixed(0)}s">${cloudSVG(k, 170 + rnd(k, 4) * 90)}</div>`;
+  }).join('');
+  const near = Array.from({ length: 5 }, (_, i) => {
+    const k = i + 11;
+    return `<div class="sky-cloud near" style="--y:${(20 + rnd(k, 1) * 62).toFixed(1)}vh;--d:${(110 + rnd(k, 2) * 80).toFixed(0)}s;--dl:-${(rnd(k, 3) * 190).toFixed(0)}s">${cloudSVG(k, 300 + rnd(k, 4) * 160)}</div>`;
+  }).join('');
+  const balloons = BALLOONS.slice(0, 3).map((c, i) => {
+    const k = i + 31;
+    const near2 = i === 0;
+    return `<div class="sky-balloon${near2 ? ' near' : ''}" style="--y:${(10 + rnd(k, 1) * 50).toFixed(1)}vh;--d:${(near2 ? 150 : 230 + rnd(k, 2) * 80).toFixed(0)}s;--dl:-${(rnd(k, 3) * 220).toFixed(0)}s">
+      <div class="bob" style="--b:${(5 + rnd(k, 4) * 4).toFixed(1)}s">${balloonSVG(k, near2 ? 74 : 36 + rnd(k, 5) * 16, c)}</div></div>`;
+  }).join('');
+  // a small V of birds: [x, y] offsets from the leader
+  const birds = [[0, 0], [-22, 12], [-22, -12], [-44, 22], [-44, -22]].map(([x, y], i) => `<svg class="bird" style="left:${x}px;top:${y}px;--dl:-${(i * 0.17).toFixed(2)}s" width="18" height="8" viewBox="0 0 18 8" aria-hidden="true">
+    <path d="M1 6Q5 0 9 5Q13 0 17 6" fill="none" stroke="rgba(35,50,75,.6)" stroke-width="1.6" stroke-linecap="round"/></svg>`).join('');
+  return `<div class="sky-sun"></div>${far}<div class="bird-flock">${birds}</div>${balloons}${near}`;   // order = depth
+}
+
 function drawScene() {
   let el = document.getElementById('sceneBg');
-  if (!LOOK.motion) { if (el) el.remove(); return; }
-  if (el && el.dataset.scene === LOOK.theme) return;
+  if (el && el.dataset.scene === LOOK.theme) { el.classList.toggle('still', !LOOK.motion); return; }
   if (!el) {
     el = document.createElement('div');
     el.id = 'sceneBg'; el.setAttribute('aria-hidden', 'true');
     document.body.prepend(el);
   }
   el.dataset.scene = LOOK.theme;
-  el.className = `scene-bg scene-${LOOK.theme}`;
+  el.className = `scene-bg scene-${LOOK.theme}${LOOK.motion ? '' : ' still'}`;   // "still": the picture stays, nothing moves
+  if (LOOK.theme === 'clouds') { el.innerHTML = skySceneHTML(); return; }
   let k = 0;
   el.innerHTML = (SCENE_BITS[LOOK.theme] || []).map(([cls, n]) => Array.from({ length: n }, () => {
     k += 1;
-    const r = (m) => { const v = Math.sin(k * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // stable pseudo-random 0..1
+    const r = (m) => rnd(k, m);
     return `<i class="${cls}" style="--x:${(r(1) * 100).toFixed(1)}vw;--y:${(r(2) * 100).toFixed(1)}vh;--d:${(8 + r(3) * 14).toFixed(1)}s;--dl:-${(r(4) * 20).toFixed(1)}s;--s:${(0.6 + r(5) * 0.9).toFixed(2)}"></i>`;
   }).join('')).join('');
 }
