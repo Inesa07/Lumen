@@ -9,7 +9,7 @@
 // Every processed frame becomes one sample: { t, face, ear, mar, yaw, pitch, gx, gy, size, fy,
 // smile, lift, brow, gap, bs, phone } — exactly the format the Python SessionTracker expects.
 
-import { faceFeatures, blendshapeFeatures, headAngles, greyStd } from './features.js';
+import { faceFeatures, blendshapeFeatures, headAngles, greyStd, edgeEnergy } from './features.js';
 
 const MP_VERSION = '0.10.14';
 const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
@@ -18,6 +18,11 @@ const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmar
 const OBJECT_MODEL = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite';
 
 const PHONE_EVERY = 5;        // the object detector is slower: every 5th frame (3x a second at 15 fps)
+// A "phone" box covering more than this share of the picture is a hand in front of the lens:
+// a real phone held while you look at it never fills the frame (and your face stays visible).
+const PHONE_MAX_AREA = 0.4;
+// Below this much detail (see edgeEnergy) the lens is covered, even when the colours vary.
+const COVER_EDGES = 2.0;
 const PHONE_MEMORY = 1.5;     // seconds: the detector misses single frames, so remember a phone a little
 const COVER_EVERY = 5;
 
@@ -122,6 +127,7 @@ export class CameraVision {
     this.tsBase = Math.round(performance.now());      // shared models need ever-growing timestamps
     this.phoneSeen = -1e9;
     this.covered = false;
+    this.edges = 99;              // picture detail (see edgeEnergy); high until first measured
     this.fpsWindow = [];
     this.stopTicker = workerTicker(this.fps, () => this.step());
     this.onStatus({ stage: 'ready', text: `Ready (${this.delegate})`, delegate: this.delegate, phone: !!this.objects });
@@ -149,19 +155,27 @@ export class CameraVision {
     if (this.objects && this.frame % PHONE_EVERY === 0) {
       try {
         const det = this.objects.detectForVideo(v, mpTs);
-        const hit = det.detections && det.detections[0];
+        const hit = (det.detections || []).find((d) => {
+          const b = d.boundingBox;
+          return !b || (b.width * b.height) / (w * h) <= PHONE_MAX_AREA;
+        });
         if (hit) { this.phoneSeen = t; this.lastPhoneBox = hit.boundingBox; } else this.lastPhoneBox = null;
       } catch (e) { console.warn('phone detector error', e); }
     }
-    const phone = t - this.phoneSeen < PHONE_MEMORY;
-
     if (this.frame % COVER_EVERY === 0) {
       this.smallCtx.drawImage(v, 0, 0, 64, 48);
-      this.covered = greyStd(this.smallCtx.getImageData(0, 0, 64, 48).data) < 12;
+      const px = this.smallCtx.getImageData(0, 0, 64, 48).data;
+      this.covered = greyStd(px) < 12;
+      this.edges = edgeEnergy(px, 64, 48);
     }
+    // A covered or blurry-smooth picture (a hand right at the lens) shows no phone, whatever the
+    // detector guessed from the hand. The smooth test only cancels a phone: it never hides your
+    // face, because a dark room can look smooth too.
+    if (this.covered || this.edges < COVER_EDGES) this.phoneSeen = -1e9;
+    const phone = t - this.phoneSeen < PHONE_MEMORY;
 
     const sample = { t, face: false, ear: null, mar: null, yaw: null, pitch: null, gx: null, gy: null,
-      size: null, fy: null, smile: null, lift: null, brow: null, gap: null, bs: null, phone };
+      size: null, fy: null, smile: null, lift: null, brow: null, gap: null, bs: null, phone, edges: this.edges };
     const lm = res.faceLandmarks && res.faceLandmarks[0];
     this.lastLandmarks = lm && !this.covered ? lm : null;
     if (lm && !this.covered) {

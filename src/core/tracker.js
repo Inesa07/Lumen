@@ -191,7 +191,9 @@ export class SessionTracker {
     if (s.phone) return ['phone', 0];
     if (!s.face) {
       // Face lost right after a big head turn: you turned away, you didn't leave.
-      if (this.last_face_t !== null && this.t - this.last_face_t < 3 && this.last_head_side > 0.7) return ['away', 0];
+      // Not when the picture is blurry-smooth: that is a hand over the lens, not a turned head.
+      const smooth = typeof s.edges === 'number' && s.edges < 2.0;
+      if (!smooth && this.last_face_t !== null && this.t - this.last_face_t < 3 && this.last_head_side > 0.7) return ['away', 0];
       return ['absent', 0];
     }
     const dev = (k) => {

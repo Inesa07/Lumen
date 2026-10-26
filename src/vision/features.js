@@ -108,3 +108,23 @@ export function greyStd(rgba) {
   const mean = sum / n;
   return Math.sqrt(Math.max(0, sum2 / n - mean * mean));
 }
+
+/**
+ * How much detail ("edges") a small grey picture has: the average brightness jump between
+ * neighbouring pixels. A real room is full of edges; a hand right in front of the lens is
+ * out of focus and smooth, so its value is tiny even when its colours are not uniform.
+ * @param {Uint8ClampedArray} rgba image data, w*h*4
+ */
+export function edgeEnergy(rgba, w, h) {
+  const g = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < rgba.length; i += 4, j += 1) g[j] = 0.299 * rgba[i] + 0.587 * rgba[i + 1] + 0.114 * rgba[i + 2];
+  let sum = 0, n = 0;
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      const k = y * w + x;
+      if (x + 1 < w) { sum += Math.abs(g[k + 1] - g[k]); n += 1; }
+      if (y + 1 < h) { sum += Math.abs(g[k + w] - g[k]); n += 1; }
+    }
+  }
+  return n ? sum / n : 0;
+}

@@ -56,3 +56,16 @@ test('fake student: phone between minutes 31 and 33.8, no face at minute 22.1', 
   f.t = 22.1 * 60; assert.equal(f.sample().face, false);
   f.t = 5 * 60; const s = f.sample(); assert.equal(s.face, true); assert.ok(s.ear > 0.05);
 });
+
+test('edgeEnergy: a sharp pattern has detail, a smooth gradient (hand at the lens) has almost none', async () => {
+  const { edgeEnergy } = await import('../src/vision/features.js');
+  const w = 64, h = 48, sharp = new Uint8ClampedArray(w * h * 4), smooth = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) {
+    const i = (y * w + x) * 4;
+    const v = ((x >> 2) + (y >> 2)) % 2 ? 200 : 40;          // checkerboard: a room full of edges
+    const u = 90 + x * 1.2;                                   // gentle skin-coloured gradient
+    sharp.set([v, v, v, 255], i); smooth.set([u, u * 0.8, u * 0.7, 255], i);
+  }
+  assert.ok(edgeEnergy(sharp, w, h) > 20);
+  assert.ok(edgeEnergy(smooth, w, h) < 2);
+});

@@ -19,15 +19,16 @@ const INFO = {
   phoneh: ['Phone pickups / hour', 'How often the phone came out per hour of study. Lower is better.'],
   // Accuracy check
   accuracy: ['Accuracy', 'Share of ALL moments where Lumen guessed right what you were doing. <br><b>Careful:</b> most of the check you look at the screen, so a lazy Lumen that always says "on screen" would still score high. That is why there is a second number.'],
-  balanced: ['Balanced accuracy', 'The average over the 5 situations (on screen, looking away, phone, eyes closed, not in frame), each counting the same. <br><b>Why:</b> it is the honest number: a situation Lumen is bad at pulls it down even if that situation is short.'],
+  balanced: ['Balanced accuracy', 'How often Lumen was right. Lumen gets a score for each of the 5 situations (looking at the screen, looking away, phone, eyes closed, not in frame), and this is the average, each situation counting the same. <br><b>Why this number:</b> most of the check you just look at the screen, which is easy. Counting every situation equally makes the hard ones count too, so the score is honest.'],
   yawn: ['Yawn', 'Did Lumen notice the "open your mouth wide" step? Yawns are one of the signs of tiredness.'],
   moments: ['Moments', 'Lumen looks at the camera about 10–15 times a second; each look is a "moment". The first 2.5 s of every step are not counted: you need time to hear the instruction and react.'],
   steps: ['Step by step', 'How often Lumen was right during each instruction of the check. <br>🟢 90%+ reliable · 🟡 60–89% · 🔴 below 60%, with what Lumen confused it with. <br><b>Why:</b> shows exactly which action is hard to recognise.'],
   matrix: ['Confusion matrix', '<b>Rows</b> = what you were really doing. <b>Columns</b> = what Lumen thought. <br>The green diagonal = right answers. Red cells = mix-ups, e.g. row "Looking away", column "On screen" = moments Lumen missed. <br><b>Why:</b> shows not only how often Lumen is wrong, but WHAT it confuses.'],
   recall: ['Recall — "did it catch it?"', 'Of all the times something REALLY happened (you really looked away), how many did Lumen notice? <br>Low recall = Lumen misses things.'],
   precision: ['Precision — "can I trust it?"', 'Of all the times Lumen SAID something ("you looked away"), how often was it true? <br>Low precision = false alarms, which annoy users most.'],
-  measured: ['What the camera measured', 'The raw numbers behind every decision: for each step, the typical (median) value of each measurement, compared with your normal position from the first 15 seconds (0 = normal). <br><b>Amber</b> = beyond the limit, so Lumen says "looking away". <br><b>Why:</b> it explains WHY a step went wrong.'],
-  tune: ['Tune Lumen to you', 'Everybody sits, looks and blinks differently. From this check Lumen suggests personal limits that keep false alarms under 3% while catching as many real look-aways as possible. <br><b>After applying, run the check again:</b> limits learned from this run always look good on this same run (that is called overfitting).'],
+  measured: ['What the camera measured (for developers)', 'The raw numbers behind every decision: for each step, the typical (median) value of each measurement, compared with your normal position from the first 15 seconds (0 = normal). <br><b>Amber</b> = beyond the limit, so Lumen says "looking away". <br><b>Why:</b> it explains WHY a step went wrong.'],
+  tune: ['Make Lumen fit you', 'Every face is a little different: some people move their eyes more, some have narrower eyes. During the check Lumen watched how YOU look and found where its standard settings do not fit you. <br><b>Why:</b> fewer wrong "you looked away" messages. <br><b>Then run the check again</b>: that is the only honest way to see if it really got better.'],
+  mixups: ['Mix-ups', 'What Lumen confuses with what. For example, when you covered the camera, did Lumen think it was a phone? <br><b>Why:</b> shows not only how often Lumen is wrong, but WHAT it mixes up, so we know what to fix.'],
   c_truth: ['Truth', 'What the instruction asked you to do: the right answer for this step.'],
   c_face: ['Face seen', 'In how many moments of the step the camera found your face.'],
   c_yaw: ['Head turn (degrees)', 'How far your head turned left or right from your normal position. Above the limit = looking away.'],
@@ -110,6 +111,7 @@ async function viewProgress(sub = '') {
       <div class="grid2">${d.insights.map((x) => `<div class="note">${x}</div>`).join('')}</div>`],
   };
 
+  if (sub === 'pr') { location.replace(`${back}/matrix`); return; }   // old link: now part of Mix-ups
   if (pages[sub]) {
     const [eyebrow, title, body] = pages[sub]();
     app.innerHTML = shell('stats', `${pageHead(eyebrow, title, '', back)}
@@ -213,20 +215,26 @@ async function viewCheckResult(id, sub = '') {
           <div class="x"><div>${esc(p.text)}</div><div>${p.acc >= 90 ? 'reliable' : p.mistake ? `often seen as: ${esc(p.mistake)}` : ''}</div></div>
           <div class="bar"><i style="width:${p.acc}%;background:${p.acc >= 90 ? 'var(--teal)' : p.acc >= 60 ? 'var(--accent)' : 'var(--coral)'}"></i></div>
           <b>${p.acc}%</b></div>`).join('')}
+        <div class="steprow">
+          <div class="x"><div>Yawn, or open your mouth wide.</div><div>${r.yawn_detected ? 'Lumen noticed the yawn' : 'Lumen missed the yawn'} ${info('yawn')}</div></div>
+          <div class="bar"><i style="width:100%;background:${r.yawn_detected ? 'var(--teal)' : 'var(--coral)'}"></i></div>
+          <b>${r.yawn_detected ? 'Seen' : 'Missed'}</b></div>
       </div></section>`],
-    matrix: () => ['Accuracy check', 'Confusion matrix', `${explain('matrix')}
-      <section class="card" style="overflow-x:auto"><table class="cm">
+    matrix: () => ['Accuracy check', 'Mix-ups', `${explain('matrix')}
+      <section class="card" style="overflow-x:auto"><h2 class="display" style="font-size:18px">Confusion matrix ${info('matrix')}</h2><table class="cm">
         <tr><th>truth \\ Lumen</th>${r.labels.map((l) => `<th>${esc(l)}</th>`).join('')}</tr>
         ${r.confusion.map((row, i) => `<tr><th>${esc(r.labels[i])}</th>${row.map((v, j) => cell(v, i, j)).join('')}</tr>`).join('')}
       </table>
-      ${mix && mix.f > 0.05 ? `<p class="muted small" style="margin:14px 0 0">Biggest mix-up: when you were <b>${esc(mix.from)}</b>, Lumen thought <b>${esc(mix.to)}</b> in ${Math.round(mix.f * 100)}% of the moments.</p>` : ''}</section>`],
-    pr: () => ['Accuracy check', 'Precision and recall', `${explain('recall')}${explain('precision')}
-      <section class="card"><table class="cm pr">
-        <tr><th></th><th>recall ${info('recall', 'recall')}</th><th>precision ${info('precision', 'precision')}</th></tr>
+      ${mix && mix.f > 0.05 ? `<p class="muted small" style="margin:14px 0 0">Biggest mix-up: when you were <b>${esc(mix.from)}</b>, Lumen thought <b>${esc(mix.to)}</b> in ${Math.round(mix.f * 100)}% of the moments.</p>` : ''}</section>
+      <section class="card"><h2 class="display" style="font-size:18px">The same, counted two ways</h2>
+        <div class="pr-explain">${explain('recall')}${explain('precision')}</div>
+        <table class="cm pr">
+        <tr><th></th><th>recall ${info('recall', 'recall')}<br><small>did it catch it?</small></th><th>precision ${info('precision', 'precision')}<br><small>can I trust it?</small></th></tr>
         ${r.per_class.map((c) => `<tr><th>${esc(c.label)}</th><td>${c.recall ?? '–'}${c.recall != null ? '%' : ''}</td><td>${c.precision ?? '–'}${c.precision != null ? '%' : ''}</td></tr>`).join('')}
       </table>
-      <p class="muted small" style="margin:14px 0 0">Example: a teacher looks for phones. Recall = of the pupils who really had a phone, how many did he catch? Precision = of the pupils he pointed at, how many really had one?</p></section>`],
-    measured: () => ['Accuracy check', 'What the camera measured', `${explain('measured')}
+      <p class="muted small" style="margin:14px 0 0">Recall = the green cell of a <b>row</b> above. Precision looks down a <b>column</b>: of everything Lumen called "Looking away", how much really was.
+        Example: a teacher looks for phones. Recall = of the pupils who really had a phone, how many did he catch? Precision = of the pupils he pointed at, how many really had one?</p></section>`],
+    measured: () => ['Accuracy check · for developers', 'What the camera measured', `${explain('measured')}
       <section class="card" style="overflow-x:auto"><table class="cm diag">
         <tr><th>step</th><th>truth ${info('c_truth')}</th><th>face seen ${info('c_face')}</th>
           <th>head turn° ${info('c_yaw')}<br><small>limit ${r.limits.yaw}</small></th><th>head tilt° ${info('c_pitch')}<br><small>limit ${r.limits.pitch}</small></th>
@@ -239,6 +247,7 @@ async function viewCheckResult(id, sub = '') {
       ${r.csv ? '<button class="linkbtn" id="csvBtn" style="margin-top:14px">Download the raw data (CSV)</button>' : ''}</section>`],
   };
 
+  if (sub === 'pr') { location.replace(`${back}/matrix`); return; }   // old link: now part of Mix-ups
   if (pages[sub]) {
     const [eyebrow, title, body] = pages[sub]();
     app.innerHTML = shell('check', `${pageHead(`${eyebrow} · ${esc(when)}`, title, '', back)}
@@ -253,60 +262,72 @@ async function viewCheckResult(id, sub = '') {
     return;
   }
 
-  const fmt = (k, v) => (k === 'closed' ? v : `×${v}`);
+  // "Make Lumen fit you": say in plain words what changes and why, numbers only for developers
+  const fmt = (k, v) => (k === 'closed' ? `${Math.round(v * 100)}%` : `×${v}`);
   const names = { side: 'Left / right limit', vert: 'Up / down limit', closed: 'Eyes-closed limit' };
   const applied = prof && JSON.stringify(prof) === JSON.stringify(t.suggested);
+  const plain = [];
+  const dir = { side: ['↔️', 'left and right'], vert: ['↕️', 'up and down'] };
+  for (const k of ['side', 'vert']) {
+    const now = t.current[k], nw = t.suggested[k];
+    if (nw > now * 1.05) plain.push([dir[k][0], `While you look at the screen, your eyes move ${dir[k][1]} a bit more than Lumen expected, so sometimes it thought you looked away when you didn't.`, `Lumen will relax a little about ${dir[k][1]} movements.`]);
+    else if (nw < now * 0.95) plain.push([dir[k][0], `Sometimes you looked away (${dir[k][1]}) and Lumen didn't notice.`, `Lumen will watch ${dir[k][1]} movements more carefully.`]);
+  }
+  if (t.suggested.closed < t.current.closed - 0.04) plain.push(['👁️', 'When you look down at your notebook, your eyelids drop a little, so Lumen sometimes thought your eyes were closed.', 'Lumen will say "eyes closed" only when they are really closed.']);
+  else if (t.suggested.closed > t.current.closed + 0.04) plain.push(['👁️', 'Sometimes your eyes were closed and Lumen noticed it too late.', 'Lumen will notice closed eyes sooner.']);
+  const settings = r.profile_used && Object.keys(r.profile_used).length ? 'your personal settings' : 'standard settings';
+  const diff = prev ? r.balanced_accuracy - prev.balanced_accuracy : null;
+
   app.innerHTML = shell('check', `
-  ${pageHead(`Accuracy check · ${esc(when)}${r.profile_used && Object.keys(r.profile_used).length ? ' · personal settings' : ' · default settings'}`,
+  ${pageHead(`Accuracy check · ${esc(when)} · ${settings}`,
     'How accurate is Lumen for you?', '<a class="btn primary" href="#/check">Run again</a>', '#/check')}
   <main class="wrap" style="display:flex;flex-direction:column;gap:20px">
-    <section class="stats">
-      ${kpi('Balanced accuracy', 'balanced', `${r.balanced_accuracy}%`, 'the honest score: 5 situations equally')}
-      ${kpi('Accuracy', 'accuracy', `${r.accuracy}%`, `of ${r.n} moments ${info('moments', 'moments')}`)}
-      ${kpi('Yawn', 'yawn', r.yawn_detected ? 'Seen' : 'Missed', 'open mouth wide step')}
+    <section class="card ck-hero">
+      <div><span class="eyebrow">Balanced accuracy ${info('balanced', 'balanced accuracy')}</span>
+        <div class="ck-big">${r.balanced_accuracy}%</div>
+        <div class="muted small">Lumen was right this often (every situation counts the same)</div></div>
+      <div class="ck-meter" aria-hidden="true"><i style="width:${r.balanced_accuracy}%"></i></div>
     </section>
     <section class="card inshort">
       <h2 class="display" style="font-size:18px;margin:0 0 10px">In short</h2>
       <p>✅ <b>${reliable} of ${r.per_step.length}</b> steps were recognised reliably (90%+).</p>
       ${worst.filter((s) => s.acc < 90).map((s) => `<p>⚠️ <b>${esc(s.text.replace(/\.$/, ''))}</b>: ${s.acc}%${s.mistake ? `, often seen as “${esc(s.mistake)}”` : ''}.</p>`).join('')}
-      ${t.changed ? '<p>🎯 Lumen found personal limits that should fit you better (below).</p>' : '<p>🎯 Your current limits already fit you well.</p>'}
+      ${plain.length ? '<p>🎯 Lumen can fit itself to you better (below).</p>' : '<p>🎯 Lumen already fits you well.</p>'}
     </section>
-    ${prev ? `<section class="card cmpcard">
-      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Compared with your previous check</h2>
-        <a class="more" href="${back}/compare">Details ›</a></div>
-      <div class="cmp-row">
-        <div><span class="eyebrow">Balanced accuracy</span><b>${prev.balanced_accuracy}% → ${r.balanced_accuracy}%</b>${arrow(r.balanced_accuracy - prev.balanced_accuracy, ' pts')}</div>
-        ${bestUp && bestUp.diff > 0 ? `<div><span class="eyebrow">Improved most</span><b class="small-b">${esc(bestUp.text.replace(/\.$/, ''))}</b>${arrow(bestUp.diff, ' pts')}</div>` : ''}
-        ${worstDown && worstDown.diff < 0 ? `<div><span class="eyebrow">Got worse</span><b class="small-b">${esc(worstDown.text.replace(/\.$/, ''))}</b>${arrow(worstDown.diff, ' pts')}</div>` : ''}
-      </div>
-      <p class="muted small" style="margin:0">Previous check: ${esc(shortDate(prev.started_at))}, ${prev.profile_used && Object.keys(prev.profile_used).length ? 'personal' : 'default'} settings.</p>
-    </section>` : ''}
+    ${prev ? `<a class="card cmp-line" href="${back}/compare">
+      <span class="muted">Since your last check (${esc(shortDate(prev.started_at))}):</span>
+      <b>${prev.balanced_accuracy}% → ${r.balanced_accuracy}%</b> ${arrow(diff, ' pts')}
+      <span class="tile-go">›</span></a>` : ''}
     <div class="tiles">
       ${tile(`${back}/steps`, '📋', 'Step by step', 'steps', `${reliable}/${r.per_step.length}`, 'steps reliable')}
-      ${tile(`${back}/matrix`, '🔀', 'Confusion matrix', 'matrix', mix ? `${Math.round(mix.f * 100)}%` : '–', mix ? `${esc(mix.from)} → seen as ${esc(mix.to)}` : 'no mix-ups')}
-      ${tile(`${back}/pr`, '🎯', 'Precision & recall', 'recall', weakest ? `${weakest.recall}%` : '–', weakest ? `weakest recall: ${esc(weakest.label)}` : '')}
-      ${r.diagnostics ? tile(`${back}/measured`, '📏', 'What the camera measured', 'measured', `${overCount}`, 'values beyond the limits (amber)') : ''}
+      ${tile(`${back}/matrix`, '🔀', 'Mix-ups', 'mixups', mix ? `${Math.round(mix.f * 100)}%` : '–', mix ? `${esc(mix.from)} → seen as ${esc(mix.to)}` : 'no mix-ups')}
     </div>
     <section class="card tunecard">
-      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Tune Lumen to you ${info('tune', 'tuning')}</h2></div>
-      ${t.notes.map((x) => `<div class="note">${esc(x)}</div>`).join('')}
-      <table class="tune">
-        <tr><th></th><th>now</th><th>suggested</th></tr>
-        ${['side', 'vert', 'closed'].map((k) => `<tr><td>${names[k]}</td><td>${fmt(k, t.current[k])}</td>
-          <td class="${t.suggested[k] !== t.current[k] ? 'chg' : ''}">${fmt(k, t.suggested[k])}</td></tr>`).join('')}
-      </table>
+      <h2 class="display" style="font-size:18px;margin:0">Make Lumen fit you ${info('tune', 'this')}</h2>
+      ${plain.length ? `<p class="muted" style="margin:0">Every face is a little different. During the check Lumen noticed:</p>
+      ${plain.map(([ic, saw, fix]) => `<div class="fitrow"><span class="fit-ic">${ic}</span><div><div>${saw}</div><div class="fit-fix">→ ${fix}</div></div></div>`).join('')}`
+      : '<p style="margin:0">Lumen\'s settings already fit you well. Nothing to change. 🎉</p>'}
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn primary" id="applyBtn" ${!t.changed || applied ? 'disabled' : ''}>${applied ? 'Applied' : 'Apply to my profile'}</button>
-        ${prof ? '<button class="btn ghost" id="resetBtn">Reset to default</button>' : ''}
+        ${plain.length ? `<button class="btn primary" id="applyBtn" ${applied ? 'disabled' : ''}>${applied ? 'Done ✓' : 'Yes, fit Lumen to me'}</button>` : ''}
+        ${prof ? '<button class="btn ghost" id="resetBtn">Go back to standard settings</button>' : ''}
       </div>
-      <p class="muted small" style="margin:0">After applying, <strong>run the check again</strong> to see honestly whether it got better.</p>
+      ${plain.length ? '<p class="muted small" style="margin:0">Then <strong>run the check once more</strong> to see if Lumen really got better.</p>' : ''}
+      <details class="devbox"><summary>For developers: the numbers</summary>
+        <table class="tune">
+          <tr><th></th><th>now</th><th>suggested</th></tr>
+          ${['side', 'vert', 'closed'].map((k) => `<tr><td>${names[k]}</td><td>${fmt(k, t.current[k])}</td>
+            <td class="${t.suggested[k] !== t.current[k] ? 'chg' : ''}">${fmt(k, t.suggested[k])}</td></tr>`).join('')}
+        </table>
+        <p class="muted small">×1.18 = allow 18% more movement before "looking away". Eyes-closed limit = how open your eyes must be, compared with normal, to count as open.</p>
+      </details>
     </section>
+    ${r.diagnostics ? `<a class="devlink" href="${back}/measured">🛠 For developers: what the camera measured ›</a>` : ''}
   </main>`);
   const ab = $('#applyBtn');
   if (ab) ab.onclick = async () => {
     await api('/api/profile', { from_check: r.id });
-    toast('Saved. Run the check again to verify.');
-    ab.textContent = 'Applied'; ab.disabled = true;
+    toast('Done. Run the check again to see if it got better.');
+    ab.textContent = 'Done ✓'; ab.disabled = true;
   };
   const rb = $('#resetBtn');
   if (rb) rb.onclick = async () => { await api('/api/profile', { reset: true }); toast('Back to default settings'); viewCheckResult(id); };

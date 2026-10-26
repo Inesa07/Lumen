@@ -38,6 +38,7 @@ export const STEPS = [
 const TOTAL = STEPS.reduce((a, s) => a + s[0], 0);
 const STARTS = STEPS.map((_, i) => STEPS.slice(0, i).reduce((a, s) => a + s[0], 0));
 
+const EAR_MAX_YAW = 25;   // degrees: beyond this the eye is seen from the side, "eyes open" is not reliable
 const predictedClass = (reason) => ({ on: 'on', notes: 'on', away: 'away', phone: 'phone', drowsy: 'closed', absent: 'absent' }[reason]);
 export function stepAt(elapsed) {
   for (let i = 0; i < STARTS.length; i += 1) if (elapsed < STARTS[i] + STEPS[i][0]) return i;
@@ -47,7 +48,7 @@ const pct = (x) => (x === null || x === undefined ? null : Math.trunc(pyRound(10
 const r4 = (x) => pyRound(x, 4);
 
 export const CSV_HEADER = ['time_s', 'step', 'group', 'truth', 'predicted', 'face', 'phone',
-  'yaw_dev_deg', 'pitch_dev_deg', 'gx_dev', 'gy_dev', 'eye_open_ratio'];
+  'yaw_dev_deg', 'pitch_dev_deg', 'gx_dev', 'gy_dev', 'eye_open_ratio', 'picture_detail'];
 
 export class ValidationRun {
   constructor(profile = null) {
@@ -76,10 +77,10 @@ export class ValidationRun {
     const meas = { face: s.face, phone: s.phone,
       yaw: s.face ? dbg.yaw ?? null : null, pitch: s.face ? dbg.pitch ?? null : null,
       gx: s.face ? dbg.gx ?? null : null, gy: s.face ? dbg.gy ?? null : null,
-      ear: s.face ? dbg.ear_ratio : null };
+      ear: s.face ? dbg.ear_ratio : null, edges: s.edges ?? null };
     (this.diag[i] ||= []).push(meas);
     this.csv_rows.push([pyRound(e, 2), i, group, expected || '', this.last_pred,
-      ...['face', 'phone', 'yaw', 'pitch', 'gx', 'gy', 'ear'].map((k) => (meas[k] === null ? '' : r4(Number(meas[k]))))]);
+      ...['face', 'phone', 'yaw', 'pitch', 'gx', 'gy', 'ear', 'edges'].map((k) => (meas[k] === null ? '' : r4(Number(meas[k]))))]);
     if (s.face && !s.phone) (this.raw[group] ||= []).push([dbg.side, dbg.vert, dbg.ear_ratio]);
     if (expected !== null) this.rows.push([i, expected, this.last_pred]);
   }
@@ -132,14 +133,22 @@ export class ValidationRun {
     STEPS.forEach(([, exp, text, group], i) => {
       const ms = this.diag[i];
       if (!ms || group === 'calib') return;
+      const faceShare = ms.filter((m) => m.face).length / ms.length;
       const row = { text, expected: exp ? label(exp) : '–',
-        face: pct(ms.filter((m) => m.face).length / ms.length), phone: pct(ms.filter((m) => m.phone).length / ms.length) };
+        face: pct(faceShare), phone: pct(ms.filter((m) => m.phone).length / ms.length) };
+      // With the face found in under half of the moments, the few remaining numbers come from a
+      // half-hidden face (a hand in front of the camera) and mean nothing: show "–" instead.
+      const enough = faceShare >= 0.5;
       for (const k of ['yaw', 'pitch', 'gx', 'gy']) {
-        const v = med(ms.map((m) => (m[k] !== null ? Math.abs(m[k]) : null)));
+        const v = enough ? med(ms.map((m) => (m[k] !== null ? Math.abs(m[k]) : null))) : null;
         row[k] = v === null ? null : pyRound(v, k === 'gx' || k === 'gy' ? 3 : 1);
         row[`${k}_over`] = v !== null && v > lim[k];
       }
-      const e = med(ms.map((m) => m.ear));
+      // "Eyes open" compares the eye shape with your normal one, seen from the front. With the head
+      // turned far to the side the camera sees the eye from the side and the ratio breaks (279%),
+      // so only moments with the head roughly frontal count. Too few of them -> "–".
+      const frontal = ms.filter((m) => m.face && m.ear !== null && (m.yaw === null || Math.abs(m.yaw) <= EAR_MAX_YAW));
+      const e = enough && frontal.length >= ms.length * 0.3 ? med(frontal.map((m) => m.ear)) : null;
       row.ear = e === null ? null : pct(e);
       diagnostics.push(row);
     });
