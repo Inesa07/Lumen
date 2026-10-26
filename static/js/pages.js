@@ -93,18 +93,11 @@ async function viewHome(prefillClass = '') {
         </form>
         ${classNames.length ? `<div class="quick"><span class="eyebrow">Recent:</span>${classNames.slice(0, 5).map((c) => `<button type="button" class="tagbtn" data-cls="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
 
-        <div class="fromtodo" id="fromTodo" hidden></div>
         <details class="options" id="moreOpts">
-          <summary><span class="opt-pill">🎯 Plan <b id="planSum">no tasks</b></span><span class="opt-pill">⏱ Rhythm <b id="rhySum">Auto</b></span>
-            <span class="opt-more">Options <span class="chev">›</span></span></summary>
+          <summary><span class="opt-pill">⏱ Lesson timing <b id="rhySum">Auto</b></span>
+            <span class="opt-more">Change <span class="chev">›</span></span></summary>
           <div class="options-body">
-            <div class="planbox">
-              <span class="eyebrow">🎯 What will you do in this session? <span class="muted">(Enter adds a task)</span></span>
-              <div class="taskadd"><input class="field" id="taskInput" maxlength="120" placeholder="e.g. solve 5 exercises" autocomplete="off">
-                <button class="btn ghost" type="button" id="taskAdd">Add</button></div>
-              <ul class="tasklist" id="taskList"></ul>
-            </div>
-            <div class="rhythmbox"><span class="eyebrow">⏱ Study rhythm</span>
+            <div class="rhythmbox"><span class="eyebrow">⏱ How long to study before a break</span>
               <div class="rhythms" role="radiogroup" aria-label="Study rhythm">${RHYTHMS.map(([v, l, sub]) => `<button type="button" class="rhy" role="radio" data-rhythm="${v}"><b>${l}</b><small>${sub}</small></button>`).join('')}</div>
               <div class="rhycustom" id="rhyCustom" hidden><input class="field" type="number" id="rhyStudy" min="5" max="240" value="45" aria-label="Study minutes"><span>min study, then</span>
                 <input class="field" type="number" id="rhyBreak" min="1" max="60" value="10" aria-label="Break minutes"><span>min break</span></div>
@@ -143,8 +136,6 @@ async function viewHome(prefillClass = '') {
   wireLessonButtons();
   drawDraft();
   if (lumi) lumiNews(lumi);
-  $('#taskAdd').onclick = () => { addTypedTask(); $('#taskInput').focus(); };
-  $('#taskInput').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addTypedTask(); } };
   document.querySelectorAll('[data-cls]').forEach((b) => { b.onclick = () => { $('#cls').value = b.dataset.cls; showClassTodos(); $('#title').focus(); }; });
   classCombo($('#cls'), $('#clsList'), classNames, () => { showClassTodos(); $('#title').focus(); });
   setupRhythm(d.settings.rhythm);
