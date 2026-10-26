@@ -17,6 +17,10 @@ const INFO = {
   learned: ['What Lumen learned', 'Personal tips found in all your lessons: when attention drops, how often the phone comes out, which breaks helped.'],
   tasks: ['Plan tasks', 'Tasks you planned before lessons and ticked as done. <br><b>Why:</b> attention is a means; finishing what you planned is the goal.'],
   phoneh: ['Phone pickups / hour', 'How often the phone came out per hour of study. Lower is better.'],
+  // Lumi
+  lumi: ['Lumi', 'Lumi is your study firefly. It grows from your light: Spark → Little light → Firefly → Bright → Glowing → Star firefly. <br><b>Why:</b> learning is easier with a friend who notices your effort.'],
+  light: ['Light 🔆', 'Every minute you are really focused gives Lumi 1 light. Every medal gives extra light: Bronze +10, Silver +25, Gold +60. <br>Light is never taken away.'],
+  ach: ['Achievements', 'Medals for good habits: planning, resting your eyes, reviewing, coming back after a pause. Each has Bronze, Silver and Gold. <br><b>No race:</b> you only compete with yourself, and a missed day never takes a medal away.'],
   // Accuracy check
   accuracy: ['Accuracy', 'Share of ALL moments where Lumen guessed right what you were doing. <br><b>Careful:</b> most of the check you look at the screen, so a lazy Lumen that always says "on screen" would still score high. That is why there is a second number.'],
   balanced: ['Balanced accuracy', 'How often Lumen was right. Lumen gets a score for each of the 5 situations (looking at the screen, looking away, phone, eyes closed, not in frame), and this is the average, each situation counting the same. <br><b>Why this number:</b> most of the check you just look at the screen, which is easy. Counting every situation equally makes the hard ones count too, so the score is honest.'],

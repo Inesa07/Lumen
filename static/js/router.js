@@ -2,7 +2,7 @@
 'use strict';
 
 // Where did you come from? Used for the back arrow on pages you opened from a link.
-const PAGE_NAMES = { '#/': 'Home', '#/review': 'Review', '#/classes': 'Classes', '#/ai': 'Ask AI', '#/stats': 'Progress',
+const PAGE_NAMES = { '#/': 'Home', '#/lumi': 'Lumi', '#/review': 'Review', '#/classes': 'Classes', '#/ai': 'Ask AI', '#/stats': 'Progress',
   '#/week': 'Weekly report', '#/history': 'History', '#/check': 'Accuracy check', '#/settings': 'Settings', '#/account': 'Account' };
 let prevHash = null, curHash = null, viaMenu = false;
 document.addEventListener('click', (e) => { if (e.target.closest('#sidebar nav a')) viaMenu = true; }, true);
@@ -28,6 +28,7 @@ function route() {
   if (h.startsWith('#/start/')) return viewHome(h.slice('#/start/'.length));
   if (h === '#/stats') return viewProgress();
   if (h.startsWith('#/stats/')) return viewProgress(h.slice('#/stats/'.length));
+  if (h === '#/lumi') return viewLumi();
   if (h === '#/review') return viewReview();
   if (h === '#/ai') return viewAI();
   if (h.startsWith('#/ai/')) return viewAI(h.slice('#/ai/'.length));

@@ -59,7 +59,7 @@ function wireLessonButtons(root = document) {
 // ---------------------------------------------------------------- Home
 async function viewHome(prefillClass = '') {
   closeStream();
-  const d = await loadOverview();
+  const [d, lumi] = await Promise.all([loadOverview(), api('/api/friend').catch(() => null)]);
   const t = d.totals;
   const week = d.days.slice(-7);
   const classNames = d.classes.map((c) => c.name);
@@ -117,6 +117,7 @@ async function viewHome(prefillClass = '') {
       </section>
 
       <aside class="todaycol">
+        ${lumi ? lumiHomeCard(lumi) : ''}
         <section class="card todaycard">
           <a class="goalbig" href="#/settings" title="Change your daily goal in Settings">${goalRing(g)}
             <div><div class="eyebrow">Today's goal</div><div class="display big2">${hm(g.today)} <span class="muted">/ ${hm(g.goal_min)}</span></div>
@@ -141,6 +142,7 @@ async function viewHome(prefillClass = '') {
 
   wireLessonButtons();
   drawDraft();
+  if (lumi) lumiNews(lumi);
   $('#taskAdd').onclick = () => { addTypedTask(); $('#taskInput').focus(); };
   $('#taskInput').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addTypedTask(); } };
   document.querySelectorAll('[data-cls]').forEach((b) => { b.onclick = () => { $('#cls').value = b.dataset.cls; showClassTodos(); $('#title').focus(); }; });
@@ -378,6 +380,7 @@ async function viewReport(id) {
     $('#repNotes').hidden = false;
     notesWidget($('#repNoteGrid'), notes, {});
   }).catch(() => {});
+  lumiNews();                           // new medals or a new stage after this lesson
 }
 
 function goalRing(g) {

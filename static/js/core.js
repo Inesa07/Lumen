@@ -157,6 +157,7 @@ const ICON = {
   ai: `<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>`,
   week: `<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>`,
   play: `<path d="M8 5v14l11-7z"/>`,
+  lumi: `<circle cx="12" cy="9" r="4"/><ellipse cx="12" cy="17" rx="3.5" ry="3.5"/><path d="M10 5.5L8 2M14 5.5L16 2"/><path d="M8.5 12.5C5 12 3 10 3.5 8M15.5 12.5C19 12 21 10 20.5 8"/>`,
 };
 const icon = (name, color = 'currentColor', size = 20) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</svg>`;
@@ -170,6 +171,7 @@ const LOGO = ICON.logo;
 let lastActive = null;
 const NAV = [
   ['home', '#/', 'Home'],
+  ['lumi', '#/lumi', 'Lumi'],
   ['review', '#/review', 'Review'],
   ['classes', '#/classes', 'Classes'],
   ['ai', '#/ai', 'Ask AI'],

@@ -10,6 +10,7 @@
 import { SessionTracker, PROFILE_VERSION } from '../core/tracker.js';
 import { mmss } from '../core/util.js';
 import * as stats from '../core/stats.js';
+import { friendState } from '../core/friend.js';
 import { ValidationRun, FakeFollower, CSV_HEADER } from '../core/validate.js';
 import { Tutor, AIError, lessonContext } from '../core/ai.js';
 import { TodoStore, NoteStore, ChatStore, ReviewStore } from '../data/stores.js';
@@ -465,8 +466,28 @@ export class LocalServer {
     if (p === '/api/reviews') return this.reviews.overview();
     if (p === '/api/week') return stats.weekly(this.reports(), this.reviews.load());
     if (p === '/api/settings') return this.settings();
+    if (p === '/api/friend') return this.friend();
     if (p === '/api/export') return { app: 'lumen', version: 1, exported_at: Date.now() / 1000, data: this.exportData() };
     return [{ error: 'not found' }, 404];
+  }
+
+  // ------------------------------------------------------------------ Lumi the firefly (see core/friend.js)
+  friend() {
+    return friendState(this.reports(), this.reviews.load(), this.db.getValue('friend') || {}, this.settings().streak_min);
+  }
+
+  /** body: {outfit} | {seen: true} (news celebrated) | {show_in_lessons} */
+  saveFriend(body) {
+    const saved = { ...(this.db.getValue('friend') || {}) };
+    const st = this.friend();
+    if (body.seen) {
+      saved.seen = Object.fromEntries(st.achievements.map((a) => [a.id, a.tier]));
+      saved.stage = st.stage.index;
+    }
+    if (body.outfit && st.outfits.some((o) => o.id === body.outfit && o.unlocked)) saved.outfit = body.outfit;
+    if (typeof body.show_in_lessons === 'boolean') saved.show_in_lessons = body.show_in_lessons;
+    this.db.setValue('friend', saved);
+    return this.friend();
   }
 
   exportData() {
@@ -531,6 +552,7 @@ export class LocalServer {
     if (p === '/api/chats/delete') { this.chats.delete(String(body.id)); return { ok: true }; }
     if (p === '/api/review') return this.reviewAction(body);
     if (p === '/api/settings') return this.saveSettings(body);
+    if (p === '/api/friend') return this.saveFriend(body);
     if (p === '/api/ping') return { ok: true };
     if (p === '/api/check/start') { const res = await this.startCheck(); return [res, res.ok ? 200 : 500]; }
     if (p === '/api/profile') {

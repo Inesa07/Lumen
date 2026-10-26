@@ -11,7 +11,7 @@ import { CloudAdapter } from './data/cloud.js';
 import { LocalServer, LocalEventSource } from './server/local-server.js';
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_JS } from './config.js';
 
-const PAGE_SCRIPTS = ['core', 'extras', 'ai', 'session', 'check', 'pages', 'insights', 'account', 'router'];
+const PAGE_SCRIPTS = ['core', 'friend', 'extras', 'ai', 'session', 'check', 'pages', 'insights', 'account', 'router'];
 const params = new URLSearchParams(location.search);
 const fake = params.has('fake');
 const speed = Number(params.get('speed')) || 30;

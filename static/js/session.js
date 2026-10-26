@@ -286,6 +286,7 @@ function render(d) {
     $('#eyeProg').style.width = `${Math.min(100, 100 * d.eye_rest.done / d.eye_rest.needed)}%`;
   }
   if (d.eye_rest_result === 'done') { chime(); toast('Eyes rested. Back to the lesson!'); speakSoft('Done. Back to the lesson.'); }
+  lumiLesson(d);                        // Lumi in the corner reacts to this moment
   if (d.eye_rest_result === 'timeout') toast('Eye rest skipped. Lumen will ask again in 5 minutes.');
 
   // mood (facial expression)
