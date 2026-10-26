@@ -653,6 +653,12 @@ async function viewSettings() {
       <p class="muted small" style="margin:14px 0 0">My suggestion: <strong>Midnight + Amber</strong> for evening study (calm, little blue light), <strong>Paper + Sky</strong> for bright daytime rooms.</p>
     </section>
     <section class="card setrow">
+      <div><h2 style="margin:0 0 4px;font-size:17px">Language</h2><p class="muted small" style="margin:0">Menu, Home, lessons and Lumi. Other pages are being translated step by step.</p></div>
+      ${langButtons()}
+    </section>
+    <a class="card setrow parentrow" href="#/parent" style="text-decoration:none;color:var(--text)">
+      <div><h2 style="margin:0 0 4px;font-size:17px">👪 Parent mode</h2><p class="muted small" style="margin:0">See your child's progress and decide about the AI tutor. Protected by a PIN.</p></div><span class="chev">›</span></a>
+    <section class="card setrow">
       <div><h2>Daily goal</h2><p class="muted small">Minutes of <strong>focused</strong> study per day, the ring on Home.</p></div>
       <form id="goalForm" class="btnrow"><input class="field" id="goal" type="number" min="10" max="600" step="5" value="${st.daily_goal_min}" style="width:110px">
         <span class="muted">min</span><button class="btn primary" type="submit">Save</button></form>

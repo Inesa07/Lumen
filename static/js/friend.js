@@ -83,6 +83,9 @@ const LUMI_LINES = {
 };
 const LINE_FACE = { hello: 'hello', calib: 'happy', happy: 'happy', notes: 'happy', wait: 'wait', phone: 'wait', absent: 'wait', sleepy: 'sleepy', rest: 'rest', eyes: 'rest', party: 'party' };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+/** Lumi's lines in the chosen language (falls back to English). */
+const lines = (key) => (LUMI_I18N[LANG] && LUMI_I18N[LANG][key]) || LUMI_LINES[key];
+const timeLines = (key) => (TIME_I18N[LANG] && TIME_I18N[LANG][key]) || TIME_LINES[key];
 
 /** Which mood fits this moment of the lesson (from the live snapshot). */
 function lumiMoodOf(d) {
@@ -110,6 +113,11 @@ const TIME_LINES = {
 };
 /** A holiday Lumi celebrates today: an accessory and a line. */
 function lumiHoliday(f, d = new Date()) {
+  const h = lumiHolidayEn(f, d);
+  if (h && HOLIDAY_I18N[LANG] && HOLIDAY_I18N[LANG][h.id]) h.line = HOLIDAY_I18N[LANG][h.id];
+  return h;
+}
+function lumiHolidayEn(f, d) {
   const md = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const between = (a, b) => (a <= b ? md >= a && md <= b : md >= a || md <= b);
   if (f && f.birthday === md) return { id: 'birthday', extra: 'party', line: 'Happy birthday!! 🎂 Today I glow just for you!' };
@@ -125,7 +133,7 @@ const restingMood = () => (lumiTime() === 'night' ? 'sleepy' : 'hello');
 function greetLine(f) {
   const hol = lumiHoliday(f);
   if (hol) return hol.line;
-  return pick(TIME_LINES[lumiTime()]);
+  return pick(timeLines(lumiTime()));
 }
 
 // ---------------------------------------------------------------- sounds (soft, can be turned off)
@@ -206,13 +214,13 @@ async function lumiLesson(d) {
   if (!lumiLive.bedtime && key === 'happy' && new Date().getHours() >= 22) {
     lumiLive.bedtime = true;
     lumiSay();
-    $('#lumiBubble').textContent = pick(TIME_LINES.night);
+    $('#lumiBubble').textContent = pick(timeLines('night'));
     lumiLive.said = now; lumiLive.key = key;
     return;
   }
   if (key !== lumiLive.key || now - lumiLive.said > 90000) {
     lumiSay();
-    $('#lumiBubble').textContent = key === 'happy' && hol && Math.random() < 0.3 ? hol.line : pick(LUMI_LINES[key]);
+    $('#lumiBubble').textContent = key === 'happy' && hol && Math.random() < 0.3 ? hol.line : pick(lines(key));
     lumiLive.said = now;
   }
   lumiLive.key = key;
@@ -240,16 +248,17 @@ function lumiJourney(d) {
     ($('#breakCard') || hero).after(el);
   }
   const f = lumiLive.info;
-  const [name, emo, col] = JOURNEY[Math.min(JOURNEY.length - 1, Math.max(0, (d.block || 1) - 1))];
+  const [nameEn, emo, col] = JOURNEY[Math.min(JOURNEY.length - 1, Math.max(0, (d.block || 1) - 1))];
   if (d.on_break) {
     el.style.setProperty('--jc', '#E57A2E');
-    el.innerHTML = `<div class="journey-head"><b>🔥 Lumi rests by the campfire</b><span class="muted small">the next trip starts after the break</span></div>`;
+    el.innerHTML = `<div class="journey-head"><b>${t('🔥 Lumi rests by the campfire')}</b><span class="muted small">${t('the next trip starts after the break')}</span></div>`;
     return;
   }
   const plan = d.plan_min || 45;
   const pct = Math.max(2, Math.min(100, Math.round(100 * (1 - (d.next_break_in ?? plan) / plan))));
   el.style.setProperty('--jc', col);
-  const html = `<div class="journey-head"><b>${emo} Lumi's journey: ${name}</b><span class="muted small">trip ${d.block || 1} · ${d.next_break_in > 0 ? `${d.next_break_in} min to the next stop` : 'time for a stop!'}</span></div>
+  const name = t(nameEn);
+  const html = `<div class="journey-head"><b>${t("{emo} Lumi's journey: {name}", { emo, name })}</b><span class="muted small">${d.next_break_in > 0 ? t('trip {a} · {b} min to the next stop', { a: d.block || 1, b: d.next_break_in }) : t('trip {a} · time for a stop!', { a: d.block || 1 })}</span></div>
     <div class="journey-track"><div class="journey-path"><i style="width:${pct}%"></i></div>
       <div class="journey-lumi" style="left:${pct}%">${lumiSVG({ mood: 'happy', stage: f.stage.index, outfit: f.outfit, size: 40 })}</div>
       <span class="journey-flag" title="break">🏕️</span></div>`;
@@ -260,21 +269,21 @@ window.addEventListener('hashchange', () => { lumiLive.info = null; });
 
 // ---------------------------------------------------------------- Lumi on Home
 function questLine(q) {
-  return `<div class="questline${q.done ? ' done' : ''}"><span>${q.icon}</span><span><b>Quest:</b> ${esc(q.text)}</span>
+  return `<div class="questline${q.done ? ' done' : ''}"><span>${q.icon}</span><span><b>${t('Quest:')}</b> ${esc(t(q.text))}</span>
     <span class="qv">${q.done ? '✓' : `${q.value}/${q.need}`}</span></div>`;
 }
 function lumiHomeCard(f) {
   const hol = lumiHoliday(f);
-  const line = f.first_time ? "Hi! I'm Lumi, your study firefly. Focus to give me light and I will grow!"
+  const line = f.first_time ? t("Hi! I'm Lumi, your study firefly. Focus to give me light and I will grow!")
     : hol ? hol.line
-    : lumiTime() === 'night' ? pick(TIME_LINES.night)
-    : f.stage.next ? `${f.stage.next.need - f.light} more light and I become a <b>${esc(f.stage.next.name)}</b>!` : 'I am a Star firefly! Thank you for all the light ✨';
+    : lumiTime() === 'night' ? pick(timeLines('night'))
+    : f.stage.next ? t('{n} more light and I become a {name}!', { n: f.stage.next.need - f.light, name: `<b>${esc(t(f.stage.next.name))}</b>` }) : t('I am a Star firefly! Thank you for all the light ✨');
   return `<a class="card lumicard" href="#/lumi">
     <div class="lumicard-pic">${lumiSVG({ mood: restingMood(), stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 92 })}</div>
-    <div class="lumicard-txt"><div class="eyebrow">Lumi · ${esc(f.stage.name)}</div>
+    <div class="lumicard-txt"><div class="eyebrow">${t('Lumi · {name}', { name: esc(t(f.stage.name)) })}</div>
       <div class="lumicard-line">${line}</div>
       <div class="lightbar" aria-label="Light ${f.light}"><i style="width:${f.stage.pct}%"></i></div>
-      <div class="muted small">🔆 ${f.light} light${f.achievements.some((a) => a.tier) ? ` · 🏅 ${f.achievements.reduce((a, x) => a + x.tier, 0)} medals` : ''}</div>
+      <div class="muted small">🔆 ${t('{n} light', { n: f.light })}${f.achievements.some((a) => a.tier) ? ` · 🏅 ${t('{n} medals', { n: f.achievements.reduce((a, x) => a + x.tier, 0) })}` : ''}</div>
       ${questLine(f.quest)}</div>
     <span class="chev">›</span></a>`;
 }
@@ -313,6 +322,13 @@ function skySVG(stars) {
   </svg>`;
 }
 
+/** How to unlock an outfit, in the chosen language. */
+function outfitHow(o, stages = []) {
+  if (o.stage != null) return t('Reach stage “{name}”', { name: t((stages[o.stage] || {}).name || '') });
+  const a = { lessons: 'Learner', deep: 'Deep diver', review: 'Memory master', streak: 'Day by day', eyes: 'Eye care' }[o.ach[0]];
+  return `${t(a || o.ach[0])} · ${t(['', 'Bronze', 'Silver', 'Gold'][o.ach[1]])}`;
+}
+
 // ---------------------------------------------------------------- the Lumi page
 const MEDAL = ['var(--track)', '#CD7F32', '#C3CCD6', '#F2C14E'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -326,57 +342,62 @@ async function viewLumi() {
   const friends = Math.max(0, f.stage.index - 2);
   const [bm, bd] = (f.birthday || '-').split('-');
   app.innerHTML = shell('lumi', `
-  ${pageHead(`${f.light} light · ${medals} medal${medals === 1 ? '' : 's'}`, 'Lumi', '', '')}
+  ${pageHead(t('{a} light · {b} medals', { a: f.light, b: medals }), 'Lumi', '', '')}
   <main class="wrap" style="display:flex;flex-direction:column;gap:22px">
     <section class="card lumi-hero tod-${lumiTime()}">
       <div class="lumi-stage-pic" id="lumiBig">
         ${friends ? `<div class="lumi-friends" aria-hidden="true">${Array.from({ length: friends }, (_, i) => `<i style="--h:${[160, 300, 30][i]};--t:${7 + i * 2}s;--dl:-${i * 2.3}s"></i>`).join('')}</div>` : ''}
         ${lumiSVG({ mood: lumiTime() === 'night' ? 'sleepy' : 'happy', stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 220 })}</div>
       <div class="lumi-hero-txt">
-        <div class="eyebrow">Stage ${f.stage.index + 1} of ${f.stages.length} ${info('lumi', 'Lumi')}</div>
-        <h1 class="display">${esc(f.stage.name)}</h1>
-        <p class="muted">${esc(f.stage.line)}${friends ? ` ${friends === 1 ? 'A friend firefly' : `${friends} friend fireflies`} came to fly with Lumi!` : ''}</p>
+        <div class="eyebrow">${t('Stage {a} of {b}', { a: f.stage.index + 1, b: f.stages.length })} ${info('lumi', 'Lumi')}</div>
+        <h1 class="display">${esc(t(f.stage.name))}</h1>
+        <p class="muted">${esc(t(f.stage.line))}${friends ? ` ${friends === 1 ? t('A friend firefly came to fly with Lumi!') : t('{n} friend fireflies came to fly with Lumi!', { n: friends })}` : ''}</p>
         <div class="lightbar big"><i style="width:${f.stage.pct}%"></i></div>
-        <div class="small">${f.stage.next ? `🔆 <b>${f.light}</b> / ${f.stage.next.need} light to <b>${esc(f.stage.next.name)}</b>` : `🔆 <b>${f.light}</b> light. Lumi is fully grown!`} ${info('light', 'light')}</div>
-        <div class="lumi-say">💬 ${esc(f.first_time ? pick(LUMI_LINES.hello) : greetLine(f))}</div>
+        <div class="small">🔆 ${f.stage.next ? t('{a} / {b} light to {name}', { a: `<b>${f.light}</b>`, b: f.stage.next.need, name: `<b>${esc(t(f.stage.next.name))}</b>` }) : t('{n} light. Lumi is fully grown!', { n: `<b>${f.light}</b>` })} ${info('light', 'light')}</div>
+        <div class="lumi-say">💬 ${esc(f.first_time ? pick(lines('hello')) : greetLine(f))}</div>
       </div>
     </section>
 
     <section class="card questcard${f.quest.done ? ' done' : ''}">
       <div class="quest-ic">${f.quest.icon}</div>
-      <div style="flex:1"><div class="eyebrow">Quest of the day ${info('quest', 'quest')}</div><b>${esc(f.quest.text)}</b>
+      <div style="flex:1"><div class="eyebrow">Quest of the day ${info('quest', 'quest')}</div><b>${esc(t(f.quest.text))}</b>
         <div class="achbar"><i style="width:${Math.round(100 * f.quest.value / f.quest.need)}%"></i></div>
-        <div class="muted small">${f.quest.done ? 'Done! +15 light ✨ A new quest comes tomorrow.' : `${f.quest.value} / ${f.quest.need} ${esc(f.quest.unit)} · +15 light`}</div></div>
+        <div class="muted small">${f.quest.done ? t('Done! +15 light ✨ A new quest comes tomorrow.') : t('{a} / {b} {unit} · +15 light', { a: f.quest.value, b: f.quest.need, unit: esc(tUnit(f.quest.unit, f.quest.need)) })}</div></div>
     </section>
 
     <section class="card skycard">
       <div class="sky-head"><h2 class="display" style="font-size:18px;margin:0">Lumi's sky</h2>
-        <span class="small">${f.sky.length ? `${f.sky.length} star${f.sky.length === 1 ? '' : 's'}: one for every lesson` : 'Your first lesson lights the first star ✨'} ${info('sky', 'sky')}</span></div>
+        <span class="small">${f.sky.length ? t('{n} stars: one for every lesson', { n: f.sky.length }) : t('Your first lesson lights the first star ✨')} ${info('sky', 'sky')}</span></div>
       ${skySVG(f.sky)}
+    </section>
+
+    <section class="card diarycard">
+      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">📔 Lumi's diary</h2><span class="muted small">${t('Lumi writes a few lines after every lesson')}</span></div>
+      ${diaryBook(f)}
     </section>
 
     <section class="card">
       <h2 class="display" style="font-size:18px;margin:0 0 14px">How Lumi grows</h2>
       <div class="stagepath">${f.stages.map((s, i) => `<div class="stagestep${i === f.stage.index ? ' now' : ''}${i > f.stage.index ? ' later' : ''}">
         ${lumiSVG({ mood: i <= f.stage.index ? 'happy' : 'rest', stage: i, size: 64, locked: i > f.stage.index, label: s.name })}
-        <b>${i > f.stage.index ? '?' : esc(s.name)}</b><span class="muted small">${s.need} light</span></div>`).join('')}</div>
+        <b>${i > f.stage.index ? '?' : esc(t(s.name))}</b><span class="muted small">${t('{n} light', { n: s.need })}</span></div>`).join('')}</div>
     </section>
 
     <section class="card">
       <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Wardrobe</h2><span class="muted small">tap to dress Lumi</span></div>
       <div class="wardrobe">${f.outfits.map((o) => `<button type="button" class="outfit${o.id === f.outfit ? ' on' : ''}" data-outfit="${o.id}" ${o.unlocked ? '' : 'disabled'} aria-pressed="${o.id === f.outfit}">
         ${lumiSVG({ mood: 'happy', stage: Math.max(2, f.stage.index), outfit: o.id, size: 70, locked: !o.unlocked, label: o.name })}
-        <b>${esc(o.name)}</b><span class="muted small">${o.unlocked ? (o.id === f.outfit ? 'wearing' : '&nbsp;') : `🔒 ${esc(o.how)}`}</span></button>`).join('')}</div>
+        <b>${esc(t(o.name))}</b><span class="muted small">${o.unlocked ? (o.id === f.outfit ? t('wearing') : '&nbsp;') : `🔒 ${esc(outfitHow(o, f.stages))}`}</span></button>`).join('')}</div>
     </section>
 
     <section class="card">
-      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Achievements ${info('ach', 'achievements')}</h2><span class="muted small">🏅 ${medals} of ${f.achievements.length * 3} medals</span></div>
+      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Achievements ${info('ach', 'achievements')}</h2><span class="muted small">${t('🏅 {a} of {b} medals', { a: medals, b: f.achievements.length * 3 })}</span></div>
       <div class="achgrid">${f.achievements.map((a) => `<div class="ach t${a.tier}">
         <div class="ach-medal" style="--m:${MEDAL[a.tier]}">${a.icon}</div>
-        <div class="ach-body"><div class="ach-top"><b>${esc(a.name)}</b><span class="ach-dots">${[1, 2, 3].map((k) => `<i class="${a.tier >= k ? 'on' : ''}" style="--m:${MEDAL[k]}"></i>`).join('')}</span></div>
-          <div class="muted small">${esc(a.what)}</div>
+        <div class="ach-body"><div class="ach-top"><b>${esc(t(a.name))}</b><span class="ach-dots">${[1, 2, 3].map((k) => `<i class="${a.tier >= k ? 'on' : ''}" style="--m:${MEDAL[k]}"></i>`).join('')}</span></div>
+          <div class="muted small">${esc(t(a.what))}</div>
           ${a.next !== null ? `<div class="achbar"><i style="width:${a.pct}%"></i></div>
-            <div class="small">${a.value} / ${a.next} ${esc(a.unit)}${a.next === 1 ? '' : 's'} · next: ${['Bronze', 'Silver', 'Gold'][a.tier]} <span class="muted">(+${[10, 25, 60][a.tier]} light)</span></div>`
+            <div class="small">${t('{a} / {b} {unit} · next: {tier}', { a: a.value, b: a.next, unit: esc(tUnit(a.unit, a.next)), tier: t(['Bronze', 'Silver', 'Gold'][a.tier]) })} <span class="muted">${t('(+{n} light)', { n: [10, 25, 60][a.tier] })}</span></div>`
           : '<div class="small" style="color:var(--c-yellow)">★ Gold! All done.</div>'}
         </div></div>`).join('')}</div>
     </section>
@@ -388,7 +409,7 @@ async function viewLumi() {
       <div class="lset"><div><b>Sounds</b><div class="muted small">A soft “ding” for medals, growing and quests. Turn off in a classroom or library.</div></div>
         <button class="switch${f.sound ? ' on' : ''}" id="lumiSoundSw" role="switch" aria-checked="${f.sound}" aria-label="Lumi sounds"><span></span></button></div>
       <div class="lset"><div><b>Birthday party 🎂</b><div class="muted small">Optional. Lumi celebrates with you. Only the month and day are saved, never the year.</div></div>
-        <div class="bday"><select class="field" id="bdM" aria-label="Birthday month"><option value="">month</option>${MONTHS.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}"${bm === String(i + 1).padStart(2, '0') ? ' selected' : ''}>${m}</option>`).join('')}</select>
+        <div class="bday"><select class="field" id="bdM" aria-label="Birthday month"><option value="">month</option>${MONTHS.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}"${bm === String(i + 1).padStart(2, '0') ? ' selected' : ''}>${new Date(2026, i, 1).toLocaleDateString(LOCALE(), { month: 'long' })}</option>`).join('')}</select>
           <select class="field" id="bdD" aria-label="Birthday day"><option value="">day</option>${Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map((v) => `<option${bd === v ? ' selected' : ''}>${v}</option>`).join('')}</select></div></div>
     </section>
   </main>`);
@@ -414,6 +435,7 @@ async function viewLumi() {
     toast(m && d ? 'Lumi wrote it down 🎂' : 'Birthday removed');
   };
   $('#bdM').onchange = saveBday; $('#bdD').onchange = saveBday;
+  wireDiary(f);
   lumiNews(f);
 }
 
@@ -430,27 +452,69 @@ async function lumiNews(given = null) {
   box.setAttribute('role', 'dialog');
   box.setAttribute('aria-modal', 'true');
   const tierName = ['', 'Bronze', 'Silver', 'Gold'];
-  const list = (quest ? `<li><span class="ach-medal sm" style="--m:var(--c-green)">${quest.icon}</span><b>Quest done!</b> · +15 light</li>` : '')
-    + tiers.slice(0, 5).map((t) => `<li><span class="ach-medal sm" style="--m:${MEDAL[t.tier]}">${t.icon}</span><b>${esc(t.name)}</b> · ${tierName[t.tier]}</li>`).join('')
+  const list = (quest ? `<li><span class="ach-medal sm" style="--m:var(--c-green)">${quest.icon}</span><b>${t('Quest done!')}</b> · ${t('(+{n} light)', { n: 15 })}</li>` : '')
+    + tiers.slice(0, 5).map((m) => `<li><span class="ach-medal sm" style="--m:${MEDAL[m.tier]}">${m.icon}</span><b>${esc(t(m.name))}</b> · ${t(tierName[m.tier])}</li>`).join('')
     + (tiers.length > 5 ? `<li class="muted">…and ${tiers.length - 5} more</li>` : '');
-  const title = f.first_time ? 'Meet Lumi!' : grew != null ? `Lumi grew into a ${esc(f.stages[grew].name)}!`
-    : tiers.length > 1 ? 'New medals!' : tiers.length ? 'New medal!' : 'Quest complete!';
+  const title = t(f.first_time ? 'Meet Lumi!' : grew != null ? 'Lumi grew into a {name}!'
+    : tiers.length > 1 ? 'New medals!' : tiers.length ? 'New medal!' : 'Quest complete!', { name: grew != null ? esc(t(f.stages[grew].name)) : '' });
   const text = f.first_time
-    ? "I'm a little firefly. Every minute you really focus gives me light, and with enough light I grow. Good habits win medals that give extra light!"
-      + (tiers.length ? ` You already earned ${tiers.length} medal${tiers.length === 1 ? '' : 's'}:` : '')
-    : grew != null ? esc(f.stages[grew].line) : tiers.length ? 'Each medal gives Lumi extra light ✨' : 'You did the quest of the day. Lumi glows a little brighter!';
+    ? t("I'm a little firefly. Every minute you really focus gives me light, and with enough light I grow. Good habits win medals that give extra light!")
+      + (tiers.length ? t(' You already earned {n} medals:', { n: tiers.length }) : '')
+    : grew != null ? esc(t(f.stages[grew].line)) : t(tiers.length ? 'Each medal gives Lumi extra light ✨' : 'You did the quest of the day. Lumi glows a little brighter!');
   box.innerHTML = `<div class="card lumi-party-card">
     <div class="confetti" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 6) * 0.15}s;--c:${['var(--c-yellow)', 'var(--c-pink)', 'var(--c-blue)', 'var(--c-green)', 'var(--c-violet)', 'var(--c-orange)'][i % 6]}"></i>`).join('')}</div>
     ${lumiSVG({ mood: 'party', stage: f.stage.index, outfit: f.outfit, size: 150 })}
     <h2 class="display">${title}</h2><p>${text}</p>
     ${list ? `<ul class="partylist">${list}</ul>` : ''}
-    <button class="btn primary big" id="partyOk">${f.first_time ? "Let's go! ✨" : 'Yay! ✨'}</button></div>`;
+    <button class="btn primary big" id="partyOk">${t(f.first_time ? "Let's go! ✨" : 'Yay! ✨')}</button></div>`;
   document.body.appendChild(box);
   lumiSound(grew != null ? 'grow' : tiers.length ? 'medal' : 'quest', f);
   const close = async () => { box.remove(); await api('/api/friend', { seen: true }).catch(() => {}); };
   $('#partyOk').onclick = close;
   $('#partyOk').focus();
   box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+}
+
+
+// ---------------------------------------------------------------- Lumi's diary
+const DIARY = {
+  open: 'We studied {title}{cls} for {n} min.',
+  focus_super: 'You were super focused. I glowed the whole time! ✨',
+  focus_good: 'You focused well for most of it.',
+  focus_hard: 'It was hard to focus today. That happens, tomorrow is a new try 🌱',
+  longest: 'Your longest focus: {n} minutes in a row!',
+  plan_all: 'You finished everything you planned 🎯',
+  plan_part: 'You finished part of your plan. Good start!',
+  no_phone: 'And no phone at all 📵',
+  phone: 'The phone came out {n}×.',
+  eyes: 'We rested our eyes {n}× 👀',
+  questions: 'Questions saved for review: {n} 🧠',
+  fell: 'Your attention got tired after about {n} minutes. A break around then could help.',
+};
+function diaryDayHTML(day) {
+  const date = new Date(day.ts * 1000).toLocaleDateString(LOCALE(), { weekday: 'long', day: 'numeric', month: 'long' });
+  return `<article class="diary-day"><h3>${esc(date)}</h3>${day.lessons.map((l) => `<p>${l.lines.map((x) =>
+    t(DIARY[x.k], { n: x.n, title: `<b>${esc(x.title || '')}</b>`, cls: x.cls ? ` (${esc(x.cls)})` : '' })).join(' ')}</p>`).join('')}</article>`;
+}
+function diaryBook(f) {
+  if (!f.diary.length) return `<p class="empty">${t('The diary starts after the first lesson.')}</p>`;
+  return `<div class="diary-book"><div class="diary-page" id="diaryPage">${diaryDayHTML(f.diary[0])}</div>
+    <div class="diary-nav"><button class="btn ghost" id="diaryOlder" ${f.diary.length > 1 ? '' : 'disabled'}>← ${t('Older')}</button>
+      <span class="muted small" id="diaryPos">1 / ${f.diary.length}</span>
+      <button class="btn ghost" id="diaryNewer" disabled>${t('Newer')} →</button></div></div>`;
+}
+function wireDiary(f) {
+  let i = 0;
+  const go = (k) => {
+    i = Math.max(0, Math.min(f.diary.length - 1, i + k));
+    const pg = $('#diaryPage');
+    pg.classList.remove('turn'); void pg.offsetWidth; pg.classList.add('turn');
+    pg.innerHTML = diaryDayHTML(f.diary[i]);
+    $('#diaryPos').textContent = `${i + 1} / ${f.diary.length}`;
+    $('#diaryOlder').disabled = i >= f.diary.length - 1;
+    $('#diaryNewer').disabled = i === 0;
+  };
+  if ($('#diaryOlder')) { $('#diaryOlder').onclick = () => go(1); $('#diaryNewer').onclick = () => go(-1); }
 }
 
 // ---------------------------------------------------------------- Lumi on empty pages

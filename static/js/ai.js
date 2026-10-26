@@ -237,7 +237,9 @@ function chatBox(container, opts = {}) {
     }
   };
 
-  const setupCard = () => `<div class="m-setup">
+  const setupCard = () => (aiState && aiState.parent_off ? `<div class="m-setup">
+      <b>👪 The AI tutor is switched off</b>
+      <span class="small">A parent turned it off in Parent mode. Ask them if you need it. Lumi and everything else still work!</span></div>` : `<div class="m-setup">
       <b>✨ The AI tutor is free with a Lumen account</b>
       <span class="small">Create an account (30 seconds) and ask up to 40 questions every day, no key needed.</span>
       <a class="btn primary" href="#/account" style="align-self:flex-start">Sign in or create an account</a>
@@ -246,7 +248,7 @@ function chatBox(container, opts = {}) {
         <li>Press <b>Create API key</b> and copy it. It's free, no card needed.</li><li>Paste it here:</li></ol>
       <form data-connect class="btnrow" style="flex-wrap:nowrap"><input class="field" type="password" placeholder="AIza…" autocomplete="off" aria-label="Gemini API key" style="flex:1">
         <button class="btn primary" type="submit">Connect</button></form>
-      <span class="muted small connect-msg">The key stays in this browser.</span></details></div>`;
+      <span class="muted small connect-msg">The key stays in this browser.</span></details></div>`);
 
   const setBusy = (on) => {
     sendBtn.innerHTML = on ? STOP_ICON : SEND_ICON;
@@ -353,7 +355,7 @@ async function viewAI(chatId = null) {
   let current = chatId ? list.chats.find((c) => c.id === chatId) : null;
   const classes = d.classes.map((c) => c.name);
   const provider = ai.ready ? (ai.provider === 'lumen' ? 'Lumen AI · free'
-    : `${ai.provider === 'claude' ? 'Claude' : ai.provider === 'gemini' ? 'Gemini' : 'Test'} · ${esc(ai.model)}`) : 'Sign in for free AI';
+    : `${ai.provider === 'claude' ? 'Claude' : ai.provider === 'gemini' ? 'Gemini' : 'Test'} · ${esc(ai.model)}`) : ai.parent_off ? 'Switched off by a parent' : 'Sign in for free AI';
 
   // Like every AI app: the page itself never scrolls, only the conversation does,
   // so the question box always stays in the same place at the bottom.

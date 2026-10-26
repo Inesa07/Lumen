@@ -79,6 +79,7 @@ export class LocalServer {
     this.chats = new ChatStore(db);
     this.reviews = new ReviewStore(db);
     this.tutor = new Tutor(db, { fake, cloud: cloudAI });
+    this.tutor.blocked = () => !this.parentInfo().ai_allowed;
     this.tracker = null; this.check = null; this.worker = null;
     this.sessionId = null; this.checkId = null;
     this.lastReportId = null; this.lastCheckId = null; this.lastStatus = null;
@@ -469,8 +470,46 @@ export class LocalServer {
     if (p === '/api/week') return stats.weekly(this.reports(), this.reviews.load());
     if (p === '/api/settings') return this.settings();
     if (p === '/api/friend') return this.friend();
+    if (p === '/api/parent') return this.parentInfo();
     if (p === '/api/export') return { app: 'lumen', version: 1, exported_at: Date.now() / 1000, data: this.exportData() };
     return [{ error: 'not found' }, 404];
+  }
+
+  // ------------------------------------------------------------------ parent mode
+  // A 4-digit PIN (stored only as a salted SHA-256 hash) protects the parent page and the
+  // AI tutor switch. It keeps children from changing it by accident; it is not a bank vault:
+  // someone with full access to the computer and browser tools could still get around it.
+  parentInfo() {
+    const p = this.db.getValue('parent') || {};
+    return { enabled: !!p.hash, ai_allowed: p.hash ? !!p.ai_allowed : true };
+  }
+
+  async pinHash(pin, salt) {
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${pin}`));
+    return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async pinOk(pin) {
+    const p = this.db.getValue('parent') || {};
+    return !!p.hash && (await this.pinHash(String(pin ?? ''), p.salt)) === p.hash;
+  }
+
+  /** body: {set_pin, pin?} | {verify, pin} | {pin, ai_allowed} | {pin, disable} */
+  async parentPost(body) {
+    const p = this.db.getValue('parent') || {};
+    if (body.set_pin !== undefined) {
+      if (p.hash && !(await this.pinOk(body.pin))) return [{ error: 'Wrong PIN' }, 403];
+      if (!/^\d{4}$/.test(String(body.set_pin))) return [{ error: 'The PIN must be 4 digits' }, 400];
+      const salt = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, '0')).join('');
+      this.db.setValue('parent', { hash: await this.pinHash(String(body.set_pin), salt), salt,
+        ai_allowed: p.hash ? !!p.ai_allowed : false });       // new parent mode: the AI tutor starts switched off
+      return this.parentInfo();
+    }
+    if (!(await this.pinOk(body.pin))) return [{ ok: false, error: 'Wrong PIN' }, 403];
+    if (body.verify) return { ok: true };
+    if (body.disable) { this.db.setValue('parent', {}); return this.parentInfo(); }
+    if (typeof body.ai_allowed === 'boolean') this.db.setValue('parent', { ...p, ai_allowed: body.ai_allowed });
+    return this.parentInfo();
   }
 
   // ------------------------------------------------------------------ Lumi the firefly (see core/friend.js)
@@ -559,6 +598,7 @@ export class LocalServer {
     if (p === '/api/review') return this.reviewAction(body);
     if (p === '/api/settings') return this.saveSettings(body);
     if (p === '/api/friend') return this.saveFriend(body);
+    if (p === '/api/parent') return this.parentPost(body);
     if (p === '/api/ping') return { ok: true };
     if (p === '/api/check/start') { const res = await this.startCheck(); return [res, res.ok ? 200 : 500]; }
     if (p === '/api/profile') {

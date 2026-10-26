@@ -105,6 +105,8 @@ export class Tutor {
 
   /** Which provider will answer. Safe to show (no key inside). */
   status() {
+    // parent mode: a parent switched the AI tutor off for this account
+    if (this.blocked && this.blocked()) return { ready: false, provider: null, parent_off: true };
     const cfg = this.config();
     if (this.fake) return { ready: true, provider: 'test', model: 'echo' };
     if (cfg.api_key) return { ready: true, provider: 'claude', model: cfg.model, key_hint: hint(cfg.api_key), gemini_hint: cfg.gemini_key ? hint(cfg.gemini_key) : null };
@@ -122,6 +124,7 @@ export class Tutor {
   /** Async generator: yields the answer in small pieces while the model is still writing. */
   async* askStream(messages, context = '', isHint = false, signal = undefined) {
     const st = this.status();
+    if (st.parent_off) throw new AIError('A parent switched the AI tutor off. Ask them to turn it on in Parent mode.');
     if (!st.ready) throw new AIError('Sign in to use the free AI tutor (menu → Guest → Create account), or add your own key in Settings → AI tutor.');
     const system = SYSTEM + (context ? `\n\n${context}` : '') + (isHint ? `\n\n${HINT}` : '');
     const msgs = messages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content }));

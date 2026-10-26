@@ -45,7 +45,7 @@ async function viewSession() {
   <header class="top">
     <div class="head-title">
       <a class="back" href="#/" aria-label="Home (the session keeps running)">${BACK}</a>
-      <div><div class="eyebrow">${esc(s.class || 'Study session')}${s.part > 1 ? ` · part ${s.part}` : ''}${s.fake ? ' · simulation' : ''}</div><div class="h-title">${esc(s.title)}</div>
+      <div><div class="eyebrow">${esc(s.class || 'Study session')}${s.part > 1 ? ` · part ${s.part}` : ''}${s.fake ? ' · simulation' : ''}</div><div class="h-title" data-noi18n>${esc(s.title)}</div>
         </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">

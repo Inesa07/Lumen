@@ -59,6 +59,10 @@ function themeSwatches(small = false) {
       <span class="sw" style="background:${bg}"><i style="background:${surf}"></i><i style="background:${surf};width:40%"></i><b></b></span>
       <span>${name}</span></button>`).join('')}</div>`;
 }
+function langButtons() {
+  return `<div class="langs" data-noi18n>${LANGS.map(([k, name]) => `<button type="button" class="langbtn${k === LANG ? ' on' : ''}" data-lang="${k}" aria-pressed="${k === LANG}">${name}</button>`).join('')}</div>`;
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (b && b.dataset.lang !== LANG) setLang(b.dataset.lang); });
 function accentSwatches() {
   return `<div class="accents">${ACCENTS.map(([hex, name]) => `<button type="button" class="acc${LOOK.accent === hex ? ' on' : ''}" data-look-accent="${hex}" style="--c:${hex}" aria-pressed="${LOOK.accent === hex}" title="${name}"><span></span><em>${name}</em></button>`).join('')}</div>`;
 }
@@ -206,7 +210,9 @@ function buildSidebar() {
     <div class="side-foot"><div id="livePill"></div><div id="accountSlot"></div>
       <div class="lookwrap"><button class="pill lookbtn" id="lookBtn" type="button" aria-expanded="false" aria-controls="lookPop">🎨 Colours</button>
         <div class="lookpop card" id="lookPop" hidden><div class="eyebrow">Background</div>${themeSwatches(true)}
-          <div class="eyebrow" style="margin-top:12px">Accent</div>${accentSwatches()}</div></div>
+          <div class="eyebrow" style="margin-top:12px">Accent</div>${accentSwatches()}
+          <div class="eyebrow" style="margin-top:12px">Language</div>${langButtons()}</div></div>
+      <a class="pill parentlink" href="#/parent">👪 Parents</a>
       <div class="pill" title="The camera is analysed inside your browser. Video never leaves your device.">${LOCK}Video stays on your device</div></div>`;
   $('#lookBtn').onclick = (e) => {
     e.stopPropagation();
@@ -337,7 +343,8 @@ function info(key, label = '') {
     e.preventDefault(); e.stopPropagation();
     if (owner === b) { close(); return; }
     close();
-    const entry = (typeof INFO !== 'undefined' && INFO[b.dataset.info]) || [null, esc(b.dataset.info)];
+    const raw = (typeof INFO !== 'undefined' && INFO[b.dataset.info]) || [null, esc(b.dataset.info)];
+    const entry = [raw[0] && t(raw[0]), t(raw[1])];
     pop = document.createElement('div');
     pop.className = 'infopop';
     pop.setAttribute('role', 'dialog');

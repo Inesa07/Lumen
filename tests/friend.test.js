@@ -87,3 +87,17 @@ test('sky: one star per lesson, paused parts joined', async () => {
   assert.equal(sky.length, 2);
   assert.equal(sky[0].focused_min, 40); assert.equal(sky[0].att, 70);
 });
+
+test('diary: a page per day, kind sentences from the lesson', async () => {
+  const { diaryOf } = await import('../src/core/friend.js');
+  const d = diaryOf([
+    lesson(at(2026, 10, 5), { id: 'a', title: 'Fractions', class: 'Math', focused_min: 26, longest_focus: 18, outcome: 'yes', eye_rests: 2 }),
+    lesson(at(2026, 10, 6), { id: 'b', title: 'Verbs', focused_min: 8, pickups: ['01:00', '09:00'], fell_after: 12, eye_rests: 0 }),
+  ]);
+  assert.equal(d.length, 2);
+  assert.equal(d[0].day, '2026-10-06');                      // newest first
+  const keys = (i) => d[i].lessons[0].lines.map((l) => l.k);
+  assert.deepEqual(keys(1), ['open', 'focus_super', 'longest', 'plan_all', 'no_phone']);
+  assert.deepEqual(keys(0), ['open', 'focus_hard', 'phone', 'fell']);
+  assert.equal(d[0].lessons[0].lines[2].n, 2);
+});

@@ -1240,6 +1240,38 @@ body { background:
 @keyframes fall { to { transform: translateY(560px) rotate(540deg); opacity: .2; } }
 @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
 
+/* ---------------------------------------------------------------- languages and parent mode */
+.langs { display: flex; flex-wrap: wrap; gap: 6px; }
+.langbtn { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); font-size: 13px; }
+.langbtn.on { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.parentlink { text-decoration: none; justify-content: center; }
+.parent-intro { display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--c-blue) 16%, var(--surface)), color-mix(in srgb, var(--c-green) 12%, var(--surface))); }
+.pinform { display: flex; flex-direction: column; gap: 14px; }
+.pinrow { display: flex; flex-wrap: wrap; gap: 14px; }
+.pinlabel { display: flex; flex-direction: column; gap: 6px; }
+.field.pin { width: 140px; font-size: 22px; letter-spacing: .4em; text-align: center; }
+.lockcard { align-items: center; text-align: center; width: min(380px, 100%); margin-top: 6vh; }
+.parent-kpis b { font: 600 24px var(--display); }
+.parent-lessons { display: flex; flex-direction: column; gap: 8px; }
+.plesson { display: grid; grid-template-columns: 150px 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px;
+  background: var(--surface-2); text-decoration: none; color: var(--text); }
+.plesson:hover { background: var(--surface-3); }
+@media (max-width: 640px) { .plesson { grid-template-columns: 1fr auto; } .plesson > :nth-child(1), .plesson > :nth-child(3) { display: none; } }
+.parent-lumi { align-items: center; text-align: center; gap: 6px !important; }
+.parent-controls { display: flex; flex-direction: column; gap: 14px; }
+/* diary */
+.diary-book { display: flex; flex-direction: column; gap: 12px; }
+.diary-page { padding: 18px 22px; border-radius: 14px; min-height: 140px; line-height: 1.7; font-size: 15px;
+  background: repeating-linear-gradient(180deg, transparent 0 27px, color-mix(in srgb, var(--c-blue) 14%, transparent) 27px 28px), color-mix(in srgb, #FFF6D8 10%, var(--surface-2));
+  border-left: 4px solid color-mix(in srgb, var(--c-pink) 60%, transparent); }
+.diary-page.turn { animation: pageTurn .35s ease; }
+@keyframes pageTurn { from { opacity: 0; transform: perspective(800px) rotateY(-12deg); } }
+.diary-day h3 { margin: 0 0 6px; font: 600 15px var(--display); color: var(--accent-text); }
+.diary-day h3::first-letter { text-transform: uppercase; }
+.diary-day p { margin: 0 0 8px; }
+.diary-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
 /* ---------------------------------------------------------------- Lumi's world */
 .lumi .snow > * { animation: snowfall 3.5s ease-in-out infinite; }
 @keyframes snowfall { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(6px); opacity: .4; } }

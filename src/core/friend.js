@@ -233,6 +233,44 @@ export function skyOf(sessions) {
     .map((a) => ({ ...a, att: a.att.length ? Math.round(a.att.reduce((x, y) => x + y, 0) / a.att.length) : 0 }));
 }
 
+/**
+ * Lumi's diary: one page per study day, a few kind sentences per lesson, newest day first.
+ * Sentences are data ({k: key, n: number…}) so the page can show them in any language.
+ */
+export function diaryOf(sessions, maxDays = 120) {
+  const lessons = new Map();
+  for (const r of sessions.filter((x) => x && x.started_at)) {
+    const k = r.lesson_id || r.id;
+    const a = lessons.get(k) || { id: r.id, title: r.title || 'a lesson', cls: r.class || '', started_at: r.started_at,
+      dur: 0, focused: 0, longest: 0, pickups: 0, eyes: 0, questions: 0, fell: null, outcome: null };
+    a.dur += (r.duration_sec || 0) / 60; a.focused += r.focused_min || 0; a.longest = Math.max(a.longest, r.longest_focus || 0);
+    a.pickups += (r.pickups || []).length; a.eyes += r.eye_rests || 0;
+    a.questions += (r.questions || []).filter((q) => q.text).length;
+    a.fell = a.fell ?? r.fell_after ?? null; a.outcome = r.outcome ?? a.outcome;
+    a.started_at = Math.min(a.started_at, r.started_at); a.id = r.id;
+    lessons.set(k, a);
+  }
+  const days = new Map();
+  for (const a of [...lessons.values()].sort((x, y) => x.started_at - y.started_at)) {
+    const dur = Math.max(1, Math.round(a.dur));
+    const share = a.focused / dur;
+    const lines = [{ k: 'open', title: a.title, cls: a.cls, n: dur }];
+    lines.push({ k: share >= 0.75 ? 'focus_super' : share >= 0.5 ? 'focus_good' : 'focus_hard' });
+    if (a.longest >= 15) lines.push({ k: 'longest', n: a.longest });
+    if (a.outcome === 'yes') lines.push({ k: 'plan_all' });
+    else if (a.outcome === 'partly') lines.push({ k: 'plan_part' });
+    if (dur >= 20 && !a.pickups) lines.push({ k: 'no_phone' });
+    else if (a.pickups) lines.push({ k: 'phone', n: a.pickups });
+    if (a.eyes) lines.push({ k: 'eyes', n: a.eyes });
+    if (a.questions) lines.push({ k: 'questions', n: a.questions });
+    if (a.fell && a.fell >= 10 && share < 0.75) lines.push({ k: 'fell', n: a.fell });
+    const key = dayKey(a.started_at);
+    if (!days.has(key)) days.set(key, { day: key, ts: dayStart(key), lessons: [] });
+    days.get(key).lessons.push({ id: a.id, lines: lines.slice(0, 5) });
+  }
+  return [...days.values()].sort((x, y) => y.ts - x.ts).slice(0, maxDays);
+}
+
 export function friendState(sessions, reviews, saved = {}, streakMin = 10, now = Date.now() / 1000) {
   const m = metrics(sessions, reviews, streakMin);
   const evals = evaluate(m);
@@ -244,6 +282,6 @@ export function friendState(sessions, reviews, saved = {}, streakMin = 10, now =
   const news = newsSince(saved, evals, stage.index);
   news.quest = quest.done && saved.quest_day !== quest.day ? quest : null;
   return { metrics: m, achievements: evals, light, stage, stages: STAGES, outfits, outfit, quest, news,
-    sky: skyOf(sessions), first_time: !saved.seen, show_in_lessons: saved.show_in_lessons !== false,
+    sky: skyOf(sessions), diary: diaryOf(sessions), first_time: !saved.seen, show_in_lessons: saved.show_in_lessons !== false,
     sound: saved.sound !== false, birthday: saved.birthday || null };
 }
