@@ -158,6 +158,14 @@ const MOOD = {
 };
 const app = $('#app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/** "3:06" -> "3 min 6 sec", "0:35" -> "35 seconds" (in the chosen language) */
+function awayWords(m) {
+  const [mm, ss] = String(m || '0:00').split(':').map(Number);
+  const total = (mm || 0) * 60 + (ss || 0);
+  if (!total) return t('never looked away');
+  const span = total < 60 ? t('{s} seconds', { s: total }) : ss ? t('{m} min {s} sec', { m: mm, s: ss }) : t('{m} min', { m: mm });
+  return t('{d} away from the screen', { d: span });
+}
 const mmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 const C = 2 * Math.PI * 88;     // ring circumference
 let stream = null;              // EventSource for the live session / check

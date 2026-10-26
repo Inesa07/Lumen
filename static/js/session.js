@@ -306,7 +306,7 @@ function render(d) {
   $('#nEyes').textContent = d.eyes_on >= 80 ? 'steady' : 'often looking away';
   $('#nEyes').style.color = d.eyes_on >= 80 ? 'var(--teal)' : 'var(--accent)';
   $('#sAway').textContent = d.away_count;
-  $('#nAway').textContent = `${d.away_total} in total`;
+  $('#nAway').textContent = awayWords(d.away_total);
   $('#sBlink').textContent = d.blink_rate ?? '–';
   const nb = $('#nBlink');
   if (d.blink_rate == null) { nb.textContent = 'measuring…'; nb.style.color = ''; }

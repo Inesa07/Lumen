@@ -1518,3 +1518,32 @@ p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px
 /* Lumi card on Home: today's goal and streak */
 .todayline { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 12.5px; color: var(--soft); }
 .lightbar.goalbar i { background: linear-gradient(90deg, var(--c-blue), var(--teal)); box-shadow: none; }
+
+
+/* ---------------------------------------------------------------- parent mode, polished */
+.parent-wrap { display: flex; flex-direction: column; gap: 18px; max-width: 860px; }
+.parent-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; padding: 26px 28px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--c-blue) 18%, var(--surface)), color-mix(in srgb, var(--c-violet) 14%, var(--surface))); }
+.parent-hero h2 { margin: 0 0 6px; font-size: 24px; }
+.parent-hero p { margin: 0; line-height: 1.6; max-width: 560px; }
+.parent-feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.pfeat { display: flex; flex-direction: column; gap: 6px; padding: 18px; }
+.pfeat-ic { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface)); margin-bottom: 4px; }
+.pinbox { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pinbox legend { padding: 0; margin-bottom: 8px; }
+.pin-cells { display: flex; gap: 10px; }
+.pin-cell { width: 52px; height: 60px; border-radius: 14px; border: 2px solid var(--line-2); background: var(--surface-2); color: var(--text);
+  font: 600 26px var(--display); text-align: center; caret-color: var(--accent); transition: border-color .15s, box-shadow .15s; }
+.pin-cell:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.pinbox.shake .pin-cells { animation: shake .4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.pinrow { display: flex; flex-wrap: wrap; gap: 28px; }
+.lockcard .pinbox { align-items: center; }
+.lockcard .pinbox legend { display: none; }
+.pinchange { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.pinchange .pin-cell { width: 44px; height: 50px; font-size: 22px; }
+.pinchange .pinbox legend { display: none; }
+.mailrow { display: flex; gap: 10px; flex-wrap: wrap; flex: none; }
+.mailrow .field { width: 240px; }
+@media (max-width: 640px) { .pin-cell { width: 46px; height: 54px; } .mailrow .field { width: 100%; } }

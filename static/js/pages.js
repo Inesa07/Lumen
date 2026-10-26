@@ -304,7 +304,7 @@ async function viewReport(id) {
       <div class="card"><span class="eyebrow">Duration</span><b>${Math.max(1, Math.round(dur / 60))} min</b></div>
       <div class="card"><span class="eyebrow">Average attention</span><b>${r.avg_attention}%</b></div>
       <div class="card"><span class="eyebrow">Focused</span><b>${hm(r.focused_min)}</b><span class="eyebrow">longest streak ${r.longest_focus ?? 0} min</span></div>
-      <div class="card"><span class="eyebrow">Looked away</span><b>${r.away_count ?? 0} ${tUnit('time', r.away_count ?? 0)}</b><span class="eyebrow">${r.away_total ?? '0:00'} in total</span></div>
+      <div class="card"><span class="eyebrow">Looked away</span><b>${r.away_count ?? 0} ${tUnit('time', r.away_count ?? 0)}</b><span class="eyebrow">${awayWords(r.away_total)}</span></div>
       <div class="card"><span class="eyebrow">Breaks</span><b>${r.breaks}</b>${r.break_min ? `<span class="eyebrow">${r.break_min} min resting</span>` : ''}</div>
     </section>
     <section class="card" style="padding:28px">

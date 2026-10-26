@@ -514,12 +514,18 @@ export class LocalServer {
       if (p.hash && !(await this.pinOk(body.pin))) return [{ error: 'Wrong PIN' }, 403];
       if (!/^\d{4}$/.test(String(body.set_pin))) return [{ error: 'The PIN must be 4 digits' }, 400];
       const salt = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, '0')).join('');
-      this.db.setValue('parent', { hash: await this.pinHash(String(body.set_pin), salt), salt,
+      this.db.setValue('parent', { ...p, hash: await this.pinHash(String(body.set_pin), salt), salt,
         ai_allowed: p.hash ? !!p.ai_allowed : false });       // new parent mode: the AI tutor starts switched off
       return this.parentInfo();
     }
     if (!(await this.pinOk(body.pin))) return [{ ok: false, error: 'Wrong PIN' }, 403];
-    if (body.verify) return { ok: true };
+    if (body.verify) return { ok: true, email: p.email || '' };
+    if (typeof body.email === 'string') {
+      const e = body.email.trim().slice(0, 120);
+      if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return [{ error: 'Not an email address' }, 400];
+      this.db.setValue('parent', { ...p, email: e });
+      return this.parentInfo();
+    }
     if (body.disable) { this.db.setValue('parent', {}); return this.parentInfo(); }
     if (typeof body.ai_allowed === 'boolean') this.db.setValue('parent', { ...p, ai_allowed: body.ai_allowed });
     return this.parentInfo();
