@@ -67,9 +67,17 @@ function skySceneHTML() {
     return `<div class="sky-balloon${near2 ? ' near' : ''}" style="--y:${(10 + rnd(k, 1) * 50).toFixed(1)}vh;--d:${(near2 ? 150 : 230 + rnd(k, 2) * 80).toFixed(0)}s;--dl:-${(rnd(k, 3) * 220).toFixed(0)}s">
       <div class="bob" style="--b:${(5 + rnd(k, 4) * 4).toFixed(1)}s">${balloonSVG(k, near2 ? 74 : 36 + rnd(k, 5) * 16, c)}</div></div>`;
   }).join('');
-  // a small V of birds: [x, y] offsets from the leader
-  const birds = [[0, 0], [-22, 12], [-22, -12], [-44, 22], [-44, -22]].map(([x, y], i) => `<svg class="bird" style="left:${x}px;top:${y}px;--dl:-${(i * 0.17).toFixed(2)}s" width="18" height="8" viewBox="0 0 18 8" aria-hidden="true">
-    <path d="M1 6Q5 0 9 5Q13 0 17 6" fill="none" stroke="rgba(35,50,75,.6)" stroke-width="1.6" stroke-linecap="round"/></svg>`).join('');
+  // a loose flock: each bird is a silhouette with three wing frames (up, glide, down)
+  const WING = {
+    up: 'M20 11.2C17.4 9.2 14.6 5.6 10.4 1.4C11.6 6.4 15 10.4 19.4 12.8ZM20 11.2C22.6 9.2 25.4 5.6 29.6 1.4C28.4 6.4 25 10.4 20.6 12.8Z',
+    mid: 'M20 11.2C16.4 7.2 10.6 6.4 2.6 8.6C8.8 9.6 14.6 11.8 19.4 13.2ZM20 11.2C23.6 7.2 29.4 6.4 37.4 8.6C31.2 9.6 25.4 11.8 20.6 13.2Z',
+    down: 'M20 11.6C16.8 12.4 12.6 14.8 8.4 18.6C13 16.6 16.6 14.2 19.6 12.8ZM20 11.6C23.2 12.4 27.4 14.8 31.6 18.6C27 16.6 23.4 14.2 20.4 12.8Z',
+  };
+  const flock = [[0, 0, 1], [-34, 14, 0.9], [-30, -16, 0.85], [-70, 26, 0.8], [-64, -6, 0.75], [-98, 34, 0.7]];
+  const birds = flock.map(([x, y, sc], i) => `<div class="bird" style="left:${x}px;top:${y}px;--sc:${sc};--fl:${(4.2 + rnd(i + 61, 1) * 1.6).toFixed(2)}s;--fd:-${(rnd(i + 61, 2) * 4).toFixed(2)}s;--bd:-${(rnd(i + 61, 3) * 3).toFixed(2)}s">
+    <svg width="40" height="20" viewBox="0 0 40 20" aria-hidden="true"><g fill="rgba(34,44,64,.78)">
+      <ellipse cx="20" cy="12" rx="2.3" ry="1.5"/><path d="M18 12.2L15.6 12.9L16.3 11.7Z"/>
+      <path class="w-up" d="${WING.up}"/><path class="w-mid" d="${WING.mid}"/><path class="w-down" d="${WING.down}"/></g></svg></div>`).join('');
   return `<div class="sky-sun"></div>${far}<div class="bird-flock">${birds}</div>${balloons}${near}`;   // order = depth
 }
 
