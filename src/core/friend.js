@@ -80,7 +80,6 @@ export const QUESTS = [
   { id: 'nophone', icon: '📵', text: 'Study 20 minutes without the phone', need: 1, unit: 'lesson' },
   { id: 'plan', icon: '🎯', text: 'Plan tasks for a lesson and finish them all', need: 1, unit: 'lesson' },
   { id: 'review3', icon: '🧠', text: 'Answer 3 review cards', need: 3, unit: 'cards' },
-  { id: 'question', icon: '❓', text: 'Save a question about something confusing (press C)', need: 1, unit: 'question' },
   { id: 'deep10', icon: '🎧', text: 'Stay focused 10 minutes in a row', need: 10, unit: 'min' },
 ];
 

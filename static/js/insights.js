@@ -94,7 +94,7 @@ async function viewProgress(sub = '') {
       <section class="card"><h2 class="display" style="font-size:20px">Day by day</h2>${dayBars(w.days, 160)}
         <p class="muted small" style="margin:12px 0 0">${w.best_day ? `Best day: <strong>${esc(w.best_day.label)} ${esc(w.best_day.date)}</strong>, ${hm(w.best_day.focused_min)} focused.` : ''}</p></section>
       <section class="stats">
-        <div class="card"><span class="eyebrow">Questions written</span><b>${w.questions_new}</b><span class="eyebrow">${w.reviews_understood} understood on review</span></div>
+        <div class="card"><span class="eyebrow">Breaks</span><b>${tw.breaks}</b><span class="eyebrow">rest helps focus</span></div>
         <div class="card"><span class="eyebrow">Eye rests</span><b>${tw.eye_rests}</b><span class="eyebrow">20-20-20</span></div>
         <div class="card"><span class="eyebrow">Posture reminders</span><b>${tw.posture_alerts}</b>${deltaTxt(tw.posture_alerts, pw.posture_alerts, '', 'down')}</div>
         <div class="card"><span class="eyebrow">Longest focus</span><b>${tw.longest_focus} min</b>${deltaTxt(tw.longest_focus, pw.longest_focus, ' min')}</div>

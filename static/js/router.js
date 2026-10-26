@@ -55,7 +55,6 @@ window.addEventListener('resize', () => { if (!layoutEl().classList.contains('fo
 document.addEventListener('keydown', (e) => {
   if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;                 // keep Cmd+C, Cmd+R etc. working
-  if ((e.key === 'c' || e.key === 'C') && $('#markBtn')) { e.preventDefault(); $('#markBtn').click(); }
   if ((e.key === 'n' || e.key === 'N') && $('#notesBtn')) { e.preventDefault(); $('#notesBtn').click(); }
   if (e.key === 'm' || e.key === 'M') toggleNav();
   if (e.key === 'Escape' && document.body.classList.contains('nav-open')) toggleNav(true);

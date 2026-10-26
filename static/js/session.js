@@ -122,17 +122,6 @@ async function viewSession() {
         </div>
         <div class="btns"><button class="btn primary" id="sugYes">Start break</button><button class="btn ghost" id="sugNo">Not now</button></div>
       </section>
-      <section class="card" style="display:flex;flex-direction:column;gap:12px">
-        <h2 style="margin:0">Lost the thread?</h2>
-        <p class="muted" style="margin:0;font-size:14px;line-height:1.5">Mark this moment as confusing. It goes to your lesson report so you can revisit it.</p>
-        <button class="markbtn" id="markBtn">Mark as confusing · C</button>
-        <form class="noteform" id="noteForm" hidden>
-          <label class="eyebrow" for="noteText">What was confusing? (optional, Enter to save)</label>
-          <input class="field" id="noteText" maxlength="300" placeholder="e.g. why det(AB) = det(A)·det(B)" autocomplete="off">
-          <div class="btnrow"><button class="btn primary" type="submit">Save question</button><button class="btn ghost" type="button" id="noteSkip">Skip</button></div>
-        </form>
-        <div class="eyebrow">Marked so far: <strong id="marks" style="color:var(--text)">0</strong> · questions go to <a href="#/review">Review</a></div>
-      </section>
       <section class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px">
         <div><h2 style="margin:0 0 4px">Taking notes?</h2>
           <div class="eyebrow">Looking down at a notebook won't count as distracted · N</div></div>
@@ -164,22 +153,6 @@ async function viewSession() {
   $('#aiFab').onclick = () => openAIPopup({ cls: s.class, lesson: s.title, lesson_id: s.lesson_id });
 
   const send = (type, extra = {}) => api('/api/action', { type, ...extra }).catch(() => {});
-  $('#markBtn').onclick = () => {
-    send('mark');
-    $('#noteForm').hidden = false;
-    $('#noteText').value = '';
-    $('#noteText').focus();
-  };
-  const closeNote = () => { $('#noteForm').hidden = true; $('#noteText').blur(); };
-  $('#noteForm').onsubmit = (e) => {
-    e.preventDefault();
-    const text = $('#noteText').value.trim();
-    if (text) { send('mark_note', { text }); toast('Question saved. Lumen will ask you about it tomorrow.'); }
-    else toast('Marked as confusing');
-    closeNote();
-  };
-  $('#noteSkip').onclick = () => { toast('Marked as confusing'); closeNote(); };
-  $('#noteText').onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeNote(); } };
   $('#breakEnd').onclick = () => { send('break_end'); toast('Welcome back'); };
   $('#breakMore').onclick = () => { send('break_extend', { minutes: 5 }); toast('+5 minutes'); };
   $('#breakBtn').onclick = () => { ui.manual = true; ui.chosen = ui.last.recommended || 5; render(ui.last); };
@@ -346,7 +319,6 @@ function render(d) {
   $('#sPhone').textContent = d.pickups;
   $('#nPhone').textContent = d.last_pickup ? `last at ${d.last_pickup}` : 'none yet';
   $('#nPhone').style.color = d.last_pickup ? 'var(--coral)' : '';
-  $('#marks').textContent = d.marks;
 
   const nbtn = $('#notesBtn');
   nbtn.setAttribute('aria-checked', String(d.notes_mode));

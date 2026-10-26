@@ -304,8 +304,8 @@ async function viewReport(id) {
       <div class="card"><span class="eyebrow">Duration</span><b>${Math.max(1, Math.round(dur / 60))} min</b></div>
       <div class="card"><span class="eyebrow">Average attention</span><b>${r.avg_attention}%</b></div>
       <div class="card"><span class="eyebrow">Focused</span><b>${hm(r.focused_min)}</b><span class="eyebrow">longest streak ${r.longest_focus ?? 0} min</span></div>
-      <div class="card"><span class="eyebrow">Looked away</span><b>${r.away_count ?? 0}×</b><span class="eyebrow">${r.away_total ?? '0:00'} in total</span></div>
-      <div class="card"><span class="eyebrow">Breaks · confusing</span><b>${r.breaks} · ${r.marks}</b>${r.break_min ? `<span class="eyebrow">${r.break_min} min resting</span>` : ''}</div>
+      <div class="card"><span class="eyebrow">Looked away</span><b>${r.away_count ?? 0} ${tUnit('time', r.away_count ?? 0)}</b><span class="eyebrow">${r.away_total ?? '0:00'} in total</span></div>
+      <div class="card"><span class="eyebrow">Breaks</span><b>${r.breaks}</b>${r.break_min ? `<span class="eyebrow">${r.break_min} min resting</span>` : ''}</div>
     </section>
     <section class="card" style="padding:28px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:6px">
@@ -313,7 +313,6 @@ async function viewReport(id) {
         <div class="legend">
           <span><i style="background:var(--teal)"></i>focused</span><span><i style="background:var(--slate)"></i>drifting</span>
           <span><i style="background:var(--coral)"></i>lost</span><span><i style="background:var(--accent-soft);border:1px dashed var(--accent-line)"></i>break</span>
-          <span><i style="width:3px;height:14px;border-radius:0;background:var(--accent)"></i>marked confusing</span>
         </div>
       </div>
       <p class="muted" style="margin:0 0 18px;font-size:14px">Each block is one minute of the lesson.</p>
@@ -327,26 +326,10 @@ async function viewReport(id) {
     </section>
     ${r.mood ? moodCard(r.mood, 'Mood during the lesson') : ''}
     <section class="card" id="repNotes" hidden><h2 class="display" style="font-size:20px">📝 Sticky notes</h2><div class="notegrid wide" id="repNoteGrid"></div></section>
-    <div class="row">
-      <section class="card" style="flex:999 1 560px;min-width:0">
-        <h2 class="display" style="font-size:20px">Rewatch these moments</h2>
-        <div class="list">
-          ${r.rewatch.length ? r.rewatch.map((x) => `<div class="rw"><div class="t">${x.from}–${x.to}</div>
-              <div class="x"><div>${esc(x.title)}</div><div>${esc(x.why)}</div></div><span class="tag">Rewatch from ${x.from}</span></div>`).join('')
-            : '<p class="empty">Nothing to rewatch: you stayed with the lesson the whole time.</p>'}
-        </div>
-      </section>
-      <section class="card" style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px">
-        <h2 class="display" style="font-size:20px;margin:0">What Lumen noticed</h2>
-        ${r.insights.map((x) => `<div class="note">${x}</div>`).join('')}
-      </section>
-    </div>
-    ${(r.questions || []).length ? `<section class="card">
-      <h2 class="display" style="font-size:20px">Questions from this lesson</h2>
-      <div class="list">${r.questions.map((q) => `<div class="rw"><div class="t">${esc(q.time)}</div>
-        <div class="x"><div>${q.text ? esc(q.text) : '<span class="muted">Marked as confusing (no note)</span>'}</div>
-        <div>${q.text ? 'In your review list: Lumen will ask about it again' : ''}</div></div></div>`).join('')}</div>
-    </section>` : ''}
+    <section class="card" style="display:flex;flex-direction:column;gap:14px">
+      <h2 class="display" style="font-size:20px;margin:0">What Lumen noticed</h2>
+      ${r.insights.map((x) => `<div class="note">${x}</div>`).join('')}
+    </section>
   </main>`);
   wireLessonButtons();
   api(`/api/notes?lesson=${encodeURIComponent(r.lesson_id || r.id)}`).then(({ notes }) => {
@@ -421,7 +404,7 @@ async function viewReview() {
             <p class="muted">${rv.next_due ? `Next card comes back <b>${dueText(rv.next_due)}</b>.` : 'Every card is learned.'} Want to practise anyway?</p>
             ${rv.upcoming.length ? '<button class="btn ghost big" id="startEarly">🔁 Practise early</button>' : ''}`
           : `<h2>Your flashcards live here</h2>
-            <p class="muted">Press <kbd>C</kbd> in a lesson when something is confusing, or add a card yourself. Lumen brings it back right before you'd forget it.</p>`}
+            <p class="muted">Add a card with something you want to remember. Lumen brings it back right before you'd forget it.</p>`}
       </div>
       <div class="rv-stats">
         <div><b>🔥 ${rv.streak}</b><span>day${rv.streak === 1 ? '' : 's'} in a row</span></div>
@@ -449,7 +432,7 @@ async function viewReview() {
       <div class="qgrid">${learned.map((q) => tile(q, 'learned')).join('')}</div></details>` : ''}
 
     <section class="rv-how">
-      <div class="how-step"><i>1</i><span>Confused in a lesson? Press <kbd>C</kbd>.</span></div><span class="how-arrow">→</span>
+      <div class="how-step"><i>1</i><span>Add a card</span></div><span class="how-arrow">→</span>
       <div class="how-step"><i>1d</i><span>See it again tomorrow</span></div><span class="how-arrow">→</span>
       <div class="how-step"><i>3d</i><span>then in 3 days</span></div><span class="how-arrow">→</span>
       <div class="how-step"><i>7d</i><span>then in a week</span></div><span class="how-arrow">→</span>

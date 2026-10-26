@@ -134,7 +134,7 @@ function subjectHue(name) {
 // suggestion cards: [emoji, text]
 function suggestionsFor(opts) {
   if (opts.lesson) {
-    return [['🤔', 'Explain the part I marked as confusing'], ['📝', 'Summarize my sticky notes for this lesson'],
+    return [['🤔', 'Explain the hardest idea of this lesson simply'], ['📝', 'Summarize my sticky notes for this lesson'],
       ['🎯', 'Quiz me with 3 questions on this lesson'], ['🧭', 'What should I study next?']];
   }
   if (opts.cls) {
@@ -184,7 +184,7 @@ function chatBox(container, opts = {}) {
     if (!msgs.length && !streaming) {
       html += `<div class="ai-empty"><div class="ai-orb"><span class="orb-face">${opts.cls ? subjectIcon(opts.cls) : '✨'}</span></div>
         <h2>${opts.lesson ? `Questions about “${esc(opts.lesson)}”?` : opts.cls ? `What do you want to understand in ${esc(opts.cls)}?` : 'Hi! What do you want to learn today? 👋'}</h2>
-        <p class="muted small">${opts.lesson ? 'I know your lesson, your plan, your sticky notes and what you marked as confusing.'
+        <p class="muted small">${opts.lesson ? 'I know your lesson, your plan and your sticky notes.'
           : 'Ask me anything. There are no silly questions! Tip: turn on 💡 Hint only to solve it yourself.'}</p>
         <div class="sugs">${suggestionsFor(opts).map(([e, x], i) => `<button type="button" class="sug c${i}" data-sug="${esc(x)}"><span class="sug-e">${e}</span><span>${esc(x)}</span></button>`).join('')}</div></div>`;
     }

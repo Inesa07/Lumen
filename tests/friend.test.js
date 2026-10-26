@@ -77,7 +77,7 @@ test('quest of the day: stable pick, checked against that day only, adds light',
   const q = questProgress(key, s);
   assert.equal(q.done, true); assert.equal(q.value, 20);
   assert.equal(questProgress(key, s.slice(0, 1)).done, false);
-  assert.ok(QUESTS.length >= 7 && QUEST_REWARD === 15);
+  assert.ok(QUESTS.length >= 6 && QUEST_REWARD === 15);
 });
 
 test('sky: one star per lesson, paused parts joined', async () => {
