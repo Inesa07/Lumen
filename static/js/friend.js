@@ -452,3 +452,15 @@ async function lumiNews(given = null) {
   $('#partyOk').focus();
   box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 }
+
+// ---------------------------------------------------------------- Lumi on empty pages
+// Any "empty" message on any page gets a small Lumi next to it (one observer for the whole app).
+(() => {
+  const root = document.getElementById('app');
+  if (!root) return;
+  const decorate = () => root.querySelectorAll('p.empty:not(.with-lumi)').forEach((p) => {
+    p.classList.add('with-lumi');
+    p.insertAdjacentHTML('afterbegin', `<span class="empty-lumi">${lumiSVG({ mood: 'hello', stage: 2, size: 76 })}</span>`);
+  });
+  new MutationObserver(decorate).observe(root, { childList: true, subtree: true });
+})();

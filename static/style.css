@@ -31,6 +31,9 @@
   --line: #E2DED5; --line-2: #CFCAC0; --track: #E7E3DA; --bar: #D6D1C6; --text: #1C1D21; --muted: #6A6D76; --soft: #3E4048; --slate: #8C8F98; --drift: #7A7E88;
   --teal: #1F9E83; --coral: #E0694F; --accent-ink: #1C1D21; --shadow: rgba(40, 35, 25, .18);
   --accent-text: color-mix(in srgb, var(--accent) 45%, var(--text)); }
+/* Fireflies: a deep night with little lights drifting behind the page */
+:root[data-theme="fireflies"] { --bg: #08111F; --sidebar: #060D18; --surface: #0F1B30; --surface-2: #14233C; --surface-3: #192A47;
+  --line: #1D2C47; --line-2: #2F4566; --track: #1C2B45; --bar: #2B3F60; --text: #EEF3FF; --muted: #A3B2CF; --soft: #CCD6EA; --slate: #6C7FA3; --drift: #B0BEDA; }
 /* colourful dark theme */
 :root[data-theme="aurora"] { --bg: #120D2A; --sidebar: #0E0A22; --surface: #1C1640; --surface-2: #241C4E; --surface-3: #2B2259;
   --line: #2F2660; --line-2: #4A3F85; --track: #2C2458; --bar: #42387A; --text: #F3F0FF; --muted: #B7AEDD; --soft: #DAD3F5; --slate: #8076B0; --drift: #C2B9E6; }
@@ -1294,3 +1297,58 @@ body { background:
 @media (max-width: 640px) { .lset { flex-direction: column; align-items: flex-start; } .sky { height: 200px; } }
 
 .lumi-bubble.pop { animation: bubbleIn .3s ease; }
+
+
+/* ---------------------------------------------------------------- motion: pages, cards, bars */
+@keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
+@keyframes barGrow { from { width: 0; } }
+#app > main, #app > .wrap, #app main.wrap { animation: pageIn .35s ease backwards; }
+#app .card { animation: pageIn .4s ease backwards; }
+#app .tiles > *:nth-child(2), #app .achgrid > *:nth-child(2), #app .stats > *:nth-child(2) { animation-delay: .04s; }
+#app .tiles > *:nth-child(3), #app .achgrid > *:nth-child(3), #app .stats > *:nth-child(3) { animation-delay: .08s; }
+#app .tiles > *:nth-child(4), #app .achgrid > *:nth-child(4), #app .stats > *:nth-child(4) { animation-delay: .12s; }
+#app .tiles > *:nth-child(n+5), #app .achgrid > *:nth-child(n+5) { animation-delay: .16s; }
+.lightbar i, .achbar i, .ck-meter i, .steprow .bar i, .progress i { animation: barGrow .9s cubic-bezier(.2, .8, .2, 1) backwards; }
+.journey-path i, #eyeProg { animation: none; }
+.ach.t3 .ach-medal { position: relative; overflow: hidden; }
+.ach.t3 .ach-medal::after { content: ""; position: absolute; inset: -40%; background: linear-gradient(110deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%);
+  animation: shine 3.5s ease-in-out infinite; }
+@keyframes shine { 0%, 60% { transform: translateX(-60%); } 100% { transform: translateX(60%); } }
+.btn { transition: transform .12s ease, filter .12s ease; }
+.btn:active { transform: scale(.97); }
+.btn.primary:hover { filter: brightness(1.06); }
+@media (prefers-reduced-motion: reduce) {
+  #app > main, #app .card, .lightbar i, .achbar i, .ck-meter i, .steprow .bar i, .progress i, .ach.t3 .ach-medal::after { animation: none !important; }
+}
+
+/* Fireflies theme: drifting lights */
+.ff-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.ff-bg i { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%; background: #F4F07A;
+  box-shadow: 0 0 10px 3px rgba(244, 240, 122, .55); animation: ffDrift var(--d) ease-in-out infinite; animation-delay: var(--dl); }
+@keyframes ffDrift { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: .9; } 50% { transform: translate(40px, -60px); opacity: .3; }
+  80% { opacity: .85; } 100% { transform: translate(-30px, -120px); opacity: 0; } }
+#layout { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .ff-bg { display: none; } }
+
+/* Lumi on empty pages */
+p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-radius: 18px; background: var(--surface); border: 1px dashed var(--line-2);
+  font-size: 15px; color: var(--soft); line-height: 1.5; max-width: 620px; }
+.empty-lumi { flex: none; }
+
+/* phones and tablets: the menu button floats top-left, keep page starts clear of it */
+@media (max-width: 900px) {
+  .layout.nav-hidden .home-hero, .home-hero { padding-top: 56px; }
+  .top .actions { width: 100%; justify-content: flex-start; padding-left: 60px; }
+  .lumi-hero { padding: 20px; gap: 12px; }
+  .lumi-hero-txt h1 { font-size: 28px; }
+  .lumi-dock { left: 10px; bottom: 10px; }
+  .lumi-dock .lumi-btn svg { width: 64px; height: 64px; }
+}
+@media (max-width: 640px) {
+  .hero-kpis span { font-size: 11px; }
+  .questcard { align-items: flex-start; }
+  .quest-ic { width: 44px; height: 44px; font-size: 22px; }
+  .stagepath { grid-template-columns: repeat(3, 1fr); }
+  .journey-track { margin-right: 26px; }
+}
+@media (max-width: 640px) { .lumi-dock .lumi-btn svg { width: 52px; height: 52px; } .lumi-bubble { margin-bottom: 26px; font-size: 12.5px; } }

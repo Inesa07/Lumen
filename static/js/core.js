@@ -11,6 +11,7 @@ const THEMES = [
   ['forest', 'Forest', '#0B120F', '#121C17'],
   ['plum', 'Plum', '#120D18', '#1B1424'],
   ['aurora', 'Aurora', '#140F2E', '#1F1844'],
+  ['fireflies', 'Fireflies', '#0A1424', '#12203A'],
   ['paper', 'Paper', '#F5F3EE', '#FFFFFF'],
   ['sky', 'Sky', '#E8F2FF', '#FFFFFF'],
   ['blossom', 'Blossom', '#FFEEF4', '#FFFFFF'],
@@ -25,6 +26,14 @@ function applyTheme(theme, accent) {
   LOOK = { theme: theme || LOOK.theme, accent: accent || LOOK.accent };
   if (LOOK.theme !== 'midnight') root.dataset.theme = LOOK.theme; else delete root.dataset.theme;
   root.style.setProperty('--accent', LOOK.accent);
+  // the Fireflies theme has little lights drifting behind the page
+  let ff = document.getElementById('ffBg');
+  if (LOOK.theme === 'fireflies' && !ff) {
+    ff = document.createElement('div');
+    ff.id = 'ffBg'; ff.className = 'ff-bg'; ff.setAttribute('aria-hidden', 'true');
+    ff.innerHTML = Array.from({ length: 22 }, (_, i) => `<i style="--x:${(i * 47) % 100}vw;--y:${(i * 31) % 100}vh;--d:${9 + (i % 7) * 2}s;--dl:-${i * 1.7}s;--s:${3 + (i % 3)}px"></i>`).join('');
+    document.body.prepend(ff);
+  } else if (LOOK.theme !== 'fireflies' && ff) ff.remove();
   try { localStorage.setItem('lumen.look', JSON.stringify(LOOK)); } catch { /* fine */ }
   // mark the chosen swatches everywhere (sidebar popover + Settings) without redrawing the page
   document.querySelectorAll('[data-look-theme]').forEach((b) => {
