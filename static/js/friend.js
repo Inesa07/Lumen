@@ -272,7 +272,7 @@ function questLine(q) {
   return `<div class="questline${q.done ? ' done' : ''}"><span>${q.icon}</span><span><b>${t('Quest:')}</b> ${esc(t(q.text))}</span>
     <span class="qv">${q.done ? '✓' : `${q.value}/${q.need}`}</span></div>`;
 }
-function lumiHomeCard(f) {
+function lumiHomeCard(f, g = null) {
   const hol = lumiHoliday(f);
   const line = f.first_time ? t("Hi! I'm Lumi, your study firefly. Focus to give me light and I will grow!")
     : hol ? hol.line
@@ -284,6 +284,8 @@ function lumiHomeCard(f) {
       <div class="lumicard-line">${line}</div>
       <div class="lightbar" aria-label="Light ${f.light}"><i style="width:${f.stage.pct}%"></i></div>
       <div class="muted small">🔆 ${t('{n} light', { n: f.light })}${f.achievements.some((a) => a.tier) ? ` · 🏅 ${t('{n} medals', { n: f.achievements.reduce((a, x) => a + x.tier, 0) })}` : ''}</div>
+      ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${t('{n} days in a row', { n: g.streak })}</span></div>
+        <div class="lightbar goalbar"><i style="width:${g.pct}%"></i></div>` : ''}
       ${questLine(f.quest)}</div>
     <span class="chev">›</span></a>`;
 }
@@ -329,8 +331,52 @@ function outfitHow(o, stages = []) {
   return `${t(a || o.ach[0])} · ${t(['', 'Bronze', 'Silver', 'Gold'][o.ach[1]])}`;
 }
 
-// ---------------------------------------------------------------- the Lumi page
+// ---------------------------------------------------------------- medals
 const MEDAL = ['var(--track)', '#CD7F32', '#C3CCD6', '#F2C14E'];
+// metal colours: light, middle, dark (for the shine) and the ribbon colours
+const METAL = {
+  1: ['#F3C08C', '#C07A3A', '#7A4419', '#C0392B', '#2E86DE'],
+  2: ['#FFFFFF', '#C9D1DA', '#808A96', '#2E86DE', '#E8EEF5'],
+  3: ['#FFF4B0', '#F2C14E', '#A87A08', '#E74C3C', '#F7DC6F'],
+};
+let medalSeq = 0;
+/** A real medal: ribbon + metal disc with the achievement's picture. Not earned = grey and faded. */
+function medalSVG(tier, icon, earned, size = 64, label = '') {
+  const id = `md${medalSeq += 1}`;
+  const [l, m, d, r1, r2] = earned ? METAL[tier] : ['#5A6070', '#454B5A', '#2E3340', '#3A3F4C', '#4A505E'];
+  return `<svg class="medal${earned ? ' won' : ''}" width="${size}" height="${Math.round(size * 1.3)}" viewBox="0 0 100 130" role="img" aria-label="${esc(label)}">
+    <defs><radialGradient id="${id}" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${l}"/><stop offset=".55" stop-color="${m}"/><stop offset="1" stop-color="${d}"/></radialGradient></defs>
+    <path d="M28 0h20l12 48H40z" fill="${r1}"/><path d="M52 0h20L60 48H40z" fill="${r2}"/><path d="M38 40h24v12H38z" fill="${d}"/>
+    <circle cx="50" cy="88" r="38" fill="url(#${id})" stroke="${d}" stroke-width="3"/>
+    <circle cx="50" cy="88" r="29" fill="none" stroke="${l}" stroke-opacity=".7" stroke-width="2" stroke-dasharray="3 3"/>
+    <text x="50" y="99" text-anchor="middle" font-size="30" style="${earned ? '' : 'filter:grayscale(1);opacity:.45'}">${icon}</text>
+    ${earned ? '' : '<g transform="translate(70 112)"><circle r="11" fill="#1B202B" stroke="#3A4152"/><rect x="-5" y="-2" width="10" height="8" rx="1.5" fill="#A3AABB"/><path d="M-3-2v-3a3 3 0 0 1 6 0v3" fill="none" stroke="#A3AABB" stroke-width="1.6"/></g>'}
+  </svg>`;
+}
+function medalsSection(f, medals) {
+  // the shelf shows the best medal of each achievement, gold first
+  const won = f.achievements.filter((a) => a.tier).map((a) => ({ a, k: a.tier })).sort((x, y) => y.k - x.k);
+  const tierName = ['', 'Bronze', 'Silver', 'Gold'];
+  return `<section class="card medalcase">
+      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">🏅 ${t('My medals')} ${info('ach', 'achievements')}</h2>
+        <span class="muted small">${t('🏅 {a} of {b} medals', { a: medals, b: f.achievements.length * 3 })}</span></div>
+      <div class="shelf">${won.length ? won.map(({ a, k }) => `<div class="shelf-item" title="${esc(t(a.name))} · ${t(tierName[k])}">
+          ${medalSVG(k, a.icon, true, 62, `${t(a.name)} · ${t(tierName[k])}`)}<span>${esc(t(a.name))}</span></div>`).join('')
+        : `<p class="muted" style="margin:0">${t('No medals yet. Your first one is very close: finish a lesson!')}</p>`}</div>
+      <h3 class="ach-h">${t('All medals')}</h3>
+      <div class="achgrid">${f.achievements.map((a) => `<div class="ach t${a.tier}">
+        <div class="ach-body"><div class="ach-top"><b>${a.icon} ${esc(t(a.name))}</b></div>
+          <div class="muted small">${esc(t(a.what))}</div>
+          <div class="ach-medals">${[1, 2, 3].map((k) => `<div class="ach-m${a.tier >= k ? ' won' : ''}">${medalSVG(k, a.icon, a.tier >= k, 44, `${t(a.name)} · ${t(tierName[k])}`)}
+            <span>${a.tiers[k - 1]}</span></div>`).join('')}</div>
+          ${a.next !== null ? `<div class="achbar"><i style="width:${a.pct}%"></i></div>
+            <div class="small">${t('{a} / {b} {unit} · next: {tier}', { a: a.value, b: a.next, unit: esc(tUnit(a.unit, a.next)), tier: t(tierName[a.tier + 1]) })} <span class="muted">${t('(+{n} light)', { n: [10, 25, 60][a.tier] })}</span></div>`
+          : `<div class="small" style="color:var(--c-yellow)">${t('★ Gold! All done.')}</div>`}
+        </div></div>`).join('')}</div>
+    </section>`;
+}
+
+// ---------------------------------------------------------------- the Lumi page
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 async function viewLumi() {
@@ -365,11 +411,7 @@ async function viewLumi() {
         <div class="muted small">${f.quest.done ? t('Done! +15 light ✨ A new quest comes tomorrow.') : t('{a} / {b} {unit} · +15 light', { a: f.quest.value, b: f.quest.need, unit: esc(tUnit(f.quest.unit, f.quest.need)) })}</div></div>
     </section>
 
-    <section class="card skycard">
-      <div class="sky-head"><h2 class="display" style="font-size:18px;margin:0">Lumi's sky</h2>
-        <span class="small">${f.sky.length ? t('{n} stars: one for every lesson', { n: f.sky.length }) : t('Your first lesson lights the first star ✨')} ${info('sky', 'sky')}</span></div>
-      ${skySVG(f.sky)}
-    </section>
+${medalsSection(f, medals)}
 
     <section class="card diarycard">
       <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">📔 Lumi's diary</h2><span class="muted small">${t('Lumi writes a few lines after every lesson')}</span></div>
@@ -388,18 +430,6 @@ async function viewLumi() {
       <div class="wardrobe">${f.outfits.map((o) => `<button type="button" class="outfit${o.id === f.outfit ? ' on' : ''}" data-outfit="${o.id}" ${o.unlocked ? '' : 'disabled'} aria-pressed="${o.id === f.outfit}">
         ${lumiSVG({ mood: 'happy', stage: Math.max(2, f.stage.index), outfit: o.id, size: 70, locked: !o.unlocked, label: o.name })}
         <b>${esc(t(o.name))}</b><span class="muted small">${o.unlocked ? (o.id === f.outfit ? t('wearing') : '&nbsp;') : `🔒 ${esc(outfitHow(o, f.stages))}`}</span></button>`).join('')}</div>
-    </section>
-
-    <section class="card">
-      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Achievements ${info('ach', 'achievements')}</h2><span class="muted small">${t('🏅 {a} of {b} medals', { a: medals, b: f.achievements.length * 3 })}</span></div>
-      <div class="achgrid">${f.achievements.map((a) => `<div class="ach t${a.tier}">
-        <div class="ach-medal" style="--m:${MEDAL[a.tier]}">${a.icon}</div>
-        <div class="ach-body"><div class="ach-top"><b>${esc(t(a.name))}</b><span class="ach-dots">${[1, 2, 3].map((k) => `<i class="${a.tier >= k ? 'on' : ''}" style="--m:${MEDAL[k]}"></i>`).join('')}</span></div>
-          <div class="muted small">${esc(t(a.what))}</div>
-          ${a.next !== null ? `<div class="achbar"><i style="width:${a.pct}%"></i></div>
-            <div class="small">${t('{a} / {b} {unit} · next: {tier}', { a: a.value, b: a.next, unit: esc(tUnit(a.unit, a.next)), tier: t(['Bronze', 'Silver', 'Gold'][a.tier]) })} <span class="muted">${t('(+{n} light)', { n: [10, 25, 60][a.tier] })}</span></div>`
-          : '<div class="small" style="color:var(--c-yellow)">★ Gold! All done.</div>'}
-        </div></div>`).join('')}</div>
     </section>
 
     <section class="card lumi-settings">
@@ -453,7 +483,7 @@ async function lumiNews(given = null) {
   box.setAttribute('aria-modal', 'true');
   const tierName = ['', 'Bronze', 'Silver', 'Gold'];
   const list = (quest ? `<li><span class="ach-medal sm" style="--m:var(--c-green)">${quest.icon}</span><b>${t('Quest done!')}</b> · ${t('(+{n} light)', { n: 15 })}</li>` : '')
-    + tiers.slice(0, 5).map((m) => `<li><span class="ach-medal sm" style="--m:${MEDAL[m.tier]}">${m.icon}</span><b>${esc(t(m.name))}</b> · ${t(tierName[m.tier])}</li>`).join('')
+    + tiers.slice(0, 5).map((m) => `<li>${medalSVG(m.tier, m.icon, true, 30)}<b>${esc(t(m.name))}</b> · ${t(tierName[m.tier])}</li>`).join('')
     + (tiers.length > 5 ? `<li class="muted">…and ${tiers.length - 5} more</li>` : '');
   const title = t(f.first_time ? 'Meet Lumi!' : grew != null ? 'Lumi grew into a {name}!'
     : tiers.length > 1 ? 'New medals!' : tiers.length ? 'New medal!' : 'Quest complete!', { name: grew != null ? esc(t(f.stages[grew].name)) : '' });

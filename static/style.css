@@ -1497,3 +1497,24 @@ p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px
 :root[data-theme="clouds"] .home-hero .muted, :root[data-theme="clouds"] .home-hero .eyebrow, :root[data-theme="clouds"] .top .eyebrow { color: rgba(255, 255, 255, .88); }
 :root[data-theme="clouds"] .home-hero a { color: #fff; }
 :root[data-theme="clouds"] .top { border-bottom-color: rgba(255, 255, 255, .35); }
+
+
+/* ---------------------------------------------------------------- medals */
+.medal { display: block; overflow: visible; }
+.medal.won { filter: drop-shadow(0 4px 8px rgba(0,0,0,.35)); }
+.medalcase { display: flex; flex-direction: column; gap: 14px;
+  background: linear-gradient(160deg, color-mix(in srgb, #F2C14E 10%, var(--surface)), var(--surface) 50%); }
+.shelf { display: flex; gap: 14px; overflow-x: auto; padding: 10px 4px 14px; border-radius: 14px;
+  background: linear-gradient(180deg, transparent 70%, color-mix(in srgb, #8B5E34 35%, transparent) 70%, color-mix(in srgb, #5A3C20 40%, transparent)); }
+.shelf-item { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 84px; text-align: center; font-size: 11px; color: var(--muted); }
+.shelf-item .medal { animation: medalIn .5s cubic-bezier(.2,1.4,.4,1) backwards; }
+@keyframes medalIn { from { transform: scale(.4) rotate(-20deg); opacity: 0; } }
+.ach-h { margin: 6px 0 0; font: 600 15px var(--display); }
+.ach { flex-direction: column; }
+.ach-medals { display: flex; gap: 14px; align-items: flex-end; margin: 6px 0 2px; }
+.ach-m { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; color: var(--muted); }
+.ach-m.won span { color: var(--text); font-weight: 600; }
+.partylist li .medal { flex: none; }
+/* Lumi card on Home: today's goal and streak */
+.todayline { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 12.5px; color: var(--soft); }
+.lightbar.goalbar i { background: linear-gradient(90deg, var(--c-blue), var(--teal)); box-shadow: none; }

@@ -150,10 +150,10 @@ api('/api/settings').then((st) => applyTheme(st.theme, st.accent, st.motion)).ca
 // ---- mood (facial expression)
 const MOOD = {
   calm: ['😌', 'Calm', 'var(--slate)'],
-  happy: ['😊', 'Happy', 'var(--accent)'],
-  surprised: ['😮', 'Surprised', 'var(--teal)'],
-  frown: ['🤨', 'Frowning', 'var(--violet)'],
-  sad: ['😟', 'Sad', 'var(--sky)'],
+  happy: ['😊', 'Happy', '#F2C14E'],          // fixed colours: never the same as each other or the accent
+  surprised: ['😮', 'Surprised', '#3FCF8E'],
+  frown: ['🤨', 'Frowning', '#B07CFF'],
+  sad: ['😟', 'Sad', '#5AA9FF'],
   tired: ['😴', 'Tired', 'var(--coral)'],
 };
 const app = $('#app');
@@ -271,6 +271,7 @@ const NAV = [
   ['settings', '#/settings', 'Settings'],
 ];
 let reviewBadge = 0;
+let hasReviewCards = false;     // Review shows in the menu only once there are saved questions
 let pausedBadge = 0;
 const COLLAPSE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/><path d="M20 4v16"/></svg>`;
 const isSmall = () => window.matchMedia('(max-width: 900px)').matches;
@@ -340,6 +341,8 @@ function shell(current, content, active = lastActive) {
     a.classList.toggle('on', on);
     if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
+  const rv = document.querySelector('#sidebar [data-nav="review"]');
+  if (rv) rv.hidden = !hasReviewCards && current !== 'review';
   const badge = $('#reviewBadge');
   badge.hidden = !reviewBadge;
   badge.textContent = reviewBadge;

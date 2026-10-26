@@ -469,7 +469,18 @@ export class LocalServer {
     if (p.startsWith('/api/checks/')) { const c = this.db.get('checks', p.split('/').at(-1)); return c ? [c] : [{ error: 'not found' }, 404]; }
     if (p === '/api/profile') return { profile: this.profile() };
     if (p === '/api/reviews') return this.reviews.overview();
-    if (p === '/api/week') return stats.weekly(this.reports(), this.reviews.load());
+    if (p === '/api/week') {
+      const w = stats.weekly(this.reports(), this.reviews.load());
+      // easier numbers for the page: lessons (paused parts of one lesson count once) and phone pickups as a count
+      const now = Date.now() / 1000, d0 = new Date(); d0.setHours(0, 0, 0, 0);
+      const from = d0.getTime() / 1000 - 6 * 86400, prevFrom = from - 7 * 86400;
+      const span = (a, b) => this.reports().filter((r) => r.started_at >= a && r.started_at < b);
+      const count = (rs) => ({ lessons: new Set(rs.map((r) => r.lesson_id || r.id)).size,
+        pickups: rs.reduce((n, r) => n + (r.pickups || []).length, 0) });
+      Object.assign(w.this, count(span(from, now + 1)));
+      Object.assign(w.prev, count(span(prevFrom, from)));
+      return w;
+    }
     if (p === '/api/settings') return this.settings();
     if (p === '/api/friend') return this.friend();
     if (p === '/api/parent') return this.parentInfo();

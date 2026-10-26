@@ -5,6 +5,7 @@ async function loadOverview() {
   const data = await cachedGet('/api/overview');
   lastActive = data.active;
   reviewBadge = data.reviews_due || 0;
+  hasReviewCards = (data.reviews_due || 0) + (data.reviews_total || 0) > 0;
   pausedBadge = (data.paused || []).length;
   return data;
 }
@@ -110,25 +111,7 @@ async function viewHome(prefillClass = '') {
       </section>
 
       <aside class="todaycol">
-        ${lumi ? lumiHomeCard(lumi) : ''}
-        <section class="card todaycard">
-          <a class="goalbig" href="#/settings" title="Change your daily goal in Settings">${goalRing(g)}
-            <div><div class="eyebrow">Today's goal</div><div class="display big2">${hm(g.today)} <span class="muted">/ ${hm(g.goal_min)}</span></div>
-              <div class="muted small">${g.reached ? 'Goal reached. Well done! 🎉' : `${hm(g.goal_min - g.today)} to go`}</div></div></a>
-          <div class="today-rows">
-            <div class="trow"><span class="trow-ico${g.streak ? '' : ' off'}">🔥</span><div><b>${g.streak} day${g.streak === 1 ? '' : 's'} streak</b>
-              <span class="muted small">${g.streak_today ? 'today counted ✓' : `${Math.max(1, g.streak_min - g.today_study)} more min today`} · best ${g.best_streak}</span></div></div>
-            <a class="trow${d.reviews_due ? ' due' : ''}" href="#/review"><span class="trow-ico">${icon('review', d.reviews_due ? 'var(--accent)' : 'var(--muted)', 18)}</span><div>
-              <b>${d.reviews_due ? `${d.reviews_due} question${d.reviews_due === 1 ? '' : 's'} to review` : 'Review: all clear'}</b>
-              <span class="muted small">${d.reviews_due ? 'spaced repetition, today' : d.reviews_total ? `${d.reviews_total} scheduled for later` : 'press C in a lesson to save a question'}</span></div><span class="chev">›</span></a>
-          </div>
-        </section>
-        <section class="card weekcard">
-          <div class="block-head" style="margin-bottom:10px"><h2 class="caps" style="margin:0">This week</h2><a class="more" style="margin:0" href="#/stats/week">Report →</a></div>
-          ${dayBars(week, 96)}
-          <div class="kpis"><div><b>${hm(t.week_focused)}</b><span>focused</span></div>
-            <div><b>${t.week_avg ?? '–'}${t.week_avg != null ? '%' : ''}</b><span>avg attention</span></div></div>
-        </section>
+        ${lumi ? lumiHomeCard(lumi, g) : ''}
       </aside>
     </div>
   </main>`);

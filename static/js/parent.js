@@ -87,7 +87,7 @@ async function parentDashboard(p) {
       ${kpi('Studied this week', 'studied', hm(tw.study_min), `${tw.sessions} ${t('lessons')}`)}
       ${kpi('Focused this week', 'focused', hm(tw.focused_min), w.change_pct == null ? t('first week with data') : `${w.change_pct >= 0 ? '▲' : '▼'} ${Math.abs(w.change_pct)}% ${t('vs last week')}`)}
       ${kpi('Average attention', 'attention', tw.avg == null ? '–' : `${tw.avg}%`, t('this week'))}
-      ${kpi('Phone pickups / hour', 'phoneh', tw.pickups_h ?? '–', t('lower is better'))}
+      ${kpi('Phone came out', 'phoneh', tw.pickups ?? 0, t('times this week'))}
     </section>
     <section class="card">
       <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Last 14 days</h2><span class="muted small">${t('grey = studied, colour = focused')}</span></div>

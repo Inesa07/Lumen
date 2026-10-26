@@ -87,8 +87,8 @@ async function viewProgress(sub = '') {
         <div class="weekkpis">
           <div><b>${hm(tw.study_min)}</b><span>studied</span>${deltaTxt(tw.study_min, pw.study_min, ' min')}</div>
           <div><b>${tw.avg ?? '–'}${tw.avg != null ? '%' : ''}</b><span>average attention</span>${deltaTxt(tw.avg, pw.avg, ' pts')}</div>
-          <div><b>${tw.sessions}</b><span>lessons</span></div>
-          <div><b>${tw.pickups_h ?? '–'}</b><span>phone pickups / hour</span>${deltaTxt(tw.pickups_h, pw.pickups_h, '', 'down')}</div>
+          <div><b>${tw.lessons ?? tw.sessions}</b><span>lessons</span></div>
+          <div><b>${tw.pickups ?? 0}</b><span>times the phone came out</span>${deltaTxt(tw.pickups, pw.pickups, '', 'down')}</div>
         </div>
       </section>
       <section class="card"><h2 class="display" style="font-size:20px">Day by day</h2>${dayBars(w.days, 160)}
