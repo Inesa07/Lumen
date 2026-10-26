@@ -1174,9 +1174,9 @@ body { background:
 @media (prefers-reduced-motion: reduce) { .lumi * { animation: none !important; } }
 
 /* Lumi in a lesson */
-.lumi-dock { position: fixed; right: 22px; bottom: 82px; z-index: 44; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; }
+.lumi-dock { position: fixed; left: 18px; bottom: 18px; z-index: 44; display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 6px; pointer-events: none; }
 .lumi-btn { pointer-events: auto; border: 0; background: none; padding: 0; cursor: pointer; }
-.lumi-bubble { pointer-events: auto; max-width: 230px; padding: 10px 14px; border-radius: 16px 16px 4px 16px; background: var(--surface);
+.lumi-bubble { pointer-events: auto; max-width: 230px; padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: var(--surface);
   border: 1px solid var(--line-2); box-shadow: 0 8px 24px var(--shadow); font-size: 13px; line-height: 1.45; margin-bottom: 40px; animation: bubbleIn .3s ease; }
 @keyframes bubbleIn { from { opacity: 0; transform: translateY(6px); } }
 @media (max-width: 640px) { .lumi-bubble { max-width: 170px; } }
@@ -1236,3 +1236,61 @@ body { background:
 .confetti i { position: absolute; top: -12px; left: var(--x); width: 8px; height: 12px; border-radius: 2px; background: var(--c); animation: fall 2.6s var(--d) ease-in infinite; }
 @keyframes fall { to { transform: translateY(560px) rotate(540deg); opacity: .2; } }
 @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
+
+/* ---------------------------------------------------------------- Lumi's world */
+.lumi .snow > * { animation: snowfall 3.5s ease-in-out infinite; }
+@keyframes snowfall { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(6px); opacity: .4; } }
+.lumi .heartfloat { animation: heartUp 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes heartUp { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.12); } }
+/* the hero follows the time of day */
+.lumi-hero.tod-morning { background: linear-gradient(135deg, color-mix(in srgb, #FFB86B 26%, var(--surface)), color-mix(in srgb, #FF9FC6 16%, var(--surface)) 55%, color-mix(in srgb, #9FD3FF 18%, var(--surface))); }
+.lumi-hero.tod-day { background: linear-gradient(135deg, color-mix(in srgb, #9FD3FF 26%, var(--surface)), color-mix(in srgb, #E9F56A 14%, var(--surface))); }
+.lumi-hero.tod-evening { background: linear-gradient(135deg, color-mix(in srgb, #FF8A70 24%, var(--surface)), color-mix(in srgb, var(--c-violet) 24%, var(--surface))); }
+.lumi-hero.tod-night { background: radial-gradient(500px 260px at 15% 50%, color-mix(in srgb, #E9F56A 16%, transparent), transparent 70%), linear-gradient(135deg, #1A1440, #0E1A3A); color: #F3F0FF; }
+.lumi-hero.tod-night .muted { color: #B9B2DD; }
+.lumi-stage-pic { position: relative; }
+.lumi-friends { position: absolute; inset: 0; pointer-events: none; }
+.lumi-friends i { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; border-radius: 50%;
+  background: hsl(var(--h) 90% 70%); box-shadow: 0 0 10px 4px hsl(var(--h) 90% 65% / .7);
+  animation: orbit var(--t) linear infinite; animation-delay: var(--dl); }
+@keyframes orbit { from { transform: rotate(0deg) translateX(105px) rotate(0deg) scale(1); } 50% { transform: rotate(180deg) translateX(85px) rotate(-180deg) scale(.7); } to { transform: rotate(360deg) translateX(105px) rotate(-360deg) scale(1); } }
+/* quest */
+.questcard { display: flex; align-items: center; gap: 16px; }
+.questcard.done { background: linear-gradient(120deg, color-mix(in srgb, var(--c-green) 16%, var(--surface)), var(--surface)); }
+.quest-ic { flex: none; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px;
+  background: color-mix(in srgb, var(--c-green) 20%, var(--surface)); }
+.questcard .achbar { margin: 8px 0 4px; }
+.questline { display: flex; align-items: center; gap: 8px; margin-top: 2px; padding: 7px 10px; border-radius: 10px; background: color-mix(in srgb, var(--surface) 70%, transparent); font-size: 12.5px; }
+.questline .qv { margin-left: auto; font-weight: 600; }
+.questline.done .qv { color: var(--teal); }
+/* sky */
+.skycard { padding: 0; overflow: hidden; background: linear-gradient(180deg, #0B0A24, #1A1440 60%, #2A1F55); border-color: #2C2560; color: #EDE9FF; }
+.sky-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 18px 22px 0; }
+.skycard .info { color: #EDE9FF; }
+.sky { display: block; width: 100%; height: 260px; }
+.sky .star { animation: twinkle2 3.2s ease-in-out infinite; }
+.sky a:hover circle:last-child, .sky a:focus circle:last-child { fill: #fff; }
+@keyframes twinkle2 { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+/* lesson: +1 light and the journey */
+.lumi-me { position: relative; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
+.lumi-gain { margin-top: -6px; padding: 2px 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line-2); font-size: 12px; font-weight: 600; }
+.plusone { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-weight: 700; color: #E9D93A; text-shadow: 0 0 8px rgba(233, 245, 106, .8);
+  animation: plusUp 1.8s ease-out forwards; pointer-events: none; }
+@keyframes plusUp { from { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -40px); } }
+.journey { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--jc) 22%, var(--surface)), var(--surface) 70%); }
+.journey-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: baseline; }
+.journey-track { position: relative; height: 44px; margin: 0 22px 0 4px; }
+.journey-path { position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: 999px;
+  background: repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 14px); }
+.journey-path i { display: block; height: 100%; border-radius: inherit; background: var(--jc); box-shadow: 0 0 10px color-mix(in srgb, var(--jc) 60%, transparent); transition: width 1s ease; }
+.journey-lumi { position: absolute; top: 50%; transform: translate(-50%, -55%); transition: left 1s ease; }
+.journey-flag { position: absolute; right: -22px; top: 50%; transform: translateY(-50%); font-size: 22px; }
+/* settings */
+.lumi-settings { display: flex; flex-direction: column; gap: 14px; }
+.lset { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.bday { display: flex; gap: 8px; flex: none; }
+.bday .field { min-height: 40px; padding: 0 10px; }
+@media (max-width: 640px) { .lset { flex-direction: column; align-items: flex-start; } .sky { height: 200px; } }
+
+.lumi-bubble.pop { animation: bubbleIn .3s ease; }

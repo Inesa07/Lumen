@@ -322,6 +322,8 @@ export class LocalServer {
     snap.camera_error = this.cameraStatus && this.cameraStatus.stage === 'error' ? this.cameraStatus.text : null;
     snap.fake = this.fake;
     snap.camera = this.cameraInfo();
+    // completed focused minutes of this lesson so far (for Lumi's "+1 light")
+    snap.focused_live = this.tracker.minutes.slice(0, -1).filter((m) => m.n >= 50 && m.sum / m.n >= 0.7).length;
     return snap;
   }
 
@@ -483,7 +485,11 @@ export class LocalServer {
     if (body.seen) {
       saved.seen = Object.fromEntries(st.achievements.map((a) => [a.id, a.tier]));
       saved.stage = st.stage.index;
+      if (st.quest.done) saved.quest_day = st.quest.day;
     }
+    if (typeof body.sound === 'boolean') saved.sound = body.sound;
+    // birthday: only month and day ("MM-DD"), never the year, so no age is stored
+    if ('birthday' in body) saved.birthday = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(body.birthday || '') ? body.birthday : null;
     if (body.outfit && st.outfits.some((o) => o.id === body.outfit && o.unlocked)) saved.outfit = body.outfit;
     if (typeof body.show_in_lessons === 'boolean') saved.show_in_lessons = body.show_in_lessons;
     this.db.setValue('friend', saved);

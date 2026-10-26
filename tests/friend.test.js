@@ -64,3 +64,26 @@ test('news: only tiers not yet celebrated; outfits unlock by stage and achieveme
   assert.ok(o.find((x) => x.id === 'cap').unlocked);
   assert.ok(!o.find((x) => x.id === 'crown').unlocked);
 });
+
+test('quest of the day: stable pick, checked against that day only, adds light', async () => {
+  const { questFor, questProgress, QUESTS, QUEST_REWARD } = await import('../src/core/friend.js');
+  assert.equal(questFor('2026-10-26').id, questFor('2026-10-26').id);
+  assert.ok(new Set(['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25', '2026-10-26'].map((k) => questFor(k).id)).size > 2);
+  // find a day whose quest is "focus20" and check it
+  let key = null;
+  for (let d = 1; d <= 28 && !key; d += 1) { const k = `2026-11-${String(d).padStart(2, '0')}`; if (questFor(k).id === 'focus20') key = k; }
+  const [y, m, d] = key.split('-').map(Number);
+  const s = [lesson(at(y, m, d), { focused_min: 12 }), lesson(at(y, m, d, 18), { focused_min: 9 }), lesson(at(y, m, d + 1), { focused_min: 50 })];
+  const q = questProgress(key, s);
+  assert.equal(q.done, true); assert.equal(q.value, 20);
+  assert.equal(questProgress(key, s.slice(0, 1)).done, false);
+  assert.ok(QUESTS.length >= 7 && QUEST_REWARD === 15);
+});
+
+test('sky: one star per lesson, paused parts joined', async () => {
+  const { skyOf } = await import('../src/core/friend.js');
+  const sky = skyOf([lesson(at(2026, 10, 5), { id: 'a', lesson_id: 'L1', avg_attention: 80 }),
+    lesson(at(2026, 10, 5, 17), { id: 'b', lesson_id: 'L1', avg_attention: 60 }), lesson(at(2026, 10, 6), { id: 'c', avg_attention: 90 })]);
+  assert.equal(sky.length, 2);
+  assert.equal(sky[0].focused_min, 40); assert.equal(sky[0].att, 70);
+});
