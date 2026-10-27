@@ -22,3 +22,18 @@ create policy "own widget row" on public.widget for all to authenticated
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 revoke all on public.widget from anon;
 grant select, insert, update, delete on public.widget to authenticated;
+
+-- The Edge Function reads the summary through this function, with the public key (no service key
+-- needed). It returns the summary only for the exact SHA-256 hash of a widget key; nobody can list
+-- rows or read anything else. "security definer" lets it read the table that anon can't read.
+create or replace function public.widget_summary(key_hash text)
+returns jsonb
+language sql
+security definer
+set search_path = ''
+as $$
+  select summary || jsonb_build_object('updated_at', updated_at)
+  from public.widget where token_hash = key_hash limit 1
+$$;
+revoke all on function public.widget_summary(text) from public;
+grant execute on function public.widget_summary(text) to anon, authenticated;
