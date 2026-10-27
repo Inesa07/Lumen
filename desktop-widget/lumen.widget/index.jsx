@@ -16,7 +16,7 @@ const today = () => { const d = new Date(), p = (n) => String(n).padStart(2, "0"
 const fmt = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`);
 
 export const className = `
-  top: 40px; right: 40px; width: 300px;
+  top: 40px; right: 40px; width: 300px;     /* place on the desktop: change these numbers to move the widget */
   font-family: -apple-system, "SF Pro Text", Inter, sans-serif; color: #EEF3FF;
   .card { background: rgba(12, 20, 40, .82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
           border: 1px solid rgba(255,255,255,.12); border-radius: 22px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
