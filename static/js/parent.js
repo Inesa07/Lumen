@@ -138,7 +138,7 @@ function weeklyReportText(w, f, d) {
     L.push('', `📔 ${t("Lumi's diary")}:`);
     recent.forEach((day) => {
       const date = new Date(day.ts * 1000).toLocaleDateString(LOCALE(), { weekday: 'long', day: 'numeric', month: 'long' });
-      day.lessons.forEach((l) => L.push(`  ${date}: ${l.lines.map((x) => t(DIARY[x.k], { n: x.n, title: x.title || '', cls: x.cls ? ` (${x.cls})` : '' })).join(' ')}`));
+      day.lessons.forEach((l) => L.push(`  ${date}: ${l.lines.map((x) => diarySentence(x, false)).filter(Boolean).join(' ')}`));
     });
   }
   L.push('', t('Sent from Lumen, a study coach. The camera is analysed on the device; no video leaves it.'));
@@ -168,7 +168,7 @@ async function parentDashboard(p) {
     </section>
     <section class="stats parent-kpis">
       ${kpi('Studied this week', 'studied', hm(tw.study_min), `${tw.lessons ?? tw.sessions} ${tUnit('lesson', tw.lessons ?? tw.sessions)}`)}
-      ${kpi('Focused this week', 'focused', hm(tw.focused_min), w.change_pct == null ? t('first week with data') : `${w.change_pct >= 0 ? '▲' : '▼'} ${Math.abs(w.change_pct)}% ${t('vs last week')}`)}
+      ${kpi('Focused this week', 'focused', hm(tw.focused_min), w.change_pct == null ? t('minutes with 70%+ attention') : `${w.change_pct >= 0 ? '▲' : '▼'} ${Math.abs(w.change_pct)}% ${t('vs last week')}`)}
       ${kpi('Average attention', 'attention', tw.avg == null ? '–' : `${tw.avg}%`, t('this week'))}
       ${kpi('Phone came out', 'phoneh', tw.pickups ?? 0, t('times this week'))}
     </section>

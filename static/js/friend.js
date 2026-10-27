@@ -507,24 +507,43 @@ async function lumiNews(given = null) {
 
 
 // ---------------------------------------------------------------- Lumi's diary
+// Lumi's diary sentences. The default lesson name ("Study session") is not repeated in the text,
+// and "once" / "N times" have their own sentences so the diary reads like a real diary.
 const DIARY = {
-  open: 'We studied {title}{cls} for {n} min.',
-  focus_super: 'You were super focused. I glowed the whole time! ✨',
-  focus_good: 'You focused well for most of it.',
-  focus_hard: 'It was hard to focus today. That happens, tomorrow is a new try 🌱',
-  longest: 'Your longest focus: {n} minutes in a row!',
-  plan_all: 'You finished everything you planned 🎯',
-  plan_part: 'You finished part of your plan. Good start!',
-  no_phone: 'And no phone at all 📵',
-  phone: 'The phone came out {n}×.',
-  eyes: 'We rested our eyes {n}× 👀',
-  questions: 'Questions saved for review: {n} 🧠',
-  fell: 'Your attention got tired after about {n} minutes. A break around then could help.',
+  open_plain: 'We had a {n}-minute lesson.',
+  open_cls: 'We had a {n}-minute {cls} lesson.',
+  open_title: 'We studied {title} for {n} minutes.',
+  open_title_cls: 'We studied {title} in {cls} for {n} minutes.',
+  focus_super: 'You were really focused, and I glowed the whole time! ✨',
+  focus_good: 'You stayed focused for most of the lesson.',
+  focus_hard: "Focusing was hard this time, and that's okay. Tomorrow is a new chance! 🌱",
+  longest: 'Your longest focus streak was {n} minutes in a row.',
+  plan_all: 'You finished everything you planned. 🎯',
+  plan_part: 'You finished part of your plan. A good start!',
+  no_phone: "And you didn't touch your phone at all. 📵",
+  phone_1: 'You picked up the phone once.',
+  phone: 'You picked up the phone {n} times.',
+  eyes_1: 'We rested our eyes together once. 👀',
+  eyes: 'We rested our eyes together {n} times. 👀',
+  fell: 'Your attention started to drop after about {n} minutes, so a short break around then could help.',
 };
+const DEFAULT_TITLES = new Set(['', 'study session', 'a lesson', 'lesson']);
+/** One diary sentence as text. bold = wrap the lesson name in <b> (for the page; not for email). */
+function diarySentence(x, bold = true) {
+  let k = x.k;
+  if (k === 'questions') return '';                      // old data: questions were removed from Lumen
+  if (k === 'open') {
+    const named = !DEFAULT_TITLES.has(String(x.title || '').trim().toLowerCase());
+    const cls = x.cls && x.cls !== 'Other' ? x.cls : '';
+    k = named ? (cls ? 'open_title_cls' : 'open_title') : (cls ? 'open_cls' : 'open_plain');
+  }
+  if ((k === 'phone' || k === 'eyes') && x.n === 1) k += '_1';
+  const name = `“${x.title || ''}”`;
+  return t(DIARY[k], { n: x.n, cls: bold ? esc(x.cls || '') : (x.cls || ''), title: bold ? `<b>${esc(name)}</b>` : name });
+}
 function diaryDayHTML(day) {
   const date = new Date(day.ts * 1000).toLocaleDateString(LOCALE(), { weekday: 'long', day: 'numeric', month: 'long' });
-  return `<article class="diary-day"><h3>${esc(date)}</h3>${day.lessons.map((l) => `<p>${l.lines.map((x) =>
-    t(DIARY[x.k], { n: x.n, title: `<b>${esc(x.title || '')}</b>`, cls: x.cls ? ` (${esc(x.cls)})` : '' })).join(' ')}</p>`).join('')}</article>`;
+  return `<article class="diary-day"><h3>${esc(date)}</h3>${day.lessons.map((l) => `<p>${l.lines.map((x) => diarySentence(x)).filter(Boolean).join(' ')}</p>`).join('')}</article>`;
 }
 function diaryBook(f) {
   if (!f.diary.length) return `<p class="empty">${t('The diary starts after the first lesson.')}</p>`;

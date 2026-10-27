@@ -238,7 +238,7 @@ const i18nAdd = (en, ru, hy) => { if (ru) DICT.ru[en] = ru; if (hy) DICT.hy[en] 
   ['Mon', 'Пн', 'Երկ'], ['Tue', 'Вт', 'Երք'], ['Wed', 'Ср', 'Չրք'], ['Thu', 'Чт', 'Հնգ'], ['Fri', 'Пт', 'Ուրբ'], ['Sat', 'Сб', 'Շբթ'], ['Sun', 'Вс', 'Կիր'],
   ['🎯 Plan', '🎯 План', '🎯 Պլան'],
   ['Fireflies', 'Светлячки', 'Լուսատտիկներ'], ['Space', 'Космос', 'Տիեզերք'], ['Ocean', 'Океан', 'Օվկիանոս'], ['Clouds', 'Облака', 'Ամպեր'], ['Blossom', 'Цветение', 'Ծաղկում'],
-  ['Moving background', 'Живой фон', 'Շարժվող ֆոն'],
+  ['Moving background', 'Живой фон', 'Շարժվող ֆոն'], ['minutes with 70%+ attention', 'минуты с вниманием от 70%', '70%+ ուշադրությամբ րոպեներ'],
   ['never looked away', 'ни разу не отвлёкся', 'ոչ մի անգամ չի շեղվել'], ['{s} seconds', '{s} сек', '{s} վայրկյան'], ['{m} min {s} sec', '{m} мин {s} сек', '{m} րոպե {s} վայրկյան'],
   ['{m} min', '{m} мин', '{m} րոպե'], ['{d} away from the screen', '{d} не смотрел на экран', '{d} չի նայել էկրանին'],
   ['Digit {n}', 'Цифра {n}', 'Թիվ {n}'], ['PIN', 'PIN', 'PIN'], ['New PIN', 'Новый PIN', 'Նոր PIN'], ['Choose a 4-digit PIN', 'Придумайте PIN из 4 цифр', 'Ընտրեք 4 թվանշանով PIN'],
@@ -280,6 +280,26 @@ function translateText(key) {
   for (const [re, ru, hy] of PATTERNS) { const m = key.match(re); if (m) return (LANG === 'ru' ? ru : hy)(...m.slice(1)); }
   return null;
 }
+
+// Lumi's diary (new sentences)
+[
+  ["We had a {n}-minute lesson.", "Урок длился {n} мин.", "Դասը տևեց {n} րոպե։"],
+  ["We had a {n}-minute {cls} lesson.", "Урок по предмету «{cls}» длился {n} мин.", "«{cls}» դասը տևեց {n} րոպե։"],
+  ["We studied {title} for {n} minutes.", "Мы занимались темой {title} {n} мин.", "Մենք սովորեցինք {title} թեման {n} րոպե։"],
+  ["We studied {title} in {cls} for {n} minutes.", "Мы занимались темой {title} по предмету «{cls}» {n} мин.", "Մենք սովորեցինք {title} թեման («{cls}») {n} րոպե։"],
+  ["You were really focused, and I glowed the whole time! ✨", "Ты был по-настоящему сосредоточен, и я светился всё время! ✨", "Դու իսկապես կենտրոնացած էիր, և ես ամբողջ ժամանակ փայլում էի ✨"],
+  ["You stayed focused for most of the lesson.", "Большую часть урока ты был сосредоточен.", "Դասի մեծ մասը դու կենտրոնացած էիր։"],
+  ["Focusing was hard this time, and that's okay. Tomorrow is a new chance! 🌱", "В этот раз сосредоточиться было трудно, и это нормально. Завтра новый шанс! 🌱", "Այս անգամ կենտրոնանալը դժվար էր, և դա նորմալ է։ Վաղը նոր հնարավորություն է 🌱"],
+  ["Your longest focus streak was {n} minutes in a row.", "Самый долгий фокус — {n} мин подряд.", "Ամենաերկար կենտրոնացումը՝ {n} րոպե անընդմեջ։"],
+  ["You finished everything you planned. 🎯", "Ты выполнил всё, что запланировал. 🎯", "Կատարեցիր այն ամենը, ինչ պլանավորել էիր։ 🎯"],
+  ["You finished part of your plan. A good start!", "Ты выполнил часть плана. Хорошее начало!", "Կատարեցիր պլանի մի մասը։ Լավ սկիզբ է։"],
+  ["And you didn't touch your phone at all. 📵", "И ни разу не взял телефон. 📵", "Եվ ընդհանրապես չվերցրիր հեռախոսը։ 📵"],
+  ["You picked up the phone once.", "Ты один раз взял телефон.", "Մեկ անգամ վերցրիր հեռախոսը։"],
+  ["You picked up the phone {n} times.", "Ты брал телефон {n} раз.", "Հեռախոսը վերցրիր {n} անգամ։"],
+  ["We rested our eyes together once. 👀", "Мы один раз дали глазам отдохнуть. 👀", "Մեկ անգամ միասին հանգստացրինք աչքերը։ 👀"],
+  ["We rested our eyes together {n} times. 👀", "Мы давали глазам отдохнуть {n} раз. 👀", "Միասին հանգստացրինք աչքերը {n} անգամ։ 👀"],
+  ["Your attention started to drop after about {n} minutes, so a short break around then could help.", "Внимание начало падать примерно через {n} мин, поэтому короткий перерыв в это время может помочь.", "Ուշադրությունը սկսեց նվազել մոտ {n} րոպեից, ուստի այդ պահին կարճ ընդմիջումը կօգնի։"],
+].forEach((x) => i18nAdd(...x));
 
 // units: [one, few, many] for Russian (Armenian nouns stay singular after numbers)
 const UNITS = {
