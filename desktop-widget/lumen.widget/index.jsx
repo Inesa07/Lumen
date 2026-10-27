@@ -6,6 +6,11 @@
 const LUMEN_WIDGET_URL = "PASTE_URL_HERE";
 const LUMEN_WIDGET_KEY = "PASTE_KEY_HERE";
 
+import { run } from "uebersicht";
+
+// What a click on the widget opens: the Lumen app from the Dock if you installed it, otherwise the website.
+const OPEN_LUMEN = `open -a "Lumen" 2>/dev/null || open "https://inesa07.github.io/Lumen/#/"`;
+
 // Übersicht runs this shell command and gives its output to render(). -m 10: give up after 10 s.
 export const command = `curl -s -m 10 -H "Authorization: Bearer ${LUMEN_WIDGET_KEY}" "${LUMEN_WIDGET_URL}"`;
 export const refreshFrequency = 5 * 60 * 1000;     // every 5 minutes
@@ -18,6 +23,8 @@ const fmt = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : 
 export const className = `
   top: 40px; right: 40px; width: 300px;     /* place on the desktop: change these numbers to move the widget */
   font-family: -apple-system, "SF Pro Text", Inter, sans-serif; color: #EEF3FF;
+  .card { cursor: pointer; transition: transform .15s ease; }
+  .card:hover { transform: scale(1.02); }
   .card { background: rgba(12, 20, 40, .82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
           border: 1px solid rgba(255,255,255,.12); border-radius: 22px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
   .row { display: flex; align-items: center; gap: 12px; }
@@ -36,13 +43,13 @@ export const render = ({ output, error }) => {
   let s = null;
   try { s = JSON.parse(output); } catch (e) { /* not JSON */ }
   if (error || !s || s.error) {
-    return <div className="card"><b>Lumen</b><div className="err">{(s && s.error) || "No connection to Lumen yet. Check the URL and key at the top of index.jsx."}</div></div>;
+    return <div className="card" onClick={() => run(OPEN_LUMEN)}><b>Lumen</b><div className="err">{(s && s.error) || "No connection to Lumen yet. Check the URL and key at the top of index.jsx."}</div></div>;
   }
   const L = s.labels || {};
   const fresh = s.day === today();                    // yesterday's numbers don't count for today
   const g = fresh ? s.goal : { ...s.goal, today: 0, pct: 0 };
   return (
-    <div className="card">
+    <div className="card" onClick={() => run(OPEN_LUMEN)} title="Open Lumen">
       {fresh && s.active && <div className="live">● {L.studying} · {s.active.cls} · {s.active.attention}%</div>}
       <div className="row">
         <div className="lumi" dangerouslySetInnerHTML={{ __html: LUMI }} />
