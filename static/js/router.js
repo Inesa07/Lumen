@@ -28,6 +28,7 @@ function route() {
   if (h.startsWith('#/start/')) return viewHome(h.slice('#/start/'.length));
   if (h === '#/stats') return viewProgress();
   if (h.startsWith('#/stats/')) return viewProgress(h.slice('#/stats/'.length));
+  if (h === '#/mini') return viewMini();
   if (h === '#/lumi') return viewLumi();
   if (h === '#/parent') return viewParent();
   if (h === '#/review') return viewReview();

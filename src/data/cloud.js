@@ -70,6 +70,16 @@ export class CloudAdapter {
     }
   }
 
+  /** Fresh copies of some collections from the cloud (no local changes are touched). */
+  async pull(colls) {
+    const out = [];
+    for (const coll of colls) {
+      if (!TABLES[coll]) continue;
+      for (const row of await this.fetchTable(TABLES[coll])) out.push({ coll, doc: row.data });
+    }
+    return out;
+  }
+
   async put(coll, doc) {
     await this.local.put(coll, doc);
     if (isSynced(coll, doc.id)) this.enqueue({ op: 'put', coll, id: doc.id, doc: structuredClone(doc) });

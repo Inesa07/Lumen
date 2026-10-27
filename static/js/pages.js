@@ -611,6 +611,8 @@ async function viewSettings() {
       <div><h2 style="margin:0 0 4px;font-size:17px">Language</h2><p class="muted small" style="margin:0">Menu, Home, lessons and Lumi. Other pages are being translated step by step.</p></div>
       ${langButtons()}
     </section>
+    <a class="card setrow" href="#/mini" style="text-decoration:none;color:var(--text)">
+      <div><h2 style="margin:0 0 4px;font-size:17px">🪟 Lumen mini</h2><p class="muted small" style="margin:0">A small window with Lumi, today's focus and mood. On a Mac: open it in Safari, then File → Add to Dock.</p></div><span class="chev">›</span></a>
     <a class="card setrow parentrow" href="#/parent" style="text-decoration:none;color:var(--text)">
       <div><h2 style="margin:0 0 4px;font-size:17px">👪 Parent mode</h2><p class="muted small" style="margin:0">See your child's progress and decide about the AI tutor. Protected by a PIN.</p></div><span class="chev">›</span></a>
     <section class="card setrow">

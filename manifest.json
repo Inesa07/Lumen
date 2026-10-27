@@ -1,0 +1,14 @@
+{
+  "name": "Lumen",
+  "short_name": "Lumen",
+  "description": "A friendly study and focus coach with Lumi the firefly.",
+  "start_url": "./#/mini",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A1428",
+  "theme_color": "#0A1428",
+  "icons": [
+    { "src": "static/icons/lumen-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "static/icons/lumen-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

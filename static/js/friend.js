@@ -473,7 +473,7 @@ ${medalsSection(f, medals)}
 // After a lesson (and on Home / Lumi) new medals, a new stage and a finished quest are celebrated once.
 async function lumiNews(given = null) {
   const f = given || await api('/api/friend').catch(() => null);
-  if (!f || $('#lumiParty')) return;
+  if (!f || $('#lumiParty') || location.hash === '#/mini') return;   // not in the small window
   const { tiers, grew, quest } = f.news;
   if (!f.first_time && !tiers.length && grew == null && !quest) return;
   const box = document.createElement('div');

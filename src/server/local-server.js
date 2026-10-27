@@ -484,8 +484,38 @@ export class LocalServer {
     if (p === '/api/settings') return this.settings();
     if (p === '/api/friend') return this.friend();
     if (p === '/api/parent') return this.parentInfo();
+    if (p === '/api/mini') return this.mini();
     if (p === '/api/export') return { app: 'lumen', version: 1, exported_at: Date.now() / 1000, data: this.exportData() };
     return [{ error: 'not found' }, 404];
+  }
+
+  // ------------------------------------------------------------------ Lumen mini (the small window)
+  mini() {
+    const st = this.settings(), reps = this.reports(), now = Date.now() / 1000;
+    const today0 = stats.startOfDay(now);
+    const sums = reps.map(stats.summary);
+    const todaySums = sums.filter((s) => s.started_at >= today0);
+    const f = this.friend();
+    const snap = this.snapshot();
+    return {
+      goal: stats.goalInfo(sums, st.daily_goal_min, now, st.streak_min),
+      today: { study_min: Math.round(todaySums.reduce((a, s) => a + s.duration_sec, 0) / 60),
+        focused_min: todaySums.reduce((a, s) => a + (s.focused_min || 0), 0), lessons: new Set(todaySums.map((s) => s.lesson_id)).size },
+      mood_today: stats.moodMix(todaySums), mood_week: stats.moodMix(sums.filter((s) => s.started_at >= today0 - 6 * 86400)),
+      lumi: { stage: f.stage, light: f.light, outfit: f.outfit, quest: f.quest, birthday: f.birthday,
+        medals: f.achievements.reduce((a, x) => a + x.tier, 0) },
+      active: snap && snap.mode === 'session' ? { title: snap.title, class: snap.class, attention: snap.attention, state: snap.state, reason: snap.reason, elapsed: snap.elapsed } : null,
+    };
+  }
+
+  /** Re-read lessons and Lumi's data from the cloud (signed-in accounts), unless a lesson runs here. */
+  async pullCloud() {
+    const ad = this.db.adapter;
+    if (!ad || typeof ad.pull !== 'function' || this.tracker || this.check) return false;
+    try {
+      for (const { coll, doc } of await ad.pull(['sessions', 'kv', 'reviews'])) this.db._coll(coll).set(doc.id, doc);
+      return true;
+    } catch { return false; }
   }
 
   // ------------------------------------------------------------------ parent mode
