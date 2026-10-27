@@ -109,6 +109,16 @@ export function greyStd(rgba) {
   return Math.sqrt(Math.max(0, sum2 / n - mean * mean));
 }
 
+/** Overlap of two boxes {originX, originY, width, height}: 0 = apart, 1 = the same box (intersection over union). */
+export function iou(a, b) {
+  if (!a || !b) return 0;
+  const x1 = Math.max(a.originX, b.originX), y1 = Math.max(a.originY, b.originY);
+  const x2 = Math.min(a.originX + a.width, b.originX + b.width), y2 = Math.min(a.originY + a.height, b.originY + b.height);
+  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  const union = a.width * a.height + b.width * b.height - inter;
+  return union > 0 ? inter / union : 0;
+}
+
 /**
  * How much detail ("edges") a small grey picture has: the average brightness jump between
  * neighbouring pixels. A real room is full of edges; a hand right in front of the lens is

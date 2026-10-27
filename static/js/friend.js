@@ -549,7 +549,7 @@ function diaryBook(f) {
   if (!f.diary.length) return `<p class="empty">${t('The diary starts after the first lesson.')}</p>`;
   return `<div class="diary-book"><div class="diary-page" id="diaryPage">${diaryDayHTML(f.diary[0])}</div>
     <div class="diary-nav"><button class="btn ghost" id="diaryOlder" ${f.diary.length > 1 ? '' : 'disabled'}>← ${t('Older')}</button>
-      <span class="muted small" id="diaryPos">1 / ${f.diary.length}</span>
+      <span class="muted small" id="diaryPos">${f.diary.length} / ${f.diary.length}</span>
       <button class="btn ghost" id="diaryNewer" disabled>${t('Newer')} →</button></div></div>`;
 }
 function wireDiary(f) {
@@ -559,7 +559,8 @@ function wireDiary(f) {
     const pg = $('#diaryPage');
     pg.classList.remove('turn'); void pg.offsetWidth; pg.classList.add('turn');
     pg.innerHTML = diaryDayHTML(f.diary[i]);
-    $('#diaryPos').textContent = `${i + 1} / ${f.diary.length}`;
+    // the list is newest first (i = 0), but pages are numbered in time order: the newest day is N / N
+    $('#diaryPos').textContent = `${f.diary.length - i} / ${f.diary.length}`;
     $('#diaryOlder').disabled = i >= f.diary.length - 1;
     $('#diaryNewer').disabled = i === 0;
   };

@@ -9,7 +9,7 @@
 // Every processed frame becomes one sample: { t, face, ear, mar, yaw, pitch, gx, gy, size, fy,
 // smile, lift, brow, gap, bs, phone } — exactly the format the Python SessionTracker expects.
 
-import { faceFeatures, blendshapeFeatures, headAngles, greyStd, edgeEnergy } from './features.js';
+import { faceFeatures, blendshapeFeatures, headAngles, greyStd, edgeEnergy, iou } from './features.js';
 
 const MP_VERSION = '0.10.14';
 const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
@@ -23,6 +23,12 @@ const PHONE_EVERY = 5;        // the object detector is slower: every 5th frame 
 const PHONE_MAX_AREA = 0.4;
 // Below this much detail (see edgeEnergy) the lens is covered, even when the colours vary.
 const COVER_EDGES = 2.0;
+// A phone in your hands always moves a little; a cup or a box on the desk does not. A "phone"
+// that stays in the same place (box overlap above STILL_IOU) for more than STILL_SEC is
+// treated as an object lying on the desk and ignored until it moves.
+const STILL_IOU = 0.8;
+const STILL_SEC = 4;
+const PHONE_SCORE = 0.45;     // how sure the detector must be (0..1); 0.3 let cups and boxes through
 const PHONE_MEMORY = 1.5;     // seconds: the detector misses single frames, so remember a phone a little
 const COVER_EVERY = 5;
 
@@ -69,7 +75,7 @@ function loadModels(withPhone, status) {
         try {
           objects = await ObjectDetector.createFromOptions(fileset, {
             baseOptions: { modelAssetPath: OBJECT_MODEL, delegate },
-            runningMode: 'VIDEO', scoreThreshold: 0.3, maxResults: 3, categoryAllowlist: ['cell phone'],
+            runningMode: 'VIDEO', scoreThreshold: PHONE_SCORE, maxResults: 3, categoryAllowlist: ['cell phone'],
           });
         } catch (e) {
           console.warn('Phone detector not available, phone detection is off', e);
@@ -126,6 +132,8 @@ export class CameraVision {
     this.lastTs = -1;
     this.tsBase = Math.round(performance.now());      // shared models need ever-growing timestamps
     this.phoneSeen = -1e9;
+    this.phoneStreak = 0;         // detector checks in a row that saw a phone
+    this.phoneAnchor = null;      // {box, since}: where the "phone" has been standing still
     this.covered = false;
     this.edges = 99;              // picture detail (see edgeEnergy); high until first measured
     this.fpsWindow = [];
@@ -159,7 +167,17 @@ export class CameraVision {
           const b = d.boundingBox;
           return !b || (b.width * b.height) / (w * h) <= PHONE_MAX_AREA;
         });
-        if (hit) { this.phoneSeen = t; this.lastPhoneBox = hit.boundingBox; } else this.lastPhoneBox = null;
+        if (hit) {
+          const box = hit.boundingBox;
+          // still in the same place? then measure how long it has been lying there
+          if (box && this.phoneAnchor && iou(box, this.phoneAnchor.box) > STILL_IOU) { /* same spot */ }
+          else this.phoneAnchor = { box, since: t };
+          const lyingStill = box && t - this.phoneAnchor.since > STILL_SEC;
+          this.phoneStreak += 1;
+          // two checks in a row (about 0.7 s) and not an object resting on the desk
+          if (this.phoneStreak >= 2 && !lyingStill) this.phoneSeen = t;
+          this.lastPhoneBox = lyingStill ? null : box;
+        } else { this.phoneStreak = 0; this.lastPhoneBox = null; }
       } catch (e) { console.warn('phone detector error', e); }
     }
     if (this.frame % COVER_EVERY === 0) {

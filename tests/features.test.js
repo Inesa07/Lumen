@@ -69,3 +69,11 @@ test('edgeEnergy: a sharp pattern has detail, a smooth gradient (hand at the len
   assert.ok(edgeEnergy(sharp, w, h) > 20);
   assert.ok(edgeEnergy(smooth, w, h) < 2);
 });
+
+test('iou: same box 1, apart 0, half-shifted in between', async () => {
+  const { iou } = await import('../src/vision/features.js');
+  const a = { originX: 0, originY: 0, width: 10, height: 10 };
+  assert.equal(iou(a, a), 1);
+  assert.equal(iou(a, { originX: 20, originY: 0, width: 10, height: 10 }), 0);
+  assert.ok(Math.abs(iou(a, { originX: 5, originY: 0, width: 10, height: 10 }) - 1 / 3) < 1e-9);
+});
