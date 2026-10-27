@@ -24,6 +24,7 @@ async function viewMini() {
     if (Date.now() - miniPull > 3 * 60000) { miniPull = Date.now(); await Lumen.server.pullCloud().catch(() => {}); }
     let m;
     try { m = await api('/api/mini'); } catch { return; }
+    pushWidget();
     const g = m.goal, L = m.lumi, hol = lumiHoliday({ birthday: L.birthday });
     const mood = Object.keys(m.mood_today || {}).length ? m.mood_today : m.mood_week;
     const moodLabel = Object.keys(m.mood_today || {}).length ? t('Mood today') : t('Mood this week');

@@ -1581,3 +1581,9 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 .mini-quest .qv { font-weight: 700; }
 .mini-quest.done .qv { color: var(--teal); }
 .mini-start { justify-content: center; }
+
+/* Mac widget card */
+.widgetcard { display: flex; flex-direction: column; gap: 12px; }
+.wkeys { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface-2); border: 1px dashed var(--accent-line); }
+.wkey { display: flex; align-items: center; gap: 10px; }
+.wkey code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; padding: 8px 10px; border-radius: 10px; background: var(--bg); font-size: 12px; }

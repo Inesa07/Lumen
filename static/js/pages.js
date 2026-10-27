@@ -119,6 +119,7 @@ async function viewHome(prefillClass = '') {
   wireLessonButtons();
   drawDraft();
   if (lumi) lumiNews(lumi);
+  pushWidget();
   document.querySelectorAll('[data-cls]').forEach((b) => { b.onclick = () => { $('#cls').value = b.dataset.cls; showClassTodos(); $('#title').focus(); }; });
   classCombo($('#cls'), $('#clsList'), classNames, () => { showClassTodos(); $('#title').focus(); });
   setupRhythm(d.settings.rhythm);
@@ -338,6 +339,7 @@ async function viewReport(id) {
     notesWidget($('#repNoteGrid'), notes, {});
   }).catch(() => {});
   lumiNews();                           // new medals or a new stage after this lesson
+  pushWidget(true);                     // the Mac widget shows the new numbers
 }
 
 function goalRing(g) {
@@ -611,6 +613,7 @@ async function viewSettings() {
       <div><h2 style="margin:0 0 4px;font-size:17px">Language</h2><p class="muted small" style="margin:0">Menu, Home, lessons and Lumi. Other pages are being translated step by step.</p></div>
       ${langButtons()}
     </section>
+    ${widgetCard()}
     <a class="card setrow" href="#/mini" style="text-decoration:none;color:var(--text)">
       <div><h2 style="margin:0 0 4px;font-size:17px">🪟 Lumen mini</h2><p class="muted small" style="margin:0">A small window with Lumi, today's focus and mood. On a Mac: open it in Safari, then File → Add to Dock.</p></div><span class="chev">›</span></a>
     <a class="card setrow parentrow" href="#/parent" style="text-decoration:none;color:var(--text)">
@@ -694,6 +697,7 @@ async function viewSettings() {
       <span class="small muted" id="dataMsg"></span>
     </section>
   </main>`);
+  wireWidgetCard();
   $('#exportBtn').onclick = async () => {
     const data = await api('/api/export');
     const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
