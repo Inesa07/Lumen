@@ -284,7 +284,7 @@ function lumiHomeCard(f, g = null) {
       <div class="lumicard-line">${line}</div>
       <div class="lightbar" aria-label="Light ${f.light}"><i style="width:${f.stage.pct}%"></i></div>
       <div class="muted small">🔆 ${t('{n} light', { n: f.light })}${f.achievements.some((a) => a.tier) ? ` · 🏅 ${t('{n} medals', { n: f.achievements.reduce((a, x) => a + x.tier, 0) })}` : ''}</div>
-      ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${t('{n} days in a row', { n: g.streak })}</span></div>
+      ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${g.streak === 1 ? t('1 day in a row') : t('{n} days in a row', { n: g.streak })}</span></div>
         <div class="lightbar goalbar"><i style="width:${g.pct}%"></i></div>` : ''}
       ${questLine(f.quest)}</div>
     <span class="chev">›</span></a>`;

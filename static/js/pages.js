@@ -66,7 +66,7 @@ async function viewHome(prefillClass = '') {
   const classNames = d.classes.map((c) => c.name);
 
   const g = d.goal;
-  const today = t.today_study ? `<strong>${hm(t.today_focused)}</strong> focused of ${hm(t.today_study)} studied today` : 'No studying yet today. Ready when you are.';
+  const today = t.today_study ? `<strong>${hm(t.today_focused)}</strong> focused of ${hm(t.today_study)} studied today` : "Let's start today's first lesson!";
   app.innerHTML = shell('home', `
   <main class="wrap home">
     <header class="home-hero">
