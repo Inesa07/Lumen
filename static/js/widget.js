@@ -48,10 +48,25 @@ async function widgetSummary() {
   };
 }
 
+/**
+ * Is the widget connected for this account? Asked in the cloud once per session, so it also works in a
+ * browser or the Dock app where "Connect widget" was not pressed (each of them has its own storage).
+ */
+let widgetCloud = null;
+async function widgetConnected() {
+  if (localStorage.getItem(widgetFlag())) return true;
+  if (widgetCloud === null || widgetCloud.user !== Lumen.user.id) {
+    const { data, error } = await Lumen.client.from('widget').select('user_id').eq('user_id', Lumen.user.id).limit(1);
+    widgetCloud = { user: Lumen.user.id, on: !error && !!(data && data.length) };
+    if (widgetCloud.on) localStorage.setItem(widgetFlag(), '1');
+  }
+  return widgetCloud.on;
+}
+
 /** Send the summary to the cloud, if the widget is connected (force: ignore the 1-minute limit). */
 async function pushWidget(force = false) {
   try {
-    if (!Lumen.user || !Lumen.client || !localStorage.getItem(widgetFlag())) return;
+    if (!Lumen.user || !Lumen.client || !(await widgetConnected())) return;
     if (!force && Date.now() - widgetLast.at < 60000) return;
     const summary = await widgetSummary();
     const json = JSON.stringify(summary);
@@ -84,6 +99,7 @@ async function connectWidget() {
 async function disconnectWidget() {
   await Lumen.client.from('widget').delete().eq('user_id', Lumen.user.id);
   localStorage.removeItem(widgetFlag());
+  widgetCloud = { user: Lumen.user.id, on: false };
 }
 
 /** The "Mac widget" card in Settings. */

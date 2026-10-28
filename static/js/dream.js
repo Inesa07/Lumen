@@ -135,6 +135,7 @@ async function drawDream(state = null) {
         lumiLive.info = await api('/api/friend');
         lumiSound('quest');
         toast(t('Your dream is saved! Let’s collect stars ✨'));
+        if (typeof pushWidget === 'function') pushWidget(true);   // the Mac widget shows the dream
         drawDream({ dr: res, mode: 'show' });
         const big = $('#lumiBig svg.lumi');
         if (big) big.outerHTML = lumiSVG({ mood: 'happy', stage: lumiLive.info.stage.index, outfit: lumiLive.info.outfit, size: 220, dream: lumiLive.info.dream });
@@ -165,6 +166,7 @@ async function drawDream(state = null) {
     ${dreamShelf(dr.done)}`;
   if ($('#dreamDone')) $('#dreamDone').onclick = async () => {
     const res = await api('/api/dream', { fulfilled: true });
+    if (typeof pushWidget === 'function') pushWidget(true);
     lumiLive.info = await api('/api/friend');
     dreamParty({ title: t('Hooray! Your dream came true! 🎉'), text: t('“{text}” is on your shelf of dreams now. What will you dream about next?', { text: esc(d.text) }), d: { ...d, level: 4 } }, f);
     drawDream({ dr: res, mode: 'empty' });
@@ -173,6 +175,7 @@ async function drawDream(state = null) {
   if ($('#dreamRemoveNo')) $('#dreamRemoveNo').onclick = () => drawDream({ dr, mode: 'show' });
   if ($('#dreamRemoveYes')) $('#dreamRemoveYes').onclick = async () => {
     const res = await api('/api/dream', { remove: true });
+    if (typeof pushWidget === 'function') pushWidget(true);
     lumiLive.info = await api('/api/friend');
     drawDream({ dr: res, mode: 'write' });
   };

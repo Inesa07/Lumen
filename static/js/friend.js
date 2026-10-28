@@ -491,6 +491,7 @@ ${medalsSection(f, medals)}
   wireDiary(f);
   drawDream();
   lumiNews(f);
+  if (typeof pushWidget === 'function') pushWidget();
 }
 
 // ---------------------------------------------------------------- celebrations
