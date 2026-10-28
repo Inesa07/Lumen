@@ -227,6 +227,16 @@ const ANIM = `<style>
 @keyframes wzz{0%{opacity:0;transform:translate(0,6px)}40%{opacity:1}100%{opacity:0;transform:translate(10px,-14px)}}
 </style>`;
 
+// Words used when the summary comes from an older Lumen (it sends its own words in your language).
+const DEFAULT_LABELS = {
+  studying: "Studying now", morning: "Lumi is waking up", day: "Lumi is flying around", evening: "Lumi is getting cosy", night: "Lumi is sleeping",
+  happy: "Happy: you studied today! ✨", missing: "Lumi misses you. A short lesson? 🌙", waiting: "Waiting for today's lesson",
+  night_missing: "Lumi misses you. See you tomorrow! 🌙", night_waiting: "Sleep well! See you tomorrow 🌙",
+  dream: "My dream", dream_ready: "All stars collected! 🎉", no_dream: "Write your dream on the Lumi page 🎁",
+  sunny: "Sunny", clear: "Clear", cloudy: "Cloudy", rain: "Rain", snow: "Snow", fog: "Fog", storm: "Storm",
+  update: "Open Lumen once to update the widget",
+};
+
 const today = () => { const d = new Date(), p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 const fmt = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`);
 const WEATHER_ICON = { clear: { day: "☀️", night: "🌙" }, partly: { day: "⛅", night: "☁️" }, cloudy: "☁️", rain: "🌧️", snow: "🌨️", fog: "🌫️", storm: "⛈️" };
@@ -240,7 +250,8 @@ export const render = ({ output, error }) => {
   if (error || !s || s.error) {
     return <div className="card" onClick={() => run(OPEN_LUMEN)}><b>Lumen</b><div className="err">{(s && s.error) || "No connection to Lumen yet. Check the URL and key at the top of index.jsx."}</div></div>;
   }
-  const L = s.labels || {};
+  const L = { ...DEFAULT_LABELS, ...(s.labels || {}) };
+  const old = !s.v || s.v < 2;                        // made by an older Lumen: no dream yet
   const now = new Date();
   const fresh = s.day === today();                    // yesterday's numbers don't count for today
   const tod = timeOfDay(now, w);
@@ -281,7 +292,7 @@ export const render = ({ output, error }) => {
             <b style={{ fontSize: 13 }}>⭐ {d.earned}/{d.need}</b></div>
           <div className="bar"><i style={{ width: `${d.pct}%` }} /></div>
           {d.ready && <div className="muted">{L.dream_ready}</div>}
-        </div>) : <div className="muted">{L.no_dream}</div>}
+        </div>) : <div className="muted">{old ? L.update : L.no_dream}</div>}
         {SIZE === "large" && g && (<div>
           <div className="sep" />
           <div className="row muted" style={{ justifyContent: "space-between" }}>
