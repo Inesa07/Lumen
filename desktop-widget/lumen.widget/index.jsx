@@ -158,22 +158,42 @@ function sceneHTML({ tod, season, w, holiday }) {
 // ---------------------------------------------------------------- styles
 export const className = `
   top: 40px; right: 40px; width: 320px;     /* place on the desktop: change these numbers to move the widget */
-  font-family: -apple-system, "SF Pro Text", Inter, sans-serif; color: #EEF3FF;
-  .card { cursor: pointer; transition: transform .15s ease; background: rgba(12, 20, 40, .82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-          border: 1px solid rgba(255,255,255,.12); border-radius: 22px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
-  .card:hover { transform: scale(1.02); }
-  .world { position: relative; height: 150px; border-radius: 16px; overflow: hidden; }
+  font-family: -apple-system, "SF Pro Rounded", "SF Pro Text", Inter, sans-serif; color: #fff;
+  -webkit-font-smoothing: antialiased;
+  /* glass: a light see-through layer, a bright rim, a soft shine and a shadow under it */
+  .card { position: relative; cursor: pointer; overflow: hidden; border-radius: 28px; padding: 9px;
+          background: linear-gradient(150deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.14) 45%, rgba(255,255,255,.08) 100%);
+          backdrop-filter: blur(30px) saturate(170%); -webkit-backdrop-filter: blur(30px) saturate(170%);
+          border: 1px solid rgba(255,255,255,.5);
+          box-shadow: 0 18px 40px rgba(10,30,60,.28), 0 2px 6px rgba(10,30,60,.18), inset 0 1px 0 rgba(255,255,255,.75), inset 0 -1px 1px rgba(255,255,255,.25);
+          transition: transform .2s ease, box-shadow .2s ease; }
+  .card:before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+          background: radial-gradient(120% 60% at 10% 0%, rgba(255,255,255,.45), rgba(255,255,255,0) 55%),
+                      radial-gradient(80% 50% at 100% 100%, rgba(140,200,255,.18), rgba(140,200,255,0) 60%); }
+  .card:hover { transform: translateY(-2px) scale(1.015); box-shadow: 0 24px 50px rgba(10,30,60,.32), 0 2px 6px rgba(10,30,60,.18), inset 0 1px 0 rgba(255,255,255,.8); }
+  .world { position: relative; height: 150px; border-radius: 20px; overflow: hidden;
+           box-shadow: inset 0 0 0 1px rgba(255,255,255,.45), 0 6px 16px rgba(10,30,60,.18); }
   .world > * { position: absolute; }
-  .info { padding: 10px 6px 4px; }
-  .muted { color: #A3B2CF; font-size: 12px; }
-  .status { font-size: 13px; font-weight: 600; }
-  .bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; margin: 6px 0 2px; }
-  .bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #FFD84A, #FF9F4D); }
+  .world .shine { inset: 0; z-index: 4; pointer-events: none; border-radius: inherit;
+           background: linear-gradient(170deg, rgba(255,255,255,.38) 0%, rgba(255,255,255,.08) 28%, rgba(255,255,255,0) 45%); }
+  .info { position: relative; padding: 11px 7px 3px; text-shadow: 0 1px 2px rgba(0,20,50,.28); }
+  .muted { color: rgba(255,255,255,.82); font-size: 12px; }
+  .status { font-size: 14px; font-weight: 700; letter-spacing: .1px; }
+  .glass { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); border-radius: 16px;
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+  .dream { padding: 9px 11px 8px; margin-top: 10px; }
+  .bar { height: 9px; border-radius: 99px; background: rgba(255,255,255,.25); overflow: hidden; margin: 7px 0 1px;
+         box-shadow: inset 0 1px 2px rgba(0,20,50,.2); }
+  .bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #FFE27A, #FFB347 60%, #FF8F5A);
+           box-shadow: 0 0 10px rgba(255,200,90,.8), inset 0 1px 0 rgba(255,255,255,.6); }
   .row { display: flex; align-items: center; gap: 8px; }
-  .sep { height: 1px; background: rgba(255,255,255,.1); margin: 10px 0; }
-  .live { background: rgba(76,201,176,.25); border-radius: 12px; padding: 5px 10px; font-size: 12px; margin-bottom: 8px; }
-  .err { font-size: 12px; color: #FFB4A0; }
-  .temp { right: 10px; top: 8px; font-size: 12px; font-weight: 600; background: rgba(0,0,0,.25); padding: 3px 8px; border-radius: 99px; }
+  .chips { display: flex; gap: 6px; margin-top: 8px; }
+  .chip { flex: 1; text-align: center; font-size: 12px; font-weight: 600; padding: 6px 0; border-radius: 12px; }
+  .live { position: relative; background: rgba(76,201,176,.35); border: 1px solid rgba(255,255,255,.4); border-radius: 12px; padding: 5px 10px; font-size: 12px; margin-bottom: 8px; }
+  .err { font-size: 12px; color: #FFE1D6; }
+  .temp { right: 9px; top: 8px; z-index: 5; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 99px; color: #fff;
+          background: rgba(255,255,255,.28); border: 1px solid rgba(255,255,255,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+          text-shadow: 0 1px 2px rgba(0,20,50,.35); }
   .zzz { font-weight: 700; color: #DDE6FF; }
 `;
 
@@ -279,24 +299,24 @@ export const render = ({ output, error }) => {
         <div className="w-scene" dangerouslySetInnerHTML={{ __html: sceneHTML({ tod, season, w, holiday }) }} />
         <div className={`w-lumi-pos ${state}`} dangerouslySetInnerHTML={{ __html: lumi }} />
         {state === "sleep" && <div className="w-zzz zzz">z z z</div>}
+        <div className="shine" />
         {w && <div className="temp">{icon} {w.temp} {weatherWord}</div>}
       </div>
       <div className="info">
         <div className="status">{L[tod]}</div>
         <div className="muted">{(tod === "night" && mood !== "happy" && L[`night_${mood}`]) || L[mood]}</div>
         {holidayLine && <div className="muted" style={{ marginTop: 2 }}>{holidayLine}</div>}
-        <div className="sep" />
-        {d ? (<div>
-          <div className="row"><span style={{ fontSize: 20 }}>{d.emoji}</span>
-            <span style={{ flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span className="muted">{L.dream}:</span> {d.text}</span>
+        {d ? (<div className="glass dream">
+          <div className="row"><span style={{ fontSize: 24 }}>{d.emoji}</span>
+            <span style={{ flex: 1, minWidth: 0 }}><div className="muted" style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".5px" }}>{L.dream}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.text}</div></span>
             <b style={{ fontSize: 13 }}>⭐ {d.earned}/{d.need}</b></div>
           <div className="bar"><i style={{ width: `${d.pct}%` }} /></div>
           {d.ready && <div className="muted">{L.dream_ready}</div>}
-        </div>) : <div className="muted">{old ? L.update : L.no_dream}</div>}
-        {SIZE === "large" && g && (<div>
-          <div className="sep" />
-          <div className="row muted" style={{ justifyContent: "space-between" }}>
-            <span>🎯 {fmt(g.today)} / {fmt(g.goal_min)}</span><span>🔥 {g.streak}</span><span>🔆 {s.lumi.light}</span><span>🏅 {s.lumi.medals}</span></div>
+        </div>) : <div className="glass dream muted">{old ? L.update : L.no_dream}</div>}
+        {SIZE === "large" && g && (<div className="chips">
+          <span className="chip glass">🎯 {fmt(g.today)}</span><span className="chip glass">🔥 {g.streak}</span>
+          <span className="chip glass">🔆 {s.lumi.light}</span><span className="chip glass">🏅 {s.lumi.medals}</span>
         </div>)}
       </div>
     </div>
