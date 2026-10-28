@@ -20,6 +20,7 @@ const INFO = {
   // Lumi
   lumi: ['Lumi', 'Lumi is your study firefly. It grows from your light: Spark → Little light → Firefly → Bright → Glowing → Star firefly. <br><b>Why:</b> learning is easier with a friend who notices your effort.'],
   light: ['Light 🔆', 'Every minute you are really focused gives Lumi 1 light. Every medal gives extra light: Bronze +10, Silver +25, Gold +60. <br>Light is never taken away.'],
+  dream: ['My dream', 'Talk with your parents, then write a dream here. Lumen counts how many stars it needs: a bigger dream needs more, and it fits how you usually study, so every dream is reachable. Stars come from lessons: 10 focused minutes = 1, a lesson without the phone = 1, a new focus record = 3. Stars are never taken away. <br><b>Why:</b> a goal you chose yourself is the best reason to start a lesson.'],
   quest: ['Quest of the day', 'One small goal every day, a different one each day. Doing it gives Lumi +15 light. <br><b>Why:</b> small daily goals build habits, and a new one each day keeps it fun.'],
   sky: ['Lumi\'s sky', 'Every lesson lights a star. Bigger star = more focused minutes. Golden star = attention 80% or more. Lessons of the same week join into a constellation. Tap a star to open that lesson.'],
   ach: ['Achievements', 'Medals for good habits: planning, resting your eyes, reviewing, coming back after a pause. Each has Bronze, Silver and Gold. <br><b>No race:</b> you only compete with yourself, and a missed day never takes a medal away.'],

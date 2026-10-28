@@ -9,8 +9,13 @@
 const STAGE_SCALE = [0.6, 0.7, 0.8, 0.88, 0.95, 1];
 let lumiSeq = 0;
 
-function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, size = 120, locked = false, label = 'Lumi the firefly' } = {}) {
-  const hat = ['cap', 'crown', 'headphones'].includes(outfit);   // holiday hats only when the head is free
+function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, size = 120, locked = false, label = 'Lumi the firefly', dream = null } = {}) {
+  // on the way to a dream (static/js/dream.js): 25 % the dream floats next to Lumi, 50 % a dream hat, 75 % a golden glow
+  const dl = dream && !locked ? dream.level || 0 : 0;
+  const dreamHat = dl >= 2 ? (DREAM_HATS[dream.look] || DREAM_HATS.party) : '';
+  if (dreamHat && ['cap', 'crown', 'headphones', 'glasses', 'bow', 'flower'].includes(outfit)) outfit = 'none';
+  if (dreamHat && (extra === 'santa' || extra === 'party')) extra = extra === 'santa' ? 'snow' : null;
+  const hat = ['cap', 'crown', 'headphones'].includes(outfit) || !!dreamHat;   // holiday hats only when the head is free
   const id = `lg${lumiSeq += 1}`;                         // unique gradient ids per drawing
   const sc = STAGE_SCALE[Math.max(0, Math.min(5, stage))];
   const glowR = 30 + stage * 5;
@@ -26,6 +31,7 @@ function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, siz
     <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B68C8"/><stop offset="1" stop-color="#5A4AA6"/></linearGradient>
   </defs>
   <circle class="glow" cx="60" cy="80" r="${glowR}" fill="url(#${id}g)"/>
+  ${dl >= 3 ? `<circle class="dreamglow" cx="60" cy="66" r="50" fill="none" stroke="#FFD84A" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>` : ''}
   <g class="spks" fill="#FFE98A">${sparkles}</g>
   <g class="lumi-body" style="transform:scale(${sc})">
     <g class="float">
@@ -53,10 +59,13 @@ function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, siz
       ${outfit === 'headphones' ? '<g><path d="M37 50q0-28 23-28t23 28" fill="none" stroke="#2F7FE0" stroke-width="4"/><rect x="32" y="44" width="9" height="14" rx="4" fill="#5AA9FF"/><rect x="79" y="44" width="9" height="14" rx="4" fill="#5AA9FF"/></g>' : ''}
       ${outfit === 'flower' ? `<g transform="translate(78 31)">${[0, 72, 144, 216, 288].map((a) => `<ellipse rx="3.2" ry="5.4" fill="#FF9FC6" transform="rotate(${a}) translate(0 -5)"/>`).join('')}<circle r="3" fill="#F2C14E"/></g>` : ''}
       ${outfit === 'crown' ? '<path d="M45 30l4-11 6 7 5-10 5 10 6-7 4 11z" fill="#F2C14E" stroke="#C99A12" stroke-width="1"/>' : ''}
+      ${dreamHat}
       ${extra === 'santa' && !hat ? '<g><path d="M40 33q20-26 40 0z" fill="#E53935"/><path d="M62 12q14 2 18 14" fill="none" stroke="#E53935" stroke-width="6" stroke-linecap="round"/><circle cx="81" cy="27" r="4.5" fill="#fff"/><rect x="37" y="29" width="46" height="7" rx="3.5" fill="#fff"/></g>' : ''}
       ${extra === 'party' && !hat ? '<g><path d="M50 30l10-24 10 24z" fill="#5AA9FF"/><path d="M53 23l14 0M56 15l8 0" stroke="#F2C14E" stroke-width="2.4"/><circle cx="60" cy="6" r="3.5" fill="#F06BA8"/></g>' : ''}
     </g>
   </g>
+  ${dl >= 1 ? `<text class="dreamfloat" x="101" y="34" font-size="20" text-anchor="middle">${esc(dream.emoji || '⭐')}</text>` : ''}
+  ${dl >= 4 ? '<g class="snow">' + [[14, 20, '#F06BA8'], [104, 52, '#5AA9FF'], [20, 90, '#F2C14E'], [100, 100, '#3FCF8E'], [30, 8, '#9B8CFF']].map(([x, y, c], i) => `<rect x="${x}" y="${y}" width="4" height="6" rx="1" fill="${c}" style="animation-delay:${i * 0.5}s"/>`).join('') + '</g>' : ''}
   ${extra === 'pumpkin' ? '<g transform="translate(96 98)"><ellipse rx="11" ry="9" fill="#FF8A2A"/><ellipse rx="5" ry="9" fill="#FF9F45"/><path d="M0-8q1-6 5-7" stroke="#3E8E41" stroke-width="2.5" fill="none"/><path d="M-5-2l2 2-2 1zM5-2l-2 2 2 1zM-4 3q4 3 8 0" fill="#5A2A00" stroke="#5A2A00" stroke-width="1"/></g>' : ''}
   ${extra === 'heart' ? '<path class="heartfloat" d="M98 30c-4-6-13-2-10 5l10 10 10-10c3-7-6-11-10-5z" fill="#F06BA8"/>' : ''}
   ${extra === 'flowers' ? `<g transform="translate(98 100)">${[0, 72, 144, 216, 288].map((a) => `<ellipse rx="3.6" ry="6" fill="#FFB3D1" transform="rotate(${a}) translate(0 -6)"/>`).join('')}<circle r="3.4" fill="#F2C14E"/><path d="M0 8v14" stroke="#3E8E41" stroke-width="2.5"/></g>` : ''}
@@ -64,6 +73,18 @@ function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, siz
   ${extra === 'party' ? '<g class="snow">' + [[14, 20, '#F06BA8'], [104, 40, '#5AA9FF'], [20, 90, '#F2C14E'], [100, 100, '#3FCF8E'], [96, 12, '#9B8CFF']].map(([x, y, c], i) => `<rect x="${x}" y="${y}" width="4" height="6" rx="1" fill="${c}" style="animation-delay:${i * 0.5}s"/>`).join('') + '</g>' : ''}
 </svg>`;
 }
+
+// Dream hats (one per kind of dream, see LOOKS in src/core/dream.js). Drawn on Lumi's head (centre 60,50, r 23).
+const DREAM_HATS = {
+  safari: '<g><ellipse cx="60" cy="31" rx="28" ry="5.5" fill="#C9A86A"/><path d="M42 31q0-18 18-18t18 18z" fill="#DCC189"/><path d="M42.5 28.5h35" stroke="#7A5C30" stroke-width="3.2"/><circle cx="60" cy="14.5" r="2.2" fill="#B8955A"/></g>',
+  sport: '<g><path d="M38 37q22-12 44 0l-.8 5.5q-21-11-42.4 0z" fill="#E53935"/><path d="M80 37.5l9 3-7 4z" fill="#E53935"/><path d="M40 39.6q20-9.6 40 0" stroke="#fff" stroke-width="1.4" fill="none"/></g>',
+  cinema: '<g><rect x="42" y="42" width="16" height="12" rx="3" fill="#E53935" fill-opacity=".7" stroke="#241A4A" stroke-width="2"/><rect x="62" y="42" width="16" height="12" rx="3" fill="#2F7FE0" fill-opacity=".7" stroke="#241A4A" stroke-width="2"/><path d="M58 47h4M42 46l-5-2M78 46l5-2" stroke="#241A4A" stroke-width="2"/></g>',
+  gamer: '<g><path d="M37 50q0-28 23-28t23 28" fill="none" stroke="#2E9E5B" stroke-width="4"/><rect x="32" y="44" width="9" height="14" rx="4" fill="#3FCF8E"/><rect x="79" y="44" width="9" height="14" rx="4" fill="#3FCF8E"/><path d="M36 57q1 9 13 9" fill="none" stroke="#2E9E5B" stroke-width="2.4"/><circle cx="50" cy="66" r="2.6" fill="#2E9E5B"/></g>',
+  artist: '<g><ellipse cx="57" cy="30" rx="21" ry="8" fill="#E5484D" transform="rotate(-12 57 30)"/><path d="M55 22.5l1-5" stroke="#B83238" stroke-width="3" stroke-linecap="round"/></g>',
+  chef: '<g><rect x="46" y="22" width="28" height="9" rx="2" fill="#fff" stroke="#E2E2EA"/><circle cx="50" cy="17" r="8" fill="#fff"/><circle cx="60" cy="12.5" r="9.5" fill="#fff"/><circle cx="70" cy="17" r="8" fill="#fff"/></g>',
+  travel: '<g><ellipse cx="60" cy="30" rx="30" ry="6" fill="#E9C46A"/><path d="M45 30q0-15 15-15t15 15z" fill="#F4D58D"/><path d="M45.5 26.5q14.5 4 29 0" stroke="#E76F51" stroke-width="3.4" fill="none"/></g>',
+  party: '<g><path d="M50 30l10-24 10 24z" fill="#9B8CFF"/><path d="M53 23l14 0M56 15l8 0" stroke="#FFD84A" stroke-width="2.4"/><circle cx="60" cy="6" r="3.5" fill="#F06BA8"/></g>',
+};
 
 // ---------------------------------------------------------------- moods and words
 // Lumi only says pre-written lines: friendly, short, never blaming. (No free AI chat for children.)
@@ -208,7 +229,7 @@ async function lumiLesson(d) {
   let key = now < lumiLive.partyUntil ? 'party' : lumiMoodOf(d);
   const face = LINE_FACE[key];
   if (key !== lumiLive.key) {
-    $('#lumiBtn').innerHTML = lumiSVG({ mood: face, stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 84 });
+    $('#lumiBtn').innerHTML = lumiSVG({ mood: face, stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 84, dream: f.dream });
   }
   // the first words of a late lesson: a gentle bedtime reminder, once
   if (!lumiLive.bedtime && key === 'happy' && new Date().getHours() >= 22) {
@@ -279,14 +300,14 @@ function lumiHomeCard(f, g = null) {
     : lumiTime() === 'night' ? pick(timeLines('night'))
     : f.stage.next ? t('{n} more light and I become a {name}!', { n: f.stage.next.need - f.light, name: `<b>${esc(t(f.stage.next.name))}</b>` }) : t('I am a Star firefly! Thank you for all the light ✨');
   return `<a class="card lumicard" href="#/lumi">
-    <div class="lumicard-pic">${lumiSVG({ mood: restingMood(), stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 92 })}</div>
+    <div class="lumicard-pic">${lumiSVG({ mood: restingMood(), stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 92, dream: f.dream })}</div>
     <div class="lumicard-txt"><div class="eyebrow">${t('Lumi · {name}', { name: esc(t(f.stage.name)) })}</div>
       <div class="lumicard-line">${line}</div>
       <div class="lightbar" aria-label="Light ${f.light}"><i style="width:${f.stage.pct}%"></i></div>
       <div class="muted small">🔆 ${t('{n} light', { n: f.light })}${f.achievements.some((a) => a.tier) ? ` · 🏅 ${t('{n} medals', { n: f.achievements.reduce((a, x) => a + x.tier, 0) })}` : ''}</div>
       ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${g.streak === 1 ? t('1 day in a row') : t('{n} days in a row', { n: g.streak })}</span></div>
         <div class="lightbar goalbar"><i style="width:${g.pct}%"></i></div>` : ''}
-      ${questLine(f.quest)}</div>
+      ${questLine(f.quest)}${f.dream ? dreamLine(f.dream) : ''}</div>
     <span class="chev">›</span></a>`;
 }
 
@@ -393,7 +414,7 @@ async function viewLumi() {
     <section class="card lumi-hero tod-${lumiTime()}">
       <div class="lumi-stage-pic" id="lumiBig">
         ${friends ? `<div class="lumi-friends" aria-hidden="true">${Array.from({ length: friends }, (_, i) => `<i style="--h:${[160, 300, 30][i]};--t:${7 + i * 2}s;--dl:-${i * 2.3}s"></i>`).join('')}</div>` : ''}
-        ${lumiSVG({ mood: lumiTime() === 'night' ? 'sleepy' : 'happy', stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 220 })}</div>
+        ${lumiSVG({ mood: lumiTime() === 'night' ? 'sleepy' : 'happy', stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 220, dream: f.dream })}</div>
       <div class="lumi-hero-txt">
         <div class="eyebrow">${t('Stage {a} of {b}', { a: f.stage.index + 1, b: f.stages.length })} ${info('lumi', 'Lumi')}</div>
         <h1 class="display">${esc(t(f.stage.name))}</h1>
@@ -403,6 +424,8 @@ async function viewLumi() {
         <div class="lumi-say">💬 ${esc(f.first_time ? pick(lines('hello')) : greetLine(f))}</div>
       </div>
     </section>
+
+    ${dreamSection()}
 
     <section class="card questcard${f.quest.done ? ' done' : ''}">
       <div class="quest-ic">${f.quest.icon}</div>
@@ -466,6 +489,7 @@ ${medalsSection(f, medals)}
   };
   $('#bdM').onchange = saveBday; $('#bdD').onchange = saveBday;
   wireDiary(f);
+  drawDream();
   lumiNews(f);
 }
 
@@ -475,7 +499,7 @@ async function lumiNews(given = null) {
   const f = given || await api('/api/friend').catch(() => null);
   if (!f || $('#lumiParty') || location.hash === '#/mini') return;   // not in the small window
   const { tiers, grew, quest } = f.news;
-  if (!f.first_time && !tiers.length && grew == null && !quest) return;
+  if (!f.first_time && !tiers.length && grew == null && !quest) { dreamNews(); return; }
   const box = document.createElement('div');
   box.id = 'lumiParty';
   box.className = 'lumi-party';
@@ -493,13 +517,13 @@ async function lumiNews(given = null) {
     : grew != null ? esc(t(f.stages[grew].line)) : t(tiers.length ? 'Each medal gives Lumi extra light ✨' : 'You did the quest of the day. Lumi glows a little brighter!');
   box.innerHTML = `<div class="card lumi-party-card">
     <div class="confetti" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 6) * 0.15}s;--c:${['var(--c-yellow)', 'var(--c-pink)', 'var(--c-blue)', 'var(--c-green)', 'var(--c-violet)', 'var(--c-orange)'][i % 6]}"></i>`).join('')}</div>
-    ${lumiSVG({ mood: 'party', stage: f.stage.index, outfit: f.outfit, size: 150 })}
+    ${lumiSVG({ mood: 'party', stage: f.stage.index, outfit: f.outfit, size: 150, dream: f.dream })}
     <h2 class="display">${title}</h2><p>${text}</p>
     ${list ? `<ul class="partylist">${list}</ul>` : ''}
     <button class="btn primary big" id="partyOk">${t(f.first_time ? "Let's go! ✨" : 'Yay! ✨')}</button></div>`;
   document.body.appendChild(box);
   lumiSound(grew != null ? 'grow' : tiers.length ? 'medal' : 'quest', f);
-  const close = async () => { box.remove(); await api('/api/friend', { seen: true }).catch(() => {}); };
+  const close = async () => { box.remove(); await api('/api/friend', { seen: true }).catch(() => {}); dreamNews(); };
   $('#partyOk').onclick = close;
   $('#partyOk').focus();
   box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });

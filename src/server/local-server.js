@@ -11,6 +11,7 @@ import { SessionTracker, PROFILE_VERSION } from '../core/tracker.js';
 import { mmss } from '../core/util.js';
 import * as stats from '../core/stats.js';
 import { friendState } from '../core/friend.js';
+import { dreamState, guessSize, guessEmoji, priceOf, sizePrompt, readSize, SIZE_DAYS, MAX_TEXT } from '../core/dream.js';
 import { ValidationRun, FakeFollower, CSV_HEADER } from '../core/validate.js';
 import { Tutor, AIError, lessonContext } from '../core/ai.js';
 import { TodoStore, NoteStore, ChatStore, ReviewStore } from '../data/stores.js';
@@ -484,6 +485,7 @@ export class LocalServer {
     if (p === '/api/settings') return this.settings();
     if (p === '/api/friend') return this.friend();
     if (p === '/api/parent') return this.parentInfo();
+    if (p === '/api/dream') return this.dream();
     if (p === '/api/mini') return this.mini();
     if (p === '/api/export') return { app: 'lumen', version: 1, exported_at: Date.now() / 1000, data: this.exportData() };
     return [{ error: 'not found' }, 404];
@@ -502,6 +504,8 @@ export class LocalServer {
       today: { study_min: Math.round(todaySums.reduce((a, s) => a + s.duration_sec, 0) / 60),
         focused_min: todaySums.reduce((a, s) => a + (s.focused_min || 0), 0), lessons: new Set(todaySums.map((s) => s.lesson_id)).size },
       mood_today: stats.moodMix(todaySums), mood_week: stats.moodMix(sums.filter((s) => s.started_at >= today0 - 6 * 86400)),
+      dream: this.dream().current,
+      last_lesson_at: reps.reduce((a, r) => Math.max(a, (r.started_at || 0) + (r.duration_sec || 0)), 0) || null,
       lumi: { stage: f.stage, light: f.light, outfit: f.outfit, quest: f.quest, birthday: f.birthday,
         medals: f.achievements.reduce((a, x) => a + x.tier, 0) },
       active: snap && snap.mode === 'session' ? { title: snap.title, class: snap.class, attention: snap.attention, state: snap.state, reason: snap.reason, elapsed: snap.elapsed } : null,
@@ -563,7 +567,9 @@ export class LocalServer {
 
   // ------------------------------------------------------------------ Lumi the firefly (see core/friend.js)
   friend() {
-    return friendState(this.reports(), this.reviews.load(), this.db.getValue('friend') || {}, this.settings().streak_min);
+    const f = friendState(this.reports(), this.reviews.load(), this.db.getValue('friend') || {}, this.settings().streak_min);
+    f.dream = this.dream().current;                  // Lumi dresses up on the way to a dream
+    return f;
   }
 
   /** body: {outfit} | {seen: true} (news celebrated) | {show_in_lessons} */
@@ -582,6 +588,72 @@ export class LocalServer {
     if (typeof body.show_in_lessons === 'boolean') saved.show_in_lessons = body.show_in_lessons;
     this.db.setValue('friend', saved);
     return this.friend();
+  }
+
+  // ------------------------------------------------------------------ My dream (see core/dream.js)
+  dream() {
+    return dreamState(this.reports(), this.db.getValue('dream') || {});
+  }
+
+  /** How big a dream is: asks the AI tutor when it may answer, otherwise key words. */
+  async dreamSize(text) {
+    const st = this.tutor.status();
+    if (st.ready && st.provider !== 'test') {
+      try {
+        const size = readSize(await this.tutor.ask([{ role: 'user', content: sizePrompt(text) }]));
+        if (size) return { size, by: 'ai' };
+      } catch { /* no AI now: use the words */ }
+    }
+    return { size: guessSize(text), by: 'words' };
+  }
+
+  /**
+   * body: {price: text} → the price, before saving | {create: {text, emoji, size}, told: true}
+   *     | {seen_level: n} | {fulfilled: true} | {remove: true} | {pin, need} (parent changes the price)
+   */
+  async dreamPost(body) {
+    const saved = { done: [], ...(this.db.getValue('dream') || {}) };
+    const st = this.dream();
+    const clean = (x) => String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_TEXT);
+    if (body.price !== undefined) {
+      const text = clean(body.price);
+      if (!text) return [{ error: 'Write your dream first' }, 400];
+      const { size, by } = await this.dreamSize(text);
+      return { size, by, stars: priceOf(size, st.per_day), carry: saved.carry || 0,
+        days: SIZE_DAYS[size], emoji: guessEmoji(text) };
+    }
+    if (body.create) {
+      if (st.current) return [{ error: 'You already have a dream' }, 400];
+      if (body.told !== true) return [{ error: 'Tell your parents first' }, 400];
+      const text = clean(body.create.text);
+      if (!text) return [{ error: 'Write your dream first' }, 400];
+      const size = SIZE_DAYS[body.create.size] ? body.create.size : (await this.dreamSize(text)).size;
+      const emoji = String(body.create.emoji || '').slice(0, 8) || guessEmoji(text);
+      saved.current = { id: `d${Date.now().toString(36)}`, text, emoji, size, need: priceOf(size, st.per_day),
+        bonus: saved.carry || 0, created_at: Date.now() / 1000, seen_level: 0 };
+      delete saved.carry;
+      this.db.setValue('dream', saved);
+      return this.dream();
+    }
+    if (!saved.current) return [{ error: 'No dream yet' }, 400];
+    if (body.seen_level !== undefined) saved.current.seen_level = Math.max(0, Math.min(4, Number(body.seen_level) || 0));
+    if (body.fulfilled) {
+      if (!st.current.ready) return [{ error: 'Not enough stars yet' }, 400];
+      const { id, text, emoji, need, created_at } = saved.current;
+      saved.done = [...saved.done, { id, text, emoji, need, created_at, done_at: Date.now() / 1000 }].slice(-30);
+      if (st.current.raw > need) saved.carry = st.current.raw - need;       // extra stars go to the next dream
+      delete saved.current;
+    }
+    if (body.remove) {                                                      // stars are never lost
+      if (st.current.raw > 0) saved.carry = st.current.raw;
+      delete saved.current;
+    }
+    if (body.need !== undefined) {
+      if (!(await this.pinOk(body.pin))) return [{ error: 'Wrong PIN' }, 403];
+      saved.current.need = Math.max(1, Math.min(999, Math.round(Number(body.need) || saved.current.need)));
+    }
+    this.db.setValue('dream', saved);
+    return this.dream();
   }
 
   exportData() {
@@ -648,6 +720,7 @@ export class LocalServer {
     if (p === '/api/settings') return this.saveSettings(body);
     if (p === '/api/friend') return this.saveFriend(body);
     if (p === '/api/parent') return this.parentPost(body);
+    if (p === '/api/dream') return this.dreamPost(body);
     if (p === '/api/ping') return { ok: true };
     if (p === '/api/check/start') { const res = await this.startCheck(); return [res, res.ok ? 200 : 500]; }
     if (p === '/api/profile') {

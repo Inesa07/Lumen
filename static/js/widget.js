@@ -15,8 +15,20 @@ async function widgetSummary() {
   const m = await api('/api/mini');
   const pad = (n) => String(n).padStart(2, '0'), d = new Date();
   const mood = Object.keys(m.mood_today || {}).length ? m.mood_today : {};
+  // holiday lines in the chosen language (the widget picks the one for its own date)
+  const holidays = {};
+  for (const [md, bd] of [['01-01', '01-01'], ['06-01'], ['12-25'], ['10-31'], ['02-14'], ['03-08']]) {
+    const [mo, da] = md.split('-').map(Number);
+    const h = lumiHoliday(bd ? { birthday: bd } : null, new Date(2026, mo - 1, da));
+    if (h) holidays[h.id] = h.line;
+  }
+  const dr = m.dream;
   return {
-    v: 1,
+    v: 2,
+    birthday: m.lumi.birthday || null,
+    last_lesson_at: m.last_lesson_at,
+    dream: dr ? { emoji: dr.emoji, text: dr.text, earned: dr.earned, need: dr.need, pct: dr.pct, level: dr.level, look: dr.look, ready: dr.ready } : null,
+    holidays,
     day: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
     goal: { today: m.goal.today, goal_min: m.goal.goal_min, pct: Math.min(100, m.goal.pct || 0), streak: m.goal.streak },
     study_min: m.today.study_min, lessons: m.today.lessons,
@@ -27,7 +39,12 @@ async function widgetSummary() {
     quest: { icon: m.lumi.quest.icon, text: t(m.lumi.quest.text), value: m.lumi.quest.value, need: m.lumi.quest.need, done: m.lumi.quest.done },
     active: m.active ? { cls: m.active.class || '', attention: m.active.attention } : null,
     labels: { goal: t("Today's goal"), streak: t('Day streak 🔥'), quest: t('Quest of the day'), focused: t('focused'), mood: t('Mood today'),
-      none: t("Let's start today's first lesson!"), studying: t('Studying now') },
+      none: t("Let's start today's first lesson!"), studying: t('Studying now'),
+      morning: t('Lumi is waking up'), day: t('Lumi is flying around'), evening: t('Lumi is getting cosy'), night: t('Lumi is sleeping'),
+      happy: t('Happy: you studied today! ✨'), missing: t('Lumi misses you. A short lesson? 🌙'), waiting: t("Waiting for today's lesson"),
+      night_missing: t('Lumi misses you. See you tomorrow! 🌙'), night_waiting: t('Sleep well! See you tomorrow 🌙'),
+      dream: t('My dream'), dream_ready: t('All stars collected! 🎉'), no_dream: t('Write your dream on the Lumi page 🎁'),
+      sunny: t('Sunny'), clear: t('Clear'), cloudy: t('Cloudy'), rain: t('Rain'), snow: t('Snow'), fog: t('Fog'), storm: t('Storm') },
   };
 }
 

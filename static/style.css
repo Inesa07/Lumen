@@ -1587,3 +1587,48 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 .wkeys { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface-2); border: 1px dashed var(--accent-line); }
 .wkey { display: flex; align-items: center; gap: 10px; }
 .wkey code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; padding: 8px 10px; border-radius: 10px; background: var(--bg); font-size: 12px; }
+
+/* My dream (static/js/dream.js) */
+.dreamcard { display: flex; flex-direction: column; gap: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c-yellow) 14%, var(--surface)), color-mix(in srgb, var(--c-pink) 12%, var(--surface))); }
+.dream-empty { display: flex; gap: 18px; align-items: center; }
+.dream-empty p { margin: 0 0 8px; line-height: 1.5; }
+.de-pic { font-size: 64px; animation: lumiFloat 3s ease-in-out infinite; }
+.dream-form { display: flex; flex-direction: column; gap: 10px; }
+.dream-form .field { font-size: 17px; max-width: 420px; }
+.emoji-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; max-width: 560px; }
+.emoji-pick .ep { font-size: 24px; height: 44px; border-radius: 12px; border: 2px solid transparent; background: var(--surface); cursor: pointer; transition: transform .12s; }
+.emoji-pick .ep:hover { transform: scale(1.1); }
+.emoji-pick .ep.on { border-color: var(--c-yellow); background: color-mix(in srgb, var(--c-yellow) 22%, var(--surface)); }
+.dream-price, .dream-show { display: flex; gap: 18px; align-items: center; }
+.dp-big { font-size: 58px; width: 84px; height: 84px; display: grid; place-items: center; border-radius: 24px; background: var(--surface); flex: none; }
+.dp-need { font-size: 16px; margin: 4px 0; }
+.lumi-ask { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--surface); }
+.lumi-ask .bubble-txt { flex: 1; }
+.dreampath { position: relative; height: 104px; margin: 4px 46px 0 8px; }
+.dp-line { position: absolute; left: 0; right: 0; top: 66px; height: 10px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.dp-line i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #FFD84A, #FF9F4D); transition: width .6s ease; }
+.dp-stop { position: absolute; top: 56px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.dp-stop span { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; background: var(--surface); border: 3px solid var(--track); filter: grayscale(1); opacity: .7; }
+.dp-stop.on span { border-color: #FFD84A; filter: none; opacity: 1; }
+.dp-stop em { font-style: normal; font-size: 11px; color: var(--muted); }
+.dp-lumi { position: absolute; top: 0; transform: translateX(-50%); transition: left .6s ease; }
+.dp-goal { position: absolute; right: -46px; top: 44px; font-size: 40px; }
+.dream-next, .dream-ready { padding: 10px 14px; border-radius: 14px; background: var(--surface); }
+.dream-ready { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.dream-how { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+.dream-how span { padding: 6px 10px; border-radius: 99px; background: var(--surface); }
+.dream-remove { padding: 12px 14px; border-radius: 14px; background: var(--surface); }
+.dreamcard .linkbtn { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.dreamshelf { display: flex; flex-direction: column; gap: 8px; }
+.ds-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.ds-item { padding: 6px 12px; border-radius: 99px; background: color-mix(in srgb, var(--c-green) 18%, var(--surface)); font-size: 13px; }
+.dreamline { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 8px; }
+.dreamline .dl-e { font-size: 18px; }
+.dreamline .dl-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lightbar.dreambar i { background: linear-gradient(90deg, #FFD84A, #FF9F4D); }
+.lumi .dreamfloat { animation: heartUp 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.lumi .dreamglow { animation: spinGlow 14s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes spinGlow { to { transform: rotate(360deg); } }
+.still .lumi .dreamfloat, .still .lumi .dreamglow, .still .de-pic { animation: none; }
+@media (max-width: 640px) { .dream-empty { flex-direction: column; text-align: center; } .dream-price, .dream-show { flex-direction: column; text-align: center; } }

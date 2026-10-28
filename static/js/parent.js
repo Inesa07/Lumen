@@ -131,6 +131,7 @@ function weeklyReportText(w, f, d) {
   L.push(`👀 ${t('Average attention')}: ${tw.avg == null ? '–' : `${tw.avg}%`}`);
   L.push(`📱 ${t('Phone came out')}: ${tw.pickups ?? 0} ${tUnit('time', tw.pickups ?? 0)}`);
   L.push(`🔥 ${t('Best streak')}: ${f.metrics.best_streak} · 🏅 ${f.achievements.reduce((a, x) => a + x.tier, 0)} ${t('medals')} · Lumi: ${t(f.stage.name)}`);
+  if (f.dream) L.push(`🎁 ${t('Dream')}: ${f.dream.emoji} ${f.dream.text} · ⭐ ${f.dream.earned}/${f.dream.need}`);
   if (w.best_day) L.push(`⭐ ${t('Best day')}: ${w.best_day.label} ${w.best_day.date}, ${hm(w.best_day.focused_min)}`);
   if (w.classes.length) { L.push('', `${t('By class')}:`); w.classes.slice(0, 6).forEach((c) => L.push(`  • ${c.name}: ${hm(c.study_min)}, ${hm(c.focused_min)} ${t('focused')}`)); }
   const recent = f.diary.slice(0, 3);
@@ -185,12 +186,20 @@ async function parentDashboard(p) {
           : `<p class="empty">${t('No lessons yet.')}</p>`}
       </section>
       <section class="card side parent-lumi">
-        ${lumiSVG({ mood: 'happy', stage: f.stage.index, outfit: f.outfit, size: 110 })}
+        ${lumiSVG({ mood: 'happy', stage: f.stage.index, outfit: f.outfit, size: 110, dream: f.dream })}
         <b>${t('Lumi · {name}', { name: esc(t(f.stage.name)) })}</b>
         <span class="muted small">🔆 ${f.light} ${t('light')} · 🏅 ${medals} ${t('medals')} · 🗺️ ${f.metrics.quests_done} ${t('quests')}</span>
         <span class="small">${t('Best streak')}: ${f.metrics.best_streak} · ${t('Lessons')}: ${f.metrics.lessons}</span>
       </section>
     </div>
+    <section class="card parent-controls">
+      <h2 class="display" style="font-size:18px;margin:0">🎁 Your child's dream</h2>
+      ${f.dream ? `${dreamLine(f.dream)}
+        <div class="lset"><div><b>${t('Stars needed')}</b><div class="muted small">${t('Lumen chose this from the size of the dream and how your child usually studies. Change it if it does not fit.')}</div></div>
+          <form class="mailrow" id="needForm"><input class="field" id="needIn" type="number" min="1" max="999" value="${f.dream.need}" aria-label="${t('Stars needed')}" style="width:90px">
+          <button class="btn ghost" type="submit">${t('Save')}</button></form></div>`
+        : `<p class="muted small" style="margin:0">${t('No dream yet. Your child can write one on the Lumi page after talking with you.')}</p>`}
+    </section>
     <section class="card">
       <h2 class="display" style="font-size:18px;margin:0 0 12px">Lumi's diary</h2>
       ${f.diary.length ? f.diary.slice(0, 3).map(diaryDayHTML).join('') : `<p class="empty">${t('The diary starts after the first lesson.')}</p>`}
@@ -224,6 +233,11 @@ async function parentDashboard(p) {
     if (to !== (priv.email || '')) { await withPin({ email: to }); priv.email = to; }
     const subject = `${t('Lumen weekly report')} · ${w.from} – ${w.to}`;
     window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(weeklyReportText(w, f, d))}`;
+  };
+  if ($('#needForm')) $('#needForm').onsubmit = async (e) => {
+    e.preventDefault();
+    if (!parentPin || Date.now() > parentUntil) { parentUntil = 0; viewParent(); return; }
+    try { await api('/api/dream', { need: Number($('#needIn').value), pin: parentPin }); toast(t('Saved')); parentDashboard(p); } catch { toast(t('Wrong PIN')); }
   };
   $('#pinChange').onsubmit = async (e) => {
     e.preventDefault();
