@@ -115,7 +115,11 @@ function applyTheme(theme, accent, motion) {
   document.querySelectorAll('[data-look-accent]').forEach((b) => {
     b.classList.toggle('on', b.dataset.lookAccent === LOOK.accent); b.setAttribute('aria-pressed', String(b.dataset.lookAccent === LOOK.accent));
   });
-  document.querySelectorAll('[data-look-motion]').forEach((b) => { b.classList.toggle('on', LOOK.motion); b.setAttribute('aria-checked', String(LOOK.motion)); });
+  document.querySelectorAll('[data-look-motion]').forEach((b) => {
+    b.classList.toggle('on', LOOK.motion); b.setAttribute('aria-checked', String(LOOK.motion));
+    const sw = b.querySelector('.switch');                       // the knob slides left / right
+    if (sw) sw.classList.toggle('on', LOOK.motion);
+  });
 }
 // Change the look: instantly on screen, then tell the server in the background (no waiting, no redraw).
 function setLook(part) {
