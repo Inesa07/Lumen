@@ -155,7 +155,7 @@ function chatBox(container, opts = {}) {
       <div class="composer">
         <textarea rows="1" maxlength="4000" placeholder="${opts.cls ? `Ask anything about ${esc(opts.cls)}…` : 'Ask anything…'}" aria-label="Your question"></textarea>
         <div class="composer-bar">
-          <button type="button" class="pillbtn" data-hint aria-pressed="false" title="The tutor gives a nudge instead of the whole answer">💡 Hint only</button>
+          <button type="button" class="pillbtn on" data-hint aria-pressed="true" title="The tutor asks guiding questions and gives small hints, so you solve it yourself">🧭 Help me think</button>
           <span class="muted small composer-tip">Enter to send · Shift+Enter new line</span>
           <button type="submit" class="sendbtn" aria-label="Send" disabled>${SEND_ICON}</button>
         </div>
@@ -168,7 +168,12 @@ function chatBox(container, opts = {}) {
 
   const grow = () => { ta.style.height = 'auto'; ta.style.height = `${Math.min(200, ta.scrollHeight)}px`; sendBtn.disabled = !ta.value.trim() && !streaming; };
   ta.addEventListener('input', grow);
-  hintBtn.onclick = () => { const on = hintBtn.getAttribute('aria-pressed') !== 'true'; hintBtn.setAttribute('aria-pressed', String(on)); hintBtn.classList.toggle('on', on); };
+  hintBtn.onclick = () => {
+    if (hintBtn.dataset.locked) { toast(t('A parent chose: hints only, no full answers')); return; }
+    const on = hintBtn.getAttribute('aria-pressed') !== 'true'; hintBtn.setAttribute('aria-pressed', String(on)); hintBtn.classList.toggle('on', on);
+  };
+  // in Parent mode without "full answers", coaching is always on
+  api('/api/parent').then((p) => { if (p.enabled && !p.ai_answers) { hintBtn.dataset.locked = '1'; hintBtn.title = t('A parent chose: hints only, no full answers'); hintBtn.textContent = '🧭 ' + t('Help me think') + ' 🔒'; } }).catch(() => {});
 
   const atBottom = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
   const toBottom = () => { scroller.scrollTop = scroller.scrollHeight; };
@@ -185,10 +190,14 @@ function chatBox(container, opts = {}) {
       html += `<div class="ai-empty"><div class="ai-orb"><span class="orb-face">${opts.cls ? subjectIcon(opts.cls) : '✨'}</span></div>
         <h2>${opts.lesson ? `Questions about “${esc(opts.lesson)}”?` : opts.cls ? `What do you want to understand in ${esc(opts.cls)}?` : 'Hi! What do you want to learn today? 👋'}</h2>
         <p class="muted small">${opts.lesson ? 'I know your lesson, your plan and your sticky notes.'
-          : 'Ask me anything. There are no silly questions! Tip: turn on 💡 Hint only to solve it yourself.'}</p>
+          : 'Ask me anything. There are no silly questions! With 🧭 Help me think I won\'t just tell you the answer: I\'ll help you find it yourself.'}</p>
         <div class="sugs">${suggestionsFor(opts).map(([e, x], i) => `<button type="button" class="sug c${i}" data-sug="${esc(x)}"><span class="sug-e">${e}</span><span>${esc(x)}</span></button>`).join('')}</div></div>`;
     }
     html += msgs.map(msgHTML).join('');
+    if (!streaming && msgs.length && msgs[msgs.length - 1].role === 'assistant' && hintBtn.getAttribute('aria-pressed') === 'true') {
+      html += `<div class="coach-replies">${[['💡', 'Give me another hint'], ['✅', 'Check my answer: '], ['🤔', "I don't understand, explain it another way"]]
+        .map(([e, x]) => `<button type="button" class="coach-btn" data-reply="${esc(x)}">${e} ${esc(t(x.replace(/: $/, '')))}</button>`).join('')}</div>`;
+    }
     if (streaming) {
       html += `<div class="m-ai live"><div class="avatar">${AI_ICON}</div><div class="m-body"><div class="md">${streaming.text
         ? md(streaming.text) + '<span class="caret"></span>' : '<div class="thinking"><i></i><i></i><i></i></div>'}</div></div></div>`;
@@ -214,6 +223,13 @@ function chatBox(container, opts = {}) {
 
   const wire = () => {
     thread.querySelectorAll('[data-sug]').forEach((b) => { b.onclick = () => { ta.value = b.dataset.sug; grow(); send(); }; });
+    thread.querySelectorAll('[data-reply]').forEach((b) => {
+      b.onclick = () => {
+        const x = t(b.dataset.reply.replace(/: $/, ''));
+        if (/: $/.test(b.dataset.reply)) { ta.value = `${x}: `; grow(); ta.focus(); return; }   // the child types the answer
+        ta.value = x; grow(); send();
+      };
+    });
     thread.querySelectorAll('[data-ctx]').forEach((b) => {
       b.onclick = () => { opts.cls = b.dataset.ctx || null; ta.placeholder = opts.cls ? `Ask anything about ${opts.cls}…` : 'Ask anything…'; draw(); ta.focus(); };
     });

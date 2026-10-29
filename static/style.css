@@ -1671,3 +1671,13 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 .place-chip { border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); border-radius: 99px; padding: 6px 11px; font: inherit; font-size: 13px; cursor: pointer; }
 .place-chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--surface)); font-weight: 600; }
 @media (max-width: 760px) { .lumi-home { grid-template-columns: 1fr; } .home-places { grid-column: 1; grid-row: 3; padding: 0 20px 20px; } }
+
+/* AI tutor: quick replies while coaching */
+.coach-replies { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px 44px; }
+.coach-btn { border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); border-radius: 99px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.coach-btn:hover { border-color: var(--accent); }
+/* Lumi reads next to you */
+.lumi.reading .pupils { transform: translateY(3px); }
+.lumi .lumi-page { transform-box: fill-box; transform-origin: left center; animation: pageFlip 7s ease-in-out infinite; }
+@keyframes pageFlip { 0%, 80%, 100% { transform: scaleX(1); } 88% { transform: scaleX(-1); opacity: .6; } 89% { opacity: 0; } 90% { transform: scaleX(1); opacity: 0; } 95% { opacity: 1; } }
+.still .lumi .lumi-page { animation: none; }

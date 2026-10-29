@@ -25,8 +25,15 @@ export const SYSTEM = `You are Lumen's study tutor. The student is learning and 
 - Write math in LaTeX: $...$ inline and $$...$$ on its own line (for example $\\int_0^1 x^2\\,dx$).
 - End with one short question or exercise that checks understanding, when it fits.`;
 
-const HINT = `The student asked for a HINT, not the answer: give one helpful nudge or a guiding question
-that moves them one step forward. Do not give the full solution.`;
+// "Help me think" (the default for children): the tutor coaches. It never hands over the answer to homework,
+// it asks guiding questions and gives one small hint at a time, so the child does the thinking.
+const HINT = `COACH MODE: the student must solve it themselves.
+- Never give the final answer or the full solution, even if the student asks for it directly.
+- First find out what they already know or tried (one short question), or give ONE small hint for the next step only.
+- Keep it short: 2-4 sentences, friendly and simple, for a school child.
+- If they give an answer: say if it is right. If it is wrong, ask a question that points to where the mistake is, don't fix it for them.
+- If they don't know a concept, explain the concept with a different, simple example (not their exact task).
+- Praise effort and thinking, not just right answers.`;
 
 export class AIError extends Error {}
 

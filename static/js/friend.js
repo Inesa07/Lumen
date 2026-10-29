@@ -9,7 +9,7 @@
 const STAGE_SCALE = [0.6, 0.7, 0.8, 0.88, 0.95, 1];
 let lumiSeq = 0;
 
-function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, size = 120, locked = false, label = 'Lumi the firefly', dream = null } = {}) {
+function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, size = 120, locked = false, label = 'Lumi the firefly', dream = null, reading = false } = {}) {
   // on the way to a dream (static/js/dream.js): 25 % the dream floats next to Lumi, 50 % a dream hat, 75 % a golden glow
   const dl = dream && !locked ? dream.level || 0 : 0;
   const dreamHat = dl >= 2 ? (DREAM_HATS[dream.look] || DREAM_HATS.party) : '';
@@ -24,7 +24,7 @@ function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, siz
   const tip = stage >= 5
     ? (x, y) => `<path class="tip" d="M${x} ${y - 5}l1.5 3.4 3.7.4-2.8 2.4.9 3.6-3.3-1.9-3.3 1.9.9-3.6-2.8-2.4 3.7-.4z"/>`
     : (x, y) => `<circle class="tip" cx="${x}" cy="${y}" r="3.2"/>`;
-  return `<svg class="lumi m-${mood}${locked ? ' locked' : ''}" width="${size}" height="${size}" viewBox="0 0 120 120" role="img" aria-label="${esc(label)}">
+  return `<svg class="lumi m-${mood}${locked ? ' locked' : ''}${reading ? ' reading' : ''}" width="${size}" height="${size}" viewBox="0 0 120 120" role="img" aria-label="${esc(label)}">
   <defs>
     <radialGradient id="${id}g"><stop offset="0" stop-color="#FFF4A8" stop-opacity=".9"/><stop offset=".45" stop-color="#E9F56A" stop-opacity=".35"/><stop offset="1" stop-color="#E9F56A" stop-opacity="0"/></radialGradient>
     <radialGradient id="${id}t" cx=".5" cy=".4"><stop offset="0" stop-color="#FFFBD0"/><stop offset=".6" stop-color="#F4E84E"/><stop offset="1" stop-color="#A9DB3A"/></radialGradient>
@@ -60,6 +60,10 @@ function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, siz
       ${outfit === 'flower' ? `<g transform="translate(78 31)">${[0, 72, 144, 216, 288].map((a) => `<ellipse rx="3.2" ry="5.4" fill="#FF9FC6" transform="rotate(${a}) translate(0 -5)"/>`).join('')}<circle r="3" fill="#F2C14E"/></g>` : ''}
       ${outfit === 'crown' ? '<path d="M45 30l4-11 6 7 5-10 5 10 6-7 4 11z" fill="#F2C14E" stroke="#C99A12" stroke-width="1"/>' : ''}
       ${dreamHat}
+      ${reading ? `<g class="lumi-book"><path d="M41 66q9.5 -5 19 0v16q-9.5 -5 -19 0z" fill="#F7F1E3" stroke="#C9B48A" stroke-width="1"/><path d="M79 66q-9.5 -5 -19 0v16q9.5 -5 19 0z" fill="#FFFBF0" stroke="#C9B48A" stroke-width="1"/>
+        <path d="M45 70.5q6 -2.4 12 0M45 74q6 -2.4 12 0M45 77.5q6 -2.4 12 0M63 70.5q6 -2.4 12 0M63 74q6 -2.4 12 0" stroke="#B8C4D8" stroke-width=".9" fill="none"/>
+        <path class="lumi-page" d="M60 66q8 -4 16 -1v16q-8 -3 -16 1z" fill="#FFFDF6" stroke="#D9C9A4" stroke-width=".7"/>
+        <rect x="38" y="81" width="44" height="3" rx="1.5" fill="#E07A5F"/></g>` : ''}
       ${extra === 'santa' && !hat ? '<g><path d="M40 33q20-26 40 0z" fill="#E53935"/><path d="M62 12q14 2 18 14" fill="none" stroke="#E53935" stroke-width="6" stroke-linecap="round"/><circle cx="81" cy="27" r="4.5" fill="#fff"/><rect x="37" y="29" width="46" height="7" rx="3.5" fill="#fff"/></g>' : ''}
       ${extra === 'party' && !hat ? '<g><path d="M50 30l10-24 10 24z" fill="#5AA9FF"/><path d="M53 23l14 0M56 15l8 0" stroke="#F2C14E" stroke-width="2.4"/><circle cx="60" cy="6" r="3.5" fill="#F06BA8"/></g>' : ''}
     </g>
@@ -92,7 +96,7 @@ const LUMI_LINES = {
   hello: ["Hi! I'm Lumi ✨ Shall we learn something?", 'Ready when you are. I glow while you learn!', 'Hello again! I missed you 🌟'],
   calib: ['Look at your lesson for a few seconds, I am getting to know you 👀'],
   happy: ["You're doing great! I'm glowing brighter ✨", 'Every focused minute gives me light 🔆', 'Nice and focused!',
-    'I love learning with you.', 'Look how bright I am! That is your focus.'],
+    'I love learning with you.', 'Look how bright I am! That is your focus.', "I'm reading my book too 📖 Let's both focus!", 'Shh… we are both studying 📖'],
   notes: ['Writing notes? Great idea ✍️', 'Notes help your brain remember 🧠'],
   wait: ["Hey, I'm here 👋", "Come back when you're ready, I'll wait.", 'The lesson is waiting for you too 📖'],
   phone: ['Psst… the phone can wait 📵', "I'll keep your place. Put the phone down when you're ready."],
@@ -235,7 +239,9 @@ async function lumiLesson(d) {
   let key = now < lumiLive.partyUntil ? 'party' : lumiMoodOf(d);
   const face = LINE_FACE[key];
   if (key !== lumiLive.key) {
-    $('#lumiBtn').innerHTML = lumiSVG({ mood: face, stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 84, dream: f.dream });
+    // while the child is focused, Lumi reads its own book next to them (it looks up when they get distracted)
+    const reading = key === 'happy' || key === 'notes';
+    $('#lumiBtn').innerHTML = lumiSVG({ mood: face, stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 84, dream: f.dream, reading });
   }
   // the first words of a late lesson: a gentle bedtime reminder, once
   if (!lumiLive.bedtime && key === 'happy' && new Date().getHours() >= 22) {

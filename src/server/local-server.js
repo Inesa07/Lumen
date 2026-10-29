@@ -404,7 +404,7 @@ export class LocalServer {
     const parts = [];
     try {
       onEvent({ chat_id: chat.id, title: chat.title });
-      for await (const piece of this.tutor.askStream(chat.messages, ctx, !!body.hint, signal)) {
+      for await (const piece of this.tutor.askStream(chat.messages, ctx, this.coachMode(body), signal)) {
         parts.push(piece);
         onEvent({ delta: piece });
       }
@@ -420,13 +420,19 @@ export class LocalServer {
     }
   }
 
+  /** Coach mode (hints, no answers): when asked for, and always when a parent did not allow full answers. */
+  coachMode(body) {
+    const p = this.parentInfo();
+    return !!body.hint || (p.enabled && !p.ai_answers);
+  }
+
   async askAI(body) {
     const text = String(body.message ?? '').trim().slice(0, 4000);
     if (!text) return [{ error: 'empty question' }, 400];
     let chat = this.openChat(body);
     chat = this.chats.append(chat.id, 'user', text);
     try {
-      const answer = await this.tutor.ask(chat.messages, this.chatContext(chat), !!body.hint);
+      const answer = await this.tutor.ask(chat.messages, this.chatContext(chat), this.coachMode(body));
       return [{ chat: this.chats.append(chat.id, 'assistant', answer) }, 200];
     } catch (e) {
       return [{ error: e.message, chat: this.chats.get(chat.id) }, e instanceof AIError ? 502 : 500];
@@ -532,7 +538,7 @@ export class LocalServer {
   // someone with full access to the computer and browser tools could still get around it.
   parentInfo() {
     const p = this.db.getValue('parent') || {};
-    return { enabled: !!p.hash, ai_allowed: p.hash ? !!p.ai_allowed : true };
+    return { enabled: !!p.hash, ai_allowed: p.hash ? !!p.ai_allowed : true, ai_answers: p.hash ? !!p.ai_answers : true };
   }
 
   async pinHash(pin, salt) {
@@ -566,6 +572,7 @@ export class LocalServer {
     }
     if (body.disable) { this.db.setValue('parent', {}); return this.parentInfo(); }
     if (typeof body.ai_allowed === 'boolean') this.db.setValue('parent', { ...p, ai_allowed: body.ai_allowed });
+    if (typeof body.ai_answers === 'boolean') this.db.setValue('parent', { ...(this.db.getValue('parent') || {}), ai_answers: body.ai_answers });
     return this.parentInfo();
   }
 

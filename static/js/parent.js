@@ -156,6 +156,9 @@ async function parentDashboard(p) {
       <div class="lset"><div><b>🤖 Allow the AI tutor</b>
         <div class="muted small">The AI tutor answers questions about lessons. Questions are sent to Google Gemini through Lumen's server. Lumi never uses AI: its words are written in advance.</div></div>
         <button class="switch${p.ai_allowed ? ' on' : ''}" id="aiSw" role="switch" aria-checked="${p.ai_allowed}" aria-label="Allow the AI tutor"><span></span></button></div>
+      <div class="lset"><div><b>🧭 Allow full answers</b>
+        <div class="muted small">Off: the AI tutor only gives hints and guiding questions, so your child solves the task alone. On: your child can also ask for the whole answer.</div></div>
+        <button class="switch${p.ai_answers ? ' on' : ''}" id="ansSw" role="switch" aria-checked="${p.ai_answers}" aria-label="Allow full answers"><span></span></button></div>
       <div class="lset"><div><b>📧 Weekly report by email</b>
         <div class="muted small">Your email app opens with this week's report ready to send. Save your address once.</div></div>
         <form class="mailrow" id="mailForm"><input class="field" id="pEmail" type="email" placeholder="parent@example.com" value="${esc(priv.email || '')}" aria-label="Parent email">
@@ -215,6 +218,14 @@ async function parentDashboard(p) {
     $('#aiSw').setAttribute('aria-checked', String(res.ai_allowed));
     $('#aiSw').classList.toggle('on', res.ai_allowed);
     toast(t(res.ai_allowed ? 'The AI tutor is allowed' : 'The AI tutor is switched off'));
+  };
+  $('#ansSw').onclick = async () => {
+    const on = $('#ansSw').getAttribute('aria-checked') !== 'true';
+    const res = await withPin({ ai_answers: on });
+    if (!res) return;
+    $('#ansSw').setAttribute('aria-checked', String(res.ai_answers));
+    $('#ansSw').classList.toggle('on', res.ai_answers);
+    toast(t(res.ai_answers ? 'Full answers are allowed' : 'Hints only: your child solves it alone'));
   };
   $('#mailForm').onsubmit = async (e) => {
     e.preventDefault();
