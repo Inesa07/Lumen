@@ -573,6 +573,56 @@ function roundTree(x, base, hh, D, k, c = ['#9CCB6A', '#5E9A48', '#3E7438']) {
 }
 const mistBand = (w, y, hh, D, k, op = 0.7) => `<rect y="${f1(y - hh / 2)}" width="${w}" height="${f1(hh)}" fill="${D.lin(`mist${k}`, [[0, '#FFFFFF', 0], [0.5, '#FFFFFF', op], [1, '#FFFFFF', 0]])}"/>`;
 
+// ---- little life in the pictures
+function duck(x, y, s, k, col = '#FFFFFF') {
+  return `<g class="pl-paddle" style="animation-delay:-${f1(plRnd(k, 1) * 20)}s"><g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">`
+    + `<ellipse cx="0" cy="1.6" rx="6.5" ry="1" fill="#FFFFFF" opacity=".35"/><path d="M-5 0Q-5 -4 0 -3.6Q4 -3.6 5 -1.4Q5.4 0 4 .4H-4Q-5 .4 -5 0Z" fill="${col}"/>`
+    + `<path d="M-1 -2.4Q1 -3.4 3 -2.2" stroke="#D8D2C8" stroke-width=".7" fill="none"/><circle cx="-4" cy="-4.6" r="2" fill="${col}"/><path d="M-5.8 -4.6l-2 .5l2 .6z" fill="#FF9F2A"/><circle cx="-4.4" cy="-5" r=".4" fill="#222"/></g></g>`;
+}
+function boat(x, y, s, D) {
+  return `<g class="pl-bob" style="animation-duration:4s"><g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">`
+    + `<ellipse cx="0" cy="3" rx="16" ry="1.6" fill="#FFFFFF" opacity=".3"/><path d="M-15 -3H15Q12 3 8 3H-8Q-12 3 -15 -3Z" fill="${D.lin('boat', [[0, '#C98A52'], [1, '#7A4A28']])}"/>`
+    + `<path d="M-15 -3H15" stroke="#EAC08E" stroke-width="1.2"/><path d="M-4 -3L-12 4M6 -3L14 5" stroke="#8A5A32" stroke-width=".9"/><path d="M-12 4l-3 1.4l1 .9z" fill="#8A5A32"/></g></g>`;
+}
+function pier(x, y, len, D) {
+  let s = '';
+  for (let i = 0; i < 4; i++) s += `<rect x="${f1(x + 2 + i * len / 4)}" y="${f1(y - 1)}" width="1.6" height="${f1(7 + i)}" fill="#5E3E26"/>`;
+  s += `<path d="M${f1(x - 4)} ${f1(y + 3)}L${f1(x + len)} ${f1(y - 1)}L${f1(x + len)} ${f1(y - 3)}L${f1(x - 4)} ${f1(y + 1)}Z" fill="${D.lin('pier', [[0, '#D9A46E'], [1, '#9C6A3E']])}"/>`;
+  for (let i = 1; i < 9; i++) s += `<path d="M${f1(x - 4 + i * (len + 4) / 9)} ${f1(y + 3 - i * 4 / 9)}v-2" stroke="#8A5A32" stroke-width=".4"/>`;
+  return s;
+}
+function deer(x, y, s, flip = 1) {
+  return `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s * flip)} ${f1(s)})">`
+    + `<path d="M-9 -9Q-10 -14 -4 -14H6Q10 -14 11 -11L14 -16Q15 -19 17 -18L18 -14Q17 -11 14 -9L12 -6Q11 -4 10 -4V0H8.6L8 -4H-4L-5 0H-6.4L-7 -4Q-9 -6 -9 -9Z" fill="#B07A4E"/>`
+    + `<path d="M-4 -14H6Q9 -14 10 -12Q4 -11 -4 -12Z" fill="#C99A6A"/><path d="M14 -16l-2 -5M14 -16l1 -6M12 -20l-2 -2M15 -21l2 -2" stroke="#7A5232" stroke-width=".8" stroke-linecap="round"/>`
+    + `<circle cx="16" cy="-15.6" r=".6" fill="#2A1A10"/><path d="M-9 -11l-2 -1" stroke="#B07A4E" stroke-width="1.6" stroke-linecap="round"/>`
+    + `<circle cx="-2" cy="-11" r=".6" fill="#F4E6D0"/><circle cx="2" cy="-12" r=".6" fill="#F4E6D0"/><circle cx="0" cy="-10" r=".5" fill="#F4E6D0"/></g>`;
+}
+function rabbit(x, y, s, k) {
+  return `<g class="pl-hopsmall" style="animation-delay:-${f1(plRnd(k, 2) * 6)}s"><g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">`
+    + `<ellipse cx="0" cy="-3" rx="4.6" ry="3.4" fill="#C9B8A6"/><circle cx="4" cy="-6" r="2.4" fill="#C9B8A6"/>`
+    + `<path d="M3.4 -8Q2.6 -13 4 -13Q4.8 -11 4.4 -8Z" fill="#C9B8A6"/><path d="M4.6 -8Q5 -12.6 6.2 -12.4Q6.4 -10.4 5.4 -8Z" fill="#B8A694"/>`
+    + `<circle cx="-4.4" cy="-3.6" r="1.4" fill="#FFFFFF"/><circle cx="4.9" cy="-6.4" r=".45" fill="#222"/><ellipse cx="0" cy="0" rx="4" ry=".7" fill="#000" opacity=".12"/></g></g>`;
+}
+function owl(x, y, s) {
+  return `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})"><ellipse cx="0" cy="0" rx="4.4" ry="5.6" fill="#8A6A4E"/><ellipse cx="0" cy="1.4" rx="3" ry="3.6" fill="#C9AE88"/>`
+    + `<circle cx="-1.8" cy="-2.6" r="1.7" fill="#FFF4C8"/><circle cx="1.8" cy="-2.6" r="1.7" fill="#FFF4C8"/><circle class="pl-blink" cx="-1.8" cy="-2.6" r=".8" fill="#222"/><circle class="pl-blink" cx="1.8" cy="-2.6" r=".8" fill="#222"/>`
+    + `<path d="M-.6 -1.4L0 -.4L.6 -1.4Z" fill="#FF9F2A"/><path d="M-4 -5L-3 -7L-2 -5.4M4 -5L3 -7L2 -5.4" fill="#8A6A4E"/></g>`;
+}
+function woodBridge(x, y, wd, D) {
+  let s = `<path d="M${f1(x - wd / 2)} ${f1(y)}Q${f1(x)} ${f1(y - wd * 0.28)} ${f1(x + wd / 2)} ${f1(y)}" stroke="${D.lin('brg', [[0, '#C98A52'], [1, '#8A5A32']], 1, 0)}" stroke-width="3.4" fill="none"/>`;
+  for (let i = 0; i <= 6; i++) { const t = i / 6, bx = x - wd / 2 + t * wd, by = y - Math.sin(t * Math.PI) * wd * 0.14 - 1; s += `<path d="M${f1(bx)} ${f1(by)}v-6" stroke="#7A4A28" stroke-width=".9"/>`; }
+  s += `<path d="M${f1(x - wd / 2)} ${f1(y - 6)}Q${f1(x)} ${f1(y - 6 - wd * 0.28)} ${f1(x + wd / 2)} ${f1(y - 6)}" stroke="#A8703E" stroke-width="1.2" fill="none"/>`;
+  return s;
+}
+function aurora(w, top, D) {
+  const g = D.lin('aur', [[0, '#5CFFB0', 0], [0.4, '#5CFFB0', 0.55], [0.75, '#A07CFF', 0.45], [1, '#A07CFF', 0]], 0, 1);
+  return `<g filter="url(#${D.id('b3')})" class="pl-aurora">${[0, 1, 2].map((i) => `<path d="M-20 ${f1(top + 20 + i * 6)}C${f1(w * 0.25)} ${f1(top - 5 + i * 8)} ${f1(w * 0.55)} ${f1(top + 30 - i * 4)} ${f1(w + 20)} ${f1(top + 6 + i * 5)}L${f1(w + 20)} ${f1(top + 30 + i * 5)}C${f1(w * 0.55)} ${f1(top + 52 - i * 4)} ${f1(w * 0.25)} ${f1(top + 22 + i * 8)} -20 ${f1(top + 44 + i * 6)}Z" fill="${g}" opacity="${0.8 - i * 0.2}"/>`).join('')}</g>`;
+}
+function rainbow(cx, cy, r, op = 0.35) {
+  return ['#FF5C5C', '#FFA94D', '#FFE066', '#69DB7C', '#4DABF7', '#9775FA'].map((c, i) => `<path d="M${f1(cx - r + i * 2.2)} ${f1(cy)}A${f1(r - i * 2.2)} ${f1(r - i * 2.2)} 0 0 1 ${f1(cx + r - i * 2.2)} ${f1(cy)}" stroke="${c}" stroke-width="2.4" fill="none" opacity="${op}"/>`).join('');
+}
+
 /** The painted picture of a place, without Lumi and the home. Returns {art, glow}. */
 function paintedPlace(place, o, D) {
   const { w, h, tod } = o;
@@ -606,6 +656,9 @@ function paintedPlace(place, o, D) {
       if (x > w * 0.3 && x < w * 0.52 && y > gy + 6) continue;
       art += tuft(x, y, 5 + plRnd(i, 47) * 5, '#7FB24A', '#4E8034', i + 200);
     }
+    // a wooden bridge over the stream, a deer in the clearing, a rabbit by the flowers
+    art += woodBridge(w * 0.4, gy + 12, w * 0.13, D);
+    art += deer(w * 0.24, gy - 1, 0.95, 1) + rabbit(w * 0.78, gy + 10, 1.1, 1);
     // near trees at the sides, big and clear
     art += slimFir(w * 0.03, gy + 8, h * 1.0, '#3E7A5A', '#2A5A44') + roundTree(w * 0.13, gy + 6, h * 0.62, D, 'n1')
       + slimFir(w * 0.97, gy + 8, h * 1.05, '#3E7A5A', '#2A5A44') + roundTree(w * 0.87, gy + 6, h * 0.55, D, 'n2');
@@ -624,6 +677,13 @@ function paintedPlace(place, o, D) {
     art += birdsWhite(w, n(6), 70);
     for (let i = 0; i < n(4); i++) art += butterfly(w * (0.2 + plRnd(i, 75) * 0.6), gy - 10 - plRnd(i, 76) * 40, 0.55, '#FFFFFF', '#E6F2FF', i + 77);
     glow += motes(w, h, dusk ? n(30) : n(18), 80, dusk ? '#E8FF9A' : '#FFF6C0');
+    if (dusk) {
+      glow += owl(w * 0.13, gy - h * 0.42, 1.2);
+      for (let i = 0; i < n(5); i++) {                                // glowing mushrooms
+        const x = w * (0.08 + plRnd(i, 78) * 0.84), y = gy + 4 + plRnd(i, 79) * 12;
+        glow += `<circle class="pl-glow" cx="${f1(x)}" cy="${f1(y - 4)}" r="6" fill="${D.rad('gm', [[0, '#7FF0FF', 0.6], [1, '#7FF0FF', 0]])}"/><path d="M${f1(x - 0.8)} ${f1(y)}V${f1(y - 3)}H${f1(x + 0.8)}V${f1(y)}Z" fill="#DFF6FF"/><path d="M${f1(x - 3)} ${f1(y - 3)}Q${f1(x)} ${f1(y - 7.5)} ${f1(x + 3)} ${f1(y - 3)}Z" fill="#7FF0FF"/>`;
+      }
+    }
   } else if (place === 'blossom') {
     art += `<rect width="${w}" height="${h}" fill="${D.lin('gsky', [[0, '#A9D6F5'], [0.55, '#FBE3EC'], [1, '#FFF1E2']])}"/>`;
     let far = '';
@@ -651,6 +711,8 @@ function paintedPlace(place, o, D) {
       if ((x > w * 0.24 && x < w * 0.48 && y < gy + 24) || Math.abs(x - w * 0.58) < w * 0.05) continue;
       art += flowerBush(x, y, 2.8 + plRnd(i, 92) * 1.6, ...cols[i % cols.length], i + 95);
     }
+    art += `<g class="pl-swing" style="transform-origin:${f1(w * 0.1 + 14)}px ${f1(gy - 58)}px"><path d="M${f1(w * 0.1 + 9)} ${f1(gy - 58)}V${f1(gy - 16)}M${f1(w * 0.1 + 19)} ${f1(gy - 58)}V${f1(gy - 16)}" stroke="#8A6A4E" stroke-width=".8"/><rect x="${f1(w * 0.1 + 7)}" y="${f1(gy - 17)}" width="14" height="2.4" rx="1" fill="#C98A52"/></g>`
+      + rabbit(w * 0.7, gy + 10, 1, 2);
     art += butterfly(w * 0.42, gy - 44, 0.8, '#FFB13C', '#FF7A3C', 1) + butterfly(w * 0.74, gy - 58, 0.7, '#FFFFFF', '#CFE8FF', 2);
     for (let i = 0; i < n(12); i++) art += `<path class="pl-petal" d="M${f1(plRnd(i, 96) * w)} -6q2 -2.4 4 0q-2 2.4 -4 0z" fill="#FFC2D8" style="animation-delay:-${f1(plRnd(i, 97) * 10)}s;animation-duration:${f1(9 + plRnd(i, 98) * 6)}s"/>`;
     glow += motes(w, h, dusk ? n(18) : n(8), 99, dusk ? '#FFE8A0' : '#FFFFFF');
@@ -666,6 +728,7 @@ function paintedPlace(place, o, D) {
       return blur ? B(blur, rock + top + tree + fall) : rock + top + tree + fall;
     };
     art += island(w * 0.16, 58, 22, 1, 'b2') + island(w * 0.86, 44, 18, 2, 'b2');
+    if (!dusk) art += rainbow(w * 0.5, gy - 6, w * 0.3, 0.32);
     art += balloon(w * 0.3, 30, 1.1, '#E8505B', '#FFD166', 1) + balloon(w * 0.7, 24, 0.75, '#3A86FF', '#F1F5FF', 2);
     art += birdsWhite(w, 4, 110);
     // the island Lumi lives on, resting on a soft cloud sea
@@ -695,6 +758,10 @@ function paintedPlace(place, o, D) {
     art += `<g opacity=".38" filter="url(#${D.id('b2')})" transform="translate(0 ${f1(lake * 2 + 2)}) scale(1 -1)">${far}${trees}</g>`;
     for (let i = 0; i < n(6); i++) art += `<path class="pl-ray" d="M${f1(plRnd(i, 8) * w)} ${f1(lake + 4 + plRnd(i, 9) * (gy - lake - 6))}h${f1(10 + plRnd(i, 10) * 20)}" stroke="#FFFFFF" stroke-width=".8" opacity=".6" style="animation-delay:-${i}s"/>`;
     art += B('b3', `<rect y="${f1(lake - 4)}" width="${w}" height="8" fill="#FFFFFF" opacity=".35"/>`);
+    if (tod !== 'night') for (let i = 0; i < 9; i++) art += `<path class="pl-ray" d="M${f1(w * 0.78 - 6 + plRnd(i, 130) * 12)} ${f1(lake + 3 + i * 3.2)}h${f1(4 + plRnd(i, 131) * 8)}" stroke="#FFF6C8" stroke-width="1.1" opacity=".75" style="animation-delay:-${f1(plRnd(i, 132) * 3)}s"/>`;
+    art += duck(w * 0.55, lake + 12, 1.1, 1) + duck(w * 0.6, lake + 16, 0.8, 2, '#E9DCC8') + duck(w * 0.63, lake + 14, 0.75, 3, '#E9DCC8');
+    art += [[0.12, 8], [0.17, 12], [0.9, 10]].map(([fx, dy], i) => `<ellipse cx="${f1(w * fx)}" cy="${f1(lake + dy + 14)}" rx="4.2" ry="1.6" fill="#4E9A52"/><path d="M${f1(w * fx)} ${f1(lake + dy + 14)}l3 -1" stroke="#7FBF72" stroke-width=".5"/>${i === 1 ? `<circle cx="${f1(w * fx + 1)}" cy="${f1(lake + dy + 13)}" r="1.5" fill="#FFB7D0"/><circle cx="${f1(w * fx + 1)}" cy="${f1(lake + dy + 13)}" r=".6" fill="#FFE27A"/>` : ''}`).join('');
+    art += pier(w * 0.36, gy + 2, w * 0.1, D) + boat(w * 0.47, gy - 6, 0.85, D);
     // the shore in front
     art += `<path d="${hillPath(w, h, gy + 2, 6, 81, 3)}" fill="${D.lin('shore', [[0, '#8DBE62'], [1, '#3E6E32']])}"/>`;
     art += stone(w * 0.2, gy + 4, 6, 1) + stone(w * 0.27, gy + 8, 4, 2) + stone(w * 0.88, gy + 6, 5, 3);
@@ -705,6 +772,7 @@ function paintedPlace(place, o, D) {
     const cols = [['#FFFFFF', '#FFFFFF'], ['#FFC93C', '#FFF0A8'], ['#B064E8', '#E0B8FF'], ['#FF8A9A', '#FFD0D8']];
     for (let i = 0; i < n(8); i++) art += flowerBush(w * (0.35 + plRnd(i, 86) * 0.6), gy + 6 + plRnd(i, 87) * (h - gy - 8), 2.4 + plRnd(i, 88) * 1.2, ...cols[i % cols.length], i + 89);
     art += birdsWhite(w, 3, 120);
+    if (tod === 'night') glow += `<g clip-path="url(#${D.id('auclip')})">${aurora(w, 2, D)}</g><clipPath id="${D.id('auclip')}"><rect width="${w}" height="${f1(lake - 50)}"/></clipPath>`;
     glow += motes(w, h * 0.95, dusk ? n(36) : n(8), 121, dusk ? '#F4F07A' : '#FFFFFF');
     if (dusk) glow += Array.from({ length: n(14) }, (_, i) => `<circle class="pl-glow" cx="${f1(plRnd(i, 125) * w)}" cy="${f1(lake + 6 + plRnd(i, 126) * (gy - lake))}" r="1.2" fill="#F4F07A" opacity=".5" style="animation-delay:-${f1(plRnd(i, 127) * 3)}s"/>`).join('');
   }
@@ -808,8 +876,13 @@ const PLACE_CSS = `<style>
 .pl-fly{animation:plFly 16s ease-in-out infinite}
 @keyframes plFly{0%,100%{transform:translate(0,0)}25%{transform:translate(70px,-14px)}50%{transform:translate(140px,6px)}75%{transform:translate(60px,14px)}}
 .pl-hop{animation:plBob 2.6s ease-in-out infinite}
+.pl-paddle{animation:plPaddle 30s ease-in-out infinite}@keyframes plPaddle{50%{transform:translateX(-40px)}}
+.pl-hopsmall{animation:plHopS 6s ease-in-out infinite}@keyframes plHopS{0%,80%,100%{transform:translate(0,0)}85%{transform:translate(3px,-4px)}90%{transform:translate(6px,0)}}
+.pl-blink{animation:plBlink 5s infinite;transform-box:fill-box;transform-origin:center}@keyframes plBlink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+.pl-aurora{animation:plAur 9s ease-in-out infinite}@keyframes plAur{50%{opacity:.6;transform:translateX(-12px)}}
+.pl-swing{animation:plSwing 4s ease-in-out infinite}@keyframes plSwing{0%,100%{transform:rotate(6deg)}50%{transform:rotate(-6deg)}}
 .pl-zzz{animation:plZzz 3s ease-in-out infinite}@keyframes plZzz{0%{opacity:0;transform:translate(0,4px)}40%{opacity:1}100%{opacity:0;transform:translate(8px,-12px)}}
-.still .pl-sway,.still .pl-glow,.still .pl-twinkle,.still .pl-swim,.still .pl-bubble,.still .pl-ray,.still .pl-drift,.still .pl-bob,.still .pl-glide,.still .pl-flutter,.still .pl-wing,.still .pl-petal,.still .pl-leaf,.still .pl-rain,.still .pl-snow,.still .pl-flash,.still .pl-shoot,.still .pl-smoke,.still .pl-fly,.still .pl-hop,.still .pl-zzz{animation:none}
+.still .pl-sway,.still .pl-glow,.still .pl-twinkle,.still .pl-swim,.still .pl-bubble,.still .pl-ray,.still .pl-drift,.still .pl-bob,.still .pl-glide,.still .pl-flutter,.still .pl-wing,.still .pl-petal,.still .pl-leaf,.still .pl-rain,.still .pl-snow,.still .pl-flash,.still .pl-shoot,.still .pl-smoke,.still .pl-fly,.still .pl-hop,.still .pl-zzz,.still .pl-paddle,.still .pl-hopsmall,.still .pl-blink,.still .pl-aurora,.still .pl-swing{animation:none}
 </style>`;
 
 /**
