@@ -16,7 +16,7 @@ let LOOK = { theme: 'fireflies', accent: '#F2B544', motion: true };
 // the moving things of each scene: how many, and the CSS class that animates them
 const SCENE_BITS = {
   fireflies: [['ff', 22]], space: [['star', 70], ['shoot', 3]], ocean: [['bubble', 20], ['ray', 4]],
-  forest: [['ff green', 14], ['leaf', 9]], blossom: [['petal', 18]], city: [['star', 30]],     // clouds: see skySceneHTML
+  forest: [['ff green', 14], ['leaf', 9]], blossom: [['petal', 18]],     // clouds: see skySceneHTML
 };
 const rnd = (k, m) => { const v = Math.sin(k * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // stable pseudo-random 0..1
 
@@ -91,9 +91,7 @@ function drawScene() {
   el.className = `scene-bg scene-${LOOK.theme}${LOOK.motion ? '' : ' still'}`;   // "still": the picture stays, nothing moves
   if (LOOK.theme === 'clouds') { el.innerHTML = skySceneHTML(); return; }
   let k = 0;
-  // the land of the place along the bottom (soft, so it never gets in the way of reading)
-  const land = `<div class="scene-land">${placeLandSVG(LOOK.theme, placeTime(), placeSeason())}</div>`;
-  el.innerHTML = land + (SCENE_BITS[LOOK.theme] || []).map(([cls, n]) => Array.from({ length: n }, () => {
+  el.innerHTML = (SCENE_BITS[LOOK.theme] || []).map(([cls, n]) => Array.from({ length: n }, () => {
     k += 1;
     const r = (m) => rnd(k, m);
     return `<i class="${cls}" style="--x:${(r(1) * 100).toFixed(1)}vw;--y:${(r(2) * 100).toFixed(1)}vh;--d:${(8 + r(3) * 14).toFixed(1)}s;--dl:-${(r(4) * 20).toFixed(1)}s;--s:${(0.6 + r(5) * 0.9).toFixed(2)}"></i>`;
