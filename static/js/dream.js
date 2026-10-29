@@ -81,7 +81,7 @@ async function drawDream(state = null) {
         <label class="small" for="dreamText"><b>${t('What is your dream?')}</b></label>
         <input class="field" id="dreamText" maxlength="40" autocomplete="off" placeholder="${t('A trip to the zoo')}" value="${esc(dft.text || '')}">
         <div class="small muted">${t('Pick a picture')}</div>
-        <div class="emoji-pick" role="radiogroup" aria-label="${t('Pick a picture')}">${DREAM_EMOJI.map((e) => `<button type="button" class="ep${e === dft.emoji ? ' on' : ''}" data-e="${e}" role="radio" aria-checked="${e === dft.emoji}">${e}</button>`).join('')}</div>
+        <div class="emoji-pick" role="radiogroup" aria-label="${t('Pick a picture')}"><button type="button" class="ep auto${dft.emoji ? '' : ' on'}" data-e="" role="radio" aria-checked="${!dft.emoji}" title="${t('Lumi finds a picture for any dream')}">✨ ${t('Lumi picks')}</button>${DREAM_EMOJI.map((e) => `<button type="button" class="ep${e === dft.emoji ? ' on' : ''}" data-e="${e}" role="radio" aria-checked="${e === dft.emoji}">${e}</button>`).join('')}</div>
         <div class="row" style="gap:10px"><button class="btn primary" type="submit">⭐ ${t('How many stars?')}</button>
           <button class="btn ghost" type="button" id="dreamCancel">${t('Cancel')}</button></div>
         <div class="err small" id="dreamErr" hidden></div>
@@ -103,8 +103,8 @@ async function drawDream(state = null) {
       btn.disabled = true; btn.textContent = t('Lumi is counting…');
       try {
         const price = await api('/api/dream', { price: text });
-        dreamDraft.set({ text, emoji: emoji || price.emoji });
-        drawDream({ dr, mode: 'price', price, text, emoji: emoji || price.emoji });
+        dreamDraft.set({ text, emoji });                 // a picture Lumi chose is chosen again next time
+        drawDream({ dr, mode: 'price', price, text, emoji: emoji || price.emoji, auto: !emoji });
       } catch (x) { btn.disabled = false; btn.textContent = `⭐ ${t('How many stars?')}`; $('#dreamErr').hidden = false; $('#dreamErr').textContent = x.message; }
     };
     return;
@@ -114,7 +114,7 @@ async function drawDream(state = null) {
     const { price, text, emoji } = state;
     box.innerHTML = `${head}
       <div class="dream-price">
-        <div class="dp-big">${esc(emoji)}</div>
+        <div class="dp-pic"><div class="dp-big">${esc(emoji)}</div>${state.auto ? `<div class="muted small">✨ ${t('Lumi chose it')}</div>` : ''}</div>
         <div class="dp-txt"><div class="display" style="font-size:22px">${esc(text)}</div>
           <div class="dp-need">${t('This dream needs {n}', { n: `<b>${price.stars} ⭐</b>` })}</div>
           <div class="muted small">${t('That is {days} if you study like you usually do.', { days: dreamDays(price.days) })}</div>

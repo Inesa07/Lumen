@@ -95,11 +95,22 @@ export function sizePrompt(text) {
     + 'small = a small treat or choice (choose the family movie, ice cream, an hour of games)\n'
     + 'medium = a small present or outing (a new ball, a book, the cinema, a park day)\n'
     + 'big = a trip or an expensive thing (the zoo, a bike, a game console, a holiday)\n'
-    + 'Answer with exactly one word: small, medium or big.';
+    + 'Also choose the ONE emoji that shows this wish best (any emoji, for example 🛹 for a skateboard, 🦄 for a unicorn toy).\n'
+    + 'Answer with exactly two lines and nothing else:\nSIZE: small, medium or big\nEMOJI: the emoji';
 }
 export function readSize(answer) {
   const m = String(answer || '').toLowerCase().match(/\b(small|medium|big)\b/);
   return m ? m[1] : null;
+}
+
+// Emoji that never fit a child's dream picture (the AI is asked nicely, this is the safety net).
+const NOT_FOR_KIDS = ['🔫', '💣', '🔪', '🗡', '⚔', '🪓', '🍺', '🍻', '🍷', '🍸', '🍹', '🥂', '🥃', '🍾', '🚬', '💊', '💉', '🖕', '🍆', '🍑', '💩', '☠', '💀', '🩸', '🎰', '💰', '💵', '💸'];
+/** The emoji from the AI's answer (one emoji, also ones made of several parts like 👩‍🚀), or null. */
+export function readEmoji(answer) {
+  const line = String(answer || '').split('\n').find((l) => /emoji/i.test(l)) || String(answer || '');
+  const m = line.match(/\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic}\uFE0F?)*/u);
+  if (!m) return null;
+  return NOT_FOR_KIDS.some((x) => m[0].startsWith(x)) ? null : m[0];
 }
 
 /** An emoji for a dream when the child did not pick one. */
@@ -122,13 +133,13 @@ export function guessEmoji(text) {
  * level 3 (75 %): hat + a golden glow; level 4 (100 %): party.
  */
 export const LOOKS = [
-  { id: 'safari', emoji: ['🦁', '🐼', '🐘', '🦒', '🐒', '🐯', '🦓', '🐶', '🐱', '🐴'] },
-  { id: 'sport', emoji: ['⚽', '🏀', '🏐', '🎾', '🏊', '🚲', '🛴', '⛸️', '🏓', '🥋'] },
+  { id: 'safari', emoji: ['🦁', '🐼', '🐘', '🦒', '🐒', '🐯', '🦓', '🐶', '🐱', '🐴', '🐰', '🐹', '🦜', '🐢', '🐠', '🦄', '🐬'] },
+  { id: 'sport', emoji: ['⚽', '🏀', '🏐', '🎾', '🏊', '🚲', '🛴', '⛸️', '🏓', '🥋', '🛹', '🛼', '🏄', '⛷️', '🏂', '🎿', '🥊', '⚾', '🏈', '🤸', '🩰'] },
   { id: 'cinema', emoji: ['🎬', '🍿', '📺', '🎭'] },
-  { id: 'gamer', emoji: ['🎮', '🕹️', '💻', '📱'] },
+  { id: 'gamer', emoji: ['🎮', '🕹️', '💻', '📱', '🎧', '📷', '🤖'] },
   { id: 'artist', emoji: ['🎨', '📚', '✏️', '🎹', '🎸', '🧩', '🧸'] },
   { id: 'chef', emoji: ['🍦', '🍕', '🍰', '🍫', '🍩', '🍔', '🧁'] },
-  { id: 'travel', emoji: ['✈️', '🏖️', '🏕️', '🎡', '🎢', '🏰', '⛰️', '🚂'] },
+  { id: 'travel', emoji: ['✈️', '🏖️', '🏕️', '🎡', '🎢', '🏰', '⛰️', '🚂', '🗽', '🗼', '🎠', '🚢', '🏝️', '🌊', '🏔️'] },
 ];
 export function lookOf(emoji) {
   const l = LOOKS.find((x) => x.emoji.includes(emoji));

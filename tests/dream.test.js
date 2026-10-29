@@ -1,7 +1,7 @@
 // "My dream": stars from lessons, a fair price, milestones.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lessonStars, starsPerDay, priceOf, guessSize, guessEmoji, readSize, lookOf, dreamState, DAY_CAP, DEFAULT_PER_DAY } from '../src/core/dream.js';
+import { lessonStars, starsPerDay, priceOf, guessSize, guessEmoji, readSize, readEmoji, lookOf, dreamState, DAY_CAP, DEFAULT_PER_DAY } from '../src/core/dream.js';
 
 process.env.TZ = 'Asia/Yerevan';
 const at = (y, m, d, h = 15) => new Date(y, m - 1, d, h).getTime() / 1000;
@@ -60,4 +60,12 @@ test('dream progress counts only lessons after the dream was written', () => {
   const done = dreamState(s, { current: { id: 'd1', text: 'Zoo', emoji: '🦁', need: 6, created_at: created, seen_level: 4 } });
   assert.equal(done.current.ready, true);
   assert.equal(done.current.news_level, 0);
+});
+
+test('the emoji the AI picked: any emoji, also joined ones, never unsuitable ones', () => {
+  assert.equal(readEmoji('SIZE: medium\nEMOJI: 🛹'), '🛹');
+  assert.equal(readEmoji('SIZE: big\nEMOJI: 👩‍🚀'), '👩‍🚀');
+  assert.equal(readEmoji('SIZE: small\nEMOJI: ❄️'), '❄️');
+  assert.equal(readEmoji('SIZE: big\nEMOJI: 🍺'), null);
+  assert.equal(readEmoji('SIZE: big'), null);
 });

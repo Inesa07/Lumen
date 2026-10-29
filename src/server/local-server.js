@@ -11,7 +11,7 @@ import { SessionTracker, PROFILE_VERSION } from '../core/tracker.js';
 import { mmss } from '../core/util.js';
 import * as stats from '../core/stats.js';
 import { friendState } from '../core/friend.js';
-import { dreamState, guessSize, guessEmoji, priceOf, sizePrompt, readSize, SIZE_DAYS, MAX_TEXT } from '../core/dream.js';
+import { dreamState, guessSize, guessEmoji, priceOf, sizePrompt, readSize, readEmoji, SIZE_DAYS, MAX_TEXT } from '../core/dream.js';
 import { ValidationRun, FakeFollower, CSV_HEADER } from '../core/validate.js';
 import { Tutor, AIError, lessonContext } from '../core/ai.js';
 import { TodoStore, NoteStore, ChatStore, ReviewStore } from '../data/stores.js';
@@ -595,16 +595,20 @@ export class LocalServer {
     return dreamState(this.reports(), this.db.getValue('dream') || {});
   }
 
-  /** How big a dream is: asks the AI tutor when it may answer, otherwise key words. */
+  /**
+   * How big a dream is and which emoji shows it: asks the AI tutor when it may answer (it can pick any
+   * emoji, not only the ones in the picker), otherwise key words.
+   */
   async dreamSize(text) {
     const st = this.tutor.status();
     if (st.ready && st.provider !== 'test') {
       try {
-        const size = readSize(await this.tutor.ask([{ role: 'user', content: sizePrompt(text) }]));
-        if (size) return { size, by: 'ai' };
+        const answer = await this.tutor.ask([{ role: 'user', content: sizePrompt(text) }]);
+        const size = readSize(answer);
+        if (size) return { size, emoji: readEmoji(answer) || guessEmoji(text), by: 'ai' };
       } catch { /* no AI now: use the words */ }
     }
-    return { size: guessSize(text), by: 'words' };
+    return { size: guessSize(text), emoji: guessEmoji(text), by: 'words' };
   }
 
   /**
@@ -618,9 +622,8 @@ export class LocalServer {
     if (body.price !== undefined) {
       const text = clean(body.price);
       if (!text) return [{ error: 'Write your dream first' }, 400];
-      const { size, by } = await this.dreamSize(text);
-      return { size, by, stars: priceOf(size, st.per_day), carry: saved.carry || 0,
-        days: SIZE_DAYS[size], emoji: guessEmoji(text) };
+      const { size, emoji, by } = await this.dreamSize(text);
+      return { size, by, stars: priceOf(size, st.per_day), carry: saved.carry || 0, days: SIZE_DAYS[size], emoji };
     }
     if (body.create) {
       if (st.current) return [{ error: 'You already have a dream' }, 400];
