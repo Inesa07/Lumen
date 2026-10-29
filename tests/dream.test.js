@@ -44,7 +44,7 @@ test('size and emoji from the words (English, Russian, Armenian)', () => {
   assert.equal(readSize('Big.'), 'big');
   assert.equal(readSize('I think it is'), null);
   assert.equal(lookOf('🦁'), 'safari');
-  assert.equal(lookOf('🦄'), 'party');
+  assert.equal(lookOf('🎁'), 'party');
 });
 
 test('dream progress counts only lessons after the dream was written', () => {
