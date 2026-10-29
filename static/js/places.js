@@ -88,6 +88,21 @@ function defsMaker(P) {
       seen.add(id);
       list.push(`<filter id="${P}${id}" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".004 .12" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="6" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".6"/></filter>`);
     },
+    // leaves: noise cuts holes and ragged edges into round shapes, so they look like masses of leaves
+    leafy(id, seed, freq = 0.11) {
+      if (seen.has(id)) return;
+      seen.add(id);
+      list.push(`<filter id="${P}${id}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="${freq}" numOctaves="4" seed="${seed}" result="t"/>`
+        + `<feDisplacementMap in="SourceGraphic" in2="t" scale="7" xChannelSelector="R" yChannelSelector="G" result="d"/>`
+        + `<feColorMatrix in="t" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.4 0 0 0 -0.45" result="m"/><feComposite in="d" in2="m" operator="in"/></filter>`);
+    },
+    // bark: dark vertical streaks, only inside the shape
+    bark(id) {
+      if (seen.has(id)) return;
+      seen.add(id);
+      list.push(`<filter id="${P}${id}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".5 .025" numOctaves="3" seed="4"/>`
+        + `<feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -1.2"/><feComposite in2="SourceAlpha" operator="in"/></filter>`);
+    },
     id: (x) => `${P}${x}`,
     html: () => `<defs>${list.join('')}</defs>`,
   };
@@ -641,6 +656,36 @@ function rainbow(cx, cy, r, op = 0.35) {
   return ['#FF5C5C', '#FFA94D', '#FFE066', '#69DB7C', '#4DABF7', '#9775FA'].map((c, i) => `<path d="M${f1(cx - r + i * 2.2)} ${f1(cy)}A${f1(r - i * 2.2)} ${f1(r - i * 2.2)} 0 0 1 ${f1(cx + r - i * 2.2)} ${f1(cy)}" stroke="${c}" stroke-width="2.4" fill="none" opacity="${op}"/>`).join('');
 }
 
+/** A realistic mass of leaves: overlapping balls in shadow, middle and sunlit greens, broken up by the leafy filter. */
+function leafMass(cx, cy, r, D, k, c = ['#2E4E2A', '#4E7A36', '#8FB04A', '#D6D86A']) {
+  D.leafy('lf', 3); D.leafy('lf2', 8, 0.16);
+  let back = '', mid = '', lit = '';
+  for (let i = 0; i < 9; i++) { const a = plRnd(k, i) * 6.28, d = Math.sqrt(plRnd(k, i + 9)) * r * 0.8; back += `<circle cx="${f1(cx + Math.cos(a) * d * 1.3)}" cy="${f1(cy + Math.sin(a) * d * 0.7 + r * 0.15)}" r="${f1(r * (0.45 + plRnd(k, i + 18) * 0.25))}" fill="${c[0]}"/>`; }
+  for (let i = 0; i < 8; i++) { const a = plRnd(k, i + 27) * 6.28, d = Math.sqrt(plRnd(k, i + 36)) * r * 0.7; mid += `<circle cx="${f1(cx + Math.cos(a) * d * 1.2 - r * 0.1)}" cy="${f1(cy + Math.sin(a) * d * 0.6 - r * 0.08)}" r="${f1(r * (0.35 + plRnd(k, i + 45) * 0.2))}" fill="${c[1]}"/>`; }
+  for (let i = 0; i < 6; i++) { const a = -2.6 + plRnd(k, i + 54) * 1.9, d = r * (0.3 + plRnd(k, i + 63) * 0.5); lit += `<circle cx="${f1(cx + Math.cos(a) * d)}" cy="${f1(cy + Math.sin(a) * d * 0.7)}" r="${f1(r * (0.22 + plRnd(k, i + 72) * 0.14))}" fill="${i % 2 ? c[2] : c[3]}"/>`; }
+  return `<g filter="url(#${D.id('lf')})">${back}</g><g filter="url(#${D.id('lf2')})">${mid}${lit}</g>`;
+}
+/** A spruce drawn like a real one: a trunk line and drooping branches, long at the bottom, short at the top. */
+function spruce(x, base, hh, dark, light, k) {
+  let s = `<path d="M${f1(x)} ${f1(base)}V${f1(base - hh)}" stroke="${dark}" stroke-width="${f1(hh * 0.035 + 0.3)}"/>`;
+  const N = Math.max(8, Math.round(hh / 0.9));
+  for (let j = 0; j < N; j++) {
+    const t = j / N, y = base - hh * 0.06 - t * hh * 0.92, L = (1 - t) * hh * 0.3 + hh * 0.04;
+    const jitter = (plRnd(k, j) - 0.5) * L * 0.3, sw = f1(Math.max(0.7, (1 - t) * hh * 0.075));
+    s += `<path d="M${f1(x)} ${f1(y)}q${f1(-L * 0.5)} ${f1(L * 0.08)} ${f1(-L - jitter)} ${f1(L * 0.42)}" stroke="${j % 3 ? dark : light}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`
+      + `<path d="M${f1(x)} ${f1(y - hh * 0.02)}q${f1(L * 0.5)} ${f1(L * 0.08)} ${f1(L + jitter)} ${f1(L * 0.42)}" stroke="${j % 3 === 1 ? light : dark}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+  }
+  return s;
+}
+/** A forest of spruces in rows (back rows paler), filling the shore. */
+function spruceForest(w, base, k, rows) {
+  return rows.map(([count, hmin, hmax, dark, light], r) => {
+    const cnt = Math.round(count * w / 400);
+    const xs = Array.from({ length: cnt }, (_, i) => (i + plRnd(k + r, i)) * w / cnt);
+    return xs.map((x, i) => spruce(x, base + r * 1.5, hmin + plRnd(k + r, i + 99) * (hmax - hmin), dark, light, k * 10 + r * 300 + i)).join('');
+  }).join('');
+}
+
 /** The painted picture of a place, without Lumi and the home. Returns {art, glow}. */
 function paintedPlace(place, o, D) {
   const { w, h, tod } = o;
@@ -712,11 +757,11 @@ function paintedPlace(place, o, D) {
     art += `<g filter="url(#${D.id('b1')})"><g filter="url(#${P1})">${mid}</g></g>`;
     // the canopy: masses of golden-green leaves along the top, some hanging down
     let canopy = '';
-    for (let i = 0; i < n(14); i++) {
+    for (let i = 0; i < n(18); i++) {
       const x = plRnd(i, 140) * w, y = -6 + plRnd(i, 141) * 22;
-      canopy += foliage(x, y, 14 + plRnd(i, 142) * 10, '#6E8A34', '#A9B840', '#E6DA6A', i + 143, 7);
+      canopy += leafMass(x, y, 20 + plRnd(i, 142) * 12, D, i + 143, ['#4E6A2E', '#7E9A3A', '#B9C04A', '#EADC72']);
     }
-    art += `<g filter="url(#${P1})">${canopy}</g>`;
+    art += canopy;
     // sun rays from the top right through the leaves
     const rg = D.lin('frays', [[0, '#FFF2B4', 0.6], [1, '#FFF2B4', 0]]);
     art += `<g filter="url(#${D.id('b3')})">${[0, 1, 2, 3].map((i) => `<path class="pl-ray" d="M${f1(w * (0.66 + i * 0.09))} -6L${f1(w * (0.7 + i * 0.09))} -6L${f1(w * (0.42 + i * 0.07))} ${f1(gy + 6)}L${f1(w * (0.36 + i * 0.07))} ${f1(gy + 6)}Z" fill="${rg}" style="animation-delay:-${i * 1.7}s"/>`).join('')}</g>`;
@@ -731,7 +776,9 @@ function paintedPlace(place, o, D) {
     front += `<path d="${arm2.d}" fill="#4A3C54"/><path d="${arm.d}" fill="${D.lin('farm', [[0, '#5E4E68'], [1, '#3A2E44']])}"/>`;
     front += drips(arm.upper.map(([x, y], i) => [x, y + 14 - i * 0.3]), 31, 26) + mossStrip(arm.upper, 9, 32) + mossStrip(arm2.upper, 6.5, 33)
       + mossStrip([[tx + tw * 0.7, gy * 0.5], [tx + tw * 0.9, gy * 0.55], [tx + tw * 1.05, gy * 0.62], [tx + tw * 1.15, gy * 0.7]], 5, 34);
-    art += `<g filter="url(#${P3})">${front}</g>`;
+    D.bark('bk');
+    const trunkPath = front.match(/<path d="([^"]+)"/)[1];
+    art += `<g filter="url(#${P3})">${front}</g><path d="${trunkPath}" fill="#000" opacity=".35" filter="url(#${D.id('bk')})"/>`;
     // the right tree
     const rx = w * 0.97;
     art += `<g filter="url(#${P3})"><path d="M${f1(rx - 34)} ${f1(gy + 10)}C${f1(rx - 18)} ${f1(gy - 4)} ${f1(rx - 14)} ${f1(gy * 0.5)} ${f1(rx - 10)} -8H${f1(w + 10)}V${f1(gy + 10)}Z" fill="${D.lin('frk', [[0, '#5A4A62'], [1, '#2E2436']], 1, 0)}"/>${mossStrip([[rx - 10, gy * 0.3], [rx - 11, gy * 0.42], [rx - 12, gy * 0.55], [rx - 14, gy * 0.68], [rx - 17, gy * 0.8]], 6, 35)}</g>`;
@@ -749,7 +796,7 @@ function paintedPlace(place, o, D) {
     // big leafy plants and bushes along the bank
     const leafFan = (x, y, sz, c1, c2, k) => `<g class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${f1(plRnd(k, 1) * 4)}s">`
       + [-1.1, -0.6, -0.15, 0.3, 0.8, 1.2].map((a, i) => { const tx2 = x + Math.sin(a) * sz * 2.2, ty2 = y - Math.cos(a) * sz * 2; return `<path d="M${f1(x)} ${f1(y)}Q${f1(x + Math.sin(a) * sz * 0.6 - sz * 0.5)} ${f1(y - Math.cos(a) * sz * 1.3)} ${f1(tx2)} ${f1(ty2)}Q${f1(x + Math.sin(a) * sz * 0.9 + sz * 0.5)} ${f1(y - Math.cos(a) * sz)} ${f1(x)} ${f1(y)}Z" fill="${i % 2 ? c1 : c2}"/>`; }).join('') + '</g>';
-    art += `<g filter="url(#${P1})">${[0.16, 0.3, 0.55, 0.74, 0.86].map((fx, i) => foliage(w * fx, gy - 2, 9 + plRnd(i, 150) * 5, '#2E5A34', '#3E7440', '#6E9A4A', i + 151, 6)).join('')}</g>`;
+    art += [0.16, 0.3, 0.55, 0.74, 0.86].map((fx, i) => leafMass(w * fx, gy - 4, 9 + plRnd(i, 150) * 5, D, i + 151, ['#1E3E26', '#2E5A34', '#4E8040', '#8FB858'])).join('');
     art += leafFan(w * 0.21, gy + 4, 5, '#3E7A4A', '#5E9A58', 1) + leafFan(w * 0.9, gy + 3, 6, '#3E7A4A', '#5E9A58', 2) + leafFan(w * 0.58, gy + 2, 4, '#4E8A50', '#6EAA60', 3);
     // the pond in front: dark teal water with the light and the flowers reflected in it, stones
     const pond = `M0 ${f1(gy + 10)}Q${f1(w * 0.2)} ${f1(gy + 6)} ${f1(w * 0.42)} ${f1(gy + 11)}Q${f1(w * 0.56)} ${f1(gy + 15)} ${f1(w * 0.5)} ${f1(h)}H0Z`;
@@ -837,7 +884,9 @@ function paintedPlace(place, o, D) {
       + mistBand(w, lake - 14, 26, D, 'a', 0.5)
       + `<g filter="url(#${D.id('lp1')})">${range(w, lake, 46, 19, '#6E7F9E', '#4A5878', '#A9B6CE', lake - 38, D, 2)}</g>`
       + mistBand(w, lake - 4, 12, D, 'b', 0.4);
-    const trees = `<g filter="url(#${D.id('lp2')})">${treeLine(w, lake + 1, 31, '#4E6E5E', '#2E4E40', '#1E3A2E')}</g>`;
+    const trees = `<g filter="url(#${D.id('b1')})">${spruceForest(w, lake, 31, [[60, 8, 16, '#5A7A6A', '#7A9A86']])}</g>`
+      + spruceForest(w, lake + 1, 41, [[44, 10, 24, '#23402F', '#3E6A4A']])
+      + `<rect y="${f1(lake - 1)}" width="${w}" height="3" fill="#23402F"/>`;
     art += far + trees;
     // the lake: sky colours, a blurred upside-down copy of the mountains, light streaks
     art += `<rect y="${f1(lake)}" width="${w}" height="${f1(gy - lake + 4)}" fill="${D.lin('lake', [[0, '#BFDDEE'], [1, '#6FA6C4']])}"/>`;
