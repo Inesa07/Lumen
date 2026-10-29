@@ -137,8 +137,7 @@ async function drawDream(state = null) {
         toast(t('Your dream is saved! Let’s collect stars ✨'));
         if (typeof pushWidget === 'function') pushWidget(true);   // the Mac widget shows the dream
         drawDream({ dr: res, mode: 'show' });
-        const big = $('#lumiBig svg.lumi');
-        if (big) big.outerHTML = lumiSVG({ mood: 'happy', stage: lumiLive.info.stage.index, outfit: lumiLive.info.outfit, size: 220, dream: lumiLive.info.dream });
+        drawLumiHome();
       } catch (x) { toast(x.message); }
     };
     if ($('#dreamNo')) $('#dreamNo').onclick = () => drawDream({ ...state, mode: 'notyet' });

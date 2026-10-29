@@ -319,25 +319,35 @@ function outfitHow(o, f) {
   return t('at {n} 🔆 · {k} more', { n: need, k: Math.max(0, need - f.light) });
 }
 
+/** Lumi's home in the place where it lives (static/js/places.js), for this time of day. */
+function drawLumiHome() {
+  const el = $('#lumiBig'), f = lumiLive.info;
+  if (!el || !f || !f.stage) return;
+  const tod = lumiTime(), hol = lumiHoliday(f);
+  const lumi = lumiSVG({ mood: tod === 'night' ? 'sleepy' : 'happy', stage: Math.max(2, f.stage.index), outfit: f.outfit, extra: hol && hol.extra, size: PLACE_LUMI, dream: f.dream });
+  // draw as much land as the box is wide (160 units high), so nothing is stretched or cut
+  const w = Math.max(320, Math.round(160 * (el.clientWidth || 800) / (el.clientHeight || 270)));
+  el.innerHTML = placeScene({ place: LOOK.theme, tod, stage: f.stage.index, season: placeSeason(), lumi, id: 'home', w, h: 160, label: t("Lumi's home") });
+  el.classList.toggle('still', !LOOK.motion);
+}
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 async function viewLumi() {
   closeStream();
   const f = await api('/api/friend');
   lumiLive.info = f;
   const hol = lumiHoliday(f);
-  const friends = Math.max(0, f.stage.index - 2);
   const [bm, bd] = (f.birthday || '-').split('-');
   app.innerHTML = shell('lumi', `
   ${pageHead(t('{n} light', { n: f.light }), 'Lumi', '', '')}
   <main class="wrap" style="display:flex;flex-direction:column;gap:22px">
-    <section class="card lumi-hero tod-${lumiTime()}">
-      <div class="lumi-stage-pic" id="lumiBig">
-        ${friends ? `<div class="lumi-friends" aria-hidden="true">${Array.from({ length: friends }, (_, i) => `<i style="--h:${[160, 300, 30][i]};--t:${7 + i * 2}s;--dl:-${i * 2.3}s"></i>`).join('')}</div>` : ''}
-        ${lumiSVG({ mood: lumiTime() === 'night' ? 'sleepy' : 'happy', stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 220, dream: f.dream })}</div>
+    <section class="card lumi-home">
+      <div class="home-scene" id="lumiBig"></div>
+      <div class="home-places"><span class="eyebrow">${t('Where Lumi lives')} ${info('home', 'home')}</span>
+        <div class="place-chips">${PLACES.map(([k, name, emo]) => `<button type="button" class="place-chip${LOOK.theme === k ? ' on' : ''}" data-look-theme="${k}" aria-pressed="${LOOK.theme === k}">${emo} ${t(name)}</button>`).join('')}</div></div>
       <div class="lumi-hero-txt">
         <div class="eyebrow">${t('Stage {a} of {b}', { a: f.stage.index + 1, b: f.stages.length })} ${info('lumi', 'Lumi')}</div>
         <h1 class="display">${esc(t(f.stage.name))}</h1>
-        <p class="muted">${esc(t(f.stage.line))}${friends ? ` ${friends === 1 ? t('A friend firefly came to fly with Lumi!') : t('{n} friend fireflies came to fly with Lumi!', { n: friends })}` : ''}</p>
+        <p class="muted">${esc(t(f.stage.line))}</p>
         <div class="lightbar big"><i style="width:${f.stage.pct}%"></i></div>
         <div class="small">🔆 ${f.stage.next ? t('{a} / {b} light to {name}', { a: `<b>${f.light}</b>`, b: f.stage.next.need, name: `<b>${esc(t(f.stage.next.name))}</b>` }) : t('{n} light. Lumi is fully grown!', { n: `<b>${f.light}</b>` })} ${info('light', 'light')}</div>
         <div class="lumi-say">💬 ${esc(f.first_time ? pick(lines('hello')) : greetLine(f))}</div>
@@ -393,6 +403,7 @@ async function viewLumi() {
     toast(m && d ? 'Lumi wrote it down 🎂' : 'Birthday removed');
   };
   $('#bdM').onchange = saveBday; $('#bdD').onchange = saveBday;
+  drawLumiHome();
   drawDream();
   lumiNews(f);
   if (typeof pushWidget === 'function') pushWidget();
@@ -480,3 +491,7 @@ function diaryDayHTML(day) {
   });
   new MutationObserver(decorate).observe(root, { childList: true, subtree: true });
 })();
+
+// Lumi's home is drawn to fit its box: draw it again when the window changes size
+let homeResize = 0;
+window.addEventListener('resize', () => { clearTimeout(homeResize); homeResize = setTimeout(() => { if ($('#lumiBig')) drawLumiHome(); }, 250); });

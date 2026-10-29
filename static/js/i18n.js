@@ -381,6 +381,11 @@ function translateText(key) {
 // simpler Lumi: light = focused minutes, stars = the dream
 [
   ['New for Lumi:', 'Новое для Луми:', 'Նոր Լումիի համար՝'],
+  ['Meadow', 'Луг', 'Մարգագետին'], ['Garden', 'Сад', 'Այգի'], ['City', 'Город', 'Քաղաք'],
+  ['Where Lumi lives', 'Где живёт Луми', 'Որտեղ է ապրում Լումին'], ["Lumi's home", 'Домик Луми', 'Լումիի տնակը'],
+  ['Choose where Lumi lives: the meadow, forest, garden, ocean, city, sky or space. The whole app gets the same background. Lumi\'s home grows with Lumi: a glass jar, then a lantern, then a little house. In the morning Lumi is at the door, in the day it flies around, in the evening the window glows, and at night Lumi sleeps.',
+    'Выбери, где живёт Луми: луг, лес, сад, океан, город, небо или космос. У всего приложения будет такой же фон. Домик растёт вместе с Луми: сначала стеклянная баночка, потом фонарик, потом маленький домик. Утром Луми у двери, днём летает, вечером в окне горит свет, а ночью Луми спит.',
+    'Ընտրիր, թե որտեղ է ապրում Լումին՝ մարգագետին, անտառ, այգի, օվկիանոս, քաղաք, երկինք կամ տիեզերք։ Ամբողջ հավելվածը կունենա նույն ֆոնը։ Տնակը մեծանում է Լումիի հետ՝ նախ ապակե բանկա, հետո լապտեր, հետո փոքրիկ տնակ։ Առավոտյան Լումին դռան մոտ է, ցերեկը թռչում է, երեկոյան պատուհանը լուսավոր է, իսկ գիշերը Լումին քնում է։'],
   ['at {n} 🔆 · {k} more', 'при {n} 🔆 · ещё {k}', '{n} 🔆-ի դեպքում · էլի {k}'],
   ['Clothes come with <b>light 🔆</b>, not with stars. Every minute you really focus gives Lumi 1 light. At 30, 120, 300, 600 and 1200 light Lumi grows, and each time new clothes open. Under every locked outfit you see how much light is still missing.',
     'Одежда открывается <b>светом 🔆</b>, а не звёздами. Каждая минута настоящего фокуса даёт Луми 1 свет. При 30, 120, 300, 600 и 1200 света Луми растёт, и каждый раз открывается новая одежда. Под каждым закрытым нарядом видно, сколько света ещё не хватает.',

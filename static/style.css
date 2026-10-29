@@ -32,6 +32,8 @@
   --teal: #1F9E83; --coral: #E0694F; --accent-ink: #1C1D21; --shadow: rgba(40, 35, 25, .18);
   --accent-text: color-mix(in srgb, var(--accent) 45%, var(--text)); }
 /* Fireflies: a deep night with little lights drifting behind the page */
+:root[data-theme="city"] { --bg: #0D1020; --sidebar: #0A0C19; --surface: #161A2E; --surface-2: #1C2138; --surface-3: #222842;
+  --line: #262C47; --line-2: #3B4368; --track: #232944; --bar: #353D62; --text: #EEF0FA; --muted: #A6ACC8; --soft: #CDD1E6; --slate: #717A9E; --drift: #B3B9D6; }
 :root[data-theme="fireflies"] { --bg: #08111F; --sidebar: #060D18; --surface: #0F1B30; --surface-2: #14233C; --surface-3: #192A47;
   --line: #1D2C47; --line-2: #2F4566; --track: #1C2B45; --bar: #2B3F60; --text: #EEF3FF; --muted: #A3B2CF; --soft: #CCD6EA; --slate: #6C7FA3; --drift: #B0BEDA; }
 /* colourful dark theme */
@@ -1403,6 +1405,9 @@ p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px
   radial-gradient(circle at 88% 6%, rgba(255, 252, 235, .95) 0 3%, rgba(255, 244, 205, .55) 6%, rgba(255, 236, 190, .18) 16%, transparent 32%),
   linear-gradient(180deg, #3F86D8 0%, #6FA9E8 28%, #A9CFF5 58%, #DCEBFA 82%, #FBEEDD 100%); background-attachment: fixed; }
 :root[data-theme="clouds"] { --bg: #A9CFF5; }
+:root[data-theme="city"] body { background:
+  radial-gradient(900px 420px at 50% 115%, rgba(255, 200, 120, .12), transparent 70%),
+  radial-gradient(700px 400px at 85% -10%, rgba(120, 140, 255, .14), transparent 70%), linear-gradient(180deg, #121633, #0B0D1C); background-attachment: fixed; }
 :root[data-theme="blossom"] body { background:
   radial-gradient(700px 400px at 90% 0%, rgba(255, 170, 200, .35), transparent 70%), linear-gradient(180deg, #FFF0F5, #FFF7FA); background-attachment: fixed; }
 :root[data-theme="clouds"] .sidebar, :root[data-theme="blossom"] .sidebar { background: color-mix(in srgb, var(--sidebar) 80%, transparent); backdrop-filter: blur(8px); }
@@ -1441,8 +1446,8 @@ p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px
 .scene-bg.still * { animation-play-state: paused !important; }
 
 /* the compact picker: round scene buttons, colour dots */
-.scenes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; max-width: 560px; }
-.scenes.compact { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.scenes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; max-width: 640px; }
+.scenes.compact { grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .scene-opt { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px; border: 0; background: none; color: var(--text); }
 .scene-dot { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; font-size: 22px;
   border: 2px solid var(--line-2); box-shadow: inset 0 0 0 3px rgba(0,0,0,.08); transition: transform .15s ease, border-color .15s; }
@@ -1454,6 +1459,7 @@ p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px
 .prev-fireflies { background: radial-gradient(circle at 70% 75%, rgba(244,240,122,.5) 0 8%, transparent 9%), radial-gradient(circle at 30% 40%, rgba(244,240,122,.6) 0 6%, transparent 7%), linear-gradient(180deg, #13244A, #07101D); }
 .prev-space { background: radial-gradient(circle at 70% 30%, rgba(240,107,168,.5), transparent 50%), linear-gradient(180deg, #2A1F55, #0B0820); }
 .prev-ocean { background: linear-gradient(180deg, #1F6FA8, #0A2238 70%); }
+.prev-city { background: linear-gradient(180deg, #2A3260, #0B0D1C 80%); }
 .prev-forest { background: linear-gradient(180deg, #2E5A3A, #0D1A14 75%); }
 .prev-clouds { background: radial-gradient(circle at 75% 20%, #FFF6D6 0 10%, transparent 30%), linear-gradient(180deg, #3F86D8, #A9CFF5 70%, #FBEEDD); }
 .prev-blossom { background: linear-gradient(180deg, #FFB3CC, #FFF0F5); }
@@ -1462,7 +1468,7 @@ p.empty.with-lumi { display: flex; align-items: center; gap: 14px; padding: 18px
 .look-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 18px; }
 .motion-sw { display: inline-flex; align-items: center; gap: 10px; border: 0; background: none; color: var(--text); font-size: 13px; padding: 0; }
 .motion-sw .switch { pointer-events: none; transform: scale(.85); }
-@media (max-width: 640px) { .scenes:not(.compact) { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { .scenes:not(.compact) { grid-template-columns: repeat(4, 1fr); } }
 
 
 /* ---------------------------------------------------------------- the sky scene (clouds + balloons) */
@@ -1647,3 +1653,21 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 .stars-big { font-size: 34px; font-weight: 800; white-space: nowrap; }
 .stars-why { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; }
 .stars-why span { padding: 5px 10px; border-radius: 99px; background: var(--surface-2); }
+
+/* the land of the place at the bottom of the page (static/js/places.js) */
+.scene-land { position: absolute; left: 0; right: 0; bottom: 0; height: min(30vh, 260px); opacity: .42;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 40%); mask-image: linear-gradient(180deg, transparent, #000 40%); }
+.scene-land svg { width: 100%; height: 100%; display: block; }
+:root[data-theme="blossom"] .scene-land { opacity: .55; }
+
+/* Lumi's home on the Lumi page */
+.lumi-home { padding: 0; overflow: hidden; display: grid; grid-template-columns: 1fr minmax(240px, 320px); }
+.home-scene { grid-column: 1 / -1; height: 270px; background: var(--surface-2); }
+@media (max-width: 760px) { .home-scene { height: 200px; } }
+.home-scene svg { width: 100%; height: 100%; display: block; }
+.lumi-home .lumi-hero-txt { padding: 20px 24px 24px; grid-column: 1; grid-row: 2; }
+.home-places { grid-column: 2; grid-row: 2; padding: 20px 24px 24px 0; display: flex; flex-direction: column; gap: 10px; }
+.place-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.place-chip { border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); border-radius: 99px; padding: 6px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+.place-chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--surface)); font-weight: 600; }
+@media (max-width: 760px) { .lumi-home { grid-template-columns: 1fr; } .home-places { grid-column: 1; grid-row: 3; padding: 0 20px 20px; } }

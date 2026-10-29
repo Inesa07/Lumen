@@ -6,10 +6,8 @@ const $ = (sel) => document.querySelector(sel);
 // ---- look: a background scene + an accent colour (chosen in the 🎨 popover or in Settings)
 // Each scene is a colour theme (CSS variables in style.css) plus a few things moving slowly
 // behind the page: fireflies, stars, bubbles, leaves, clouds or petals.
-const SCENES = [
-  ['fireflies', 'Fireflies', '🌌'], ['space', 'Space', '✨'], ['ocean', 'Ocean', '🐠'],
-  ['forest', 'Forest', '🌲'], ['clouds', 'Sky', '🎈'], ['blossom', 'Blossom', '🌸'],
-];
+// The scenes are the places where Lumi lives (static/js/places.js): the page background and Lumi's home match.
+const SCENES = PLACES;
 const OLD_THEME = { midnight: 'space', graphite: 'space', plum: 'space', aurora: 'space', paper: 'clouds', sky: 'clouds',
   mint: 'clouds', sunny: 'clouds', lavender: 'blossom' };
 const ACCENTS = [['#F2B544', 'Amber'], ['#4CC9B0', 'Mint'], ['#FF8A70', 'Coral'], ['#9B8CFF', 'Violet'], ['#5AA9FF', 'Sky'], ['#F06BA8', 'Rose']];
@@ -18,7 +16,7 @@ let LOOK = { theme: 'fireflies', accent: '#F2B544', motion: true };
 // the moving things of each scene: how many, and the CSS class that animates them
 const SCENE_BITS = {
   fireflies: [['ff', 22]], space: [['star', 70], ['shoot', 3]], ocean: [['bubble', 20], ['ray', 4]],
-  forest: [['ff green', 14], ['leaf', 9]], blossom: [['petal', 18]],     // clouds: see skySceneHTML
+  forest: [['ff green', 14], ['leaf', 9]], blossom: [['petal', 18]], city: [['star', 30]],     // clouds: see skySceneHTML
 };
 const rnd = (k, m) => { const v = Math.sin(k * 12.9898 + m * 78.233) * 43758.5453; return v - Math.floor(v); };   // stable pseudo-random 0..1
 
@@ -93,7 +91,9 @@ function drawScene() {
   el.className = `scene-bg scene-${LOOK.theme}${LOOK.motion ? '' : ' still'}`;   // "still": the picture stays, nothing moves
   if (LOOK.theme === 'clouds') { el.innerHTML = skySceneHTML(); return; }
   let k = 0;
-  el.innerHTML = (SCENE_BITS[LOOK.theme] || []).map(([cls, n]) => Array.from({ length: n }, () => {
+  // the land of the place along the bottom (soft, so it never gets in the way of reading)
+  const land = `<div class="scene-land">${placeLandSVG(LOOK.theme, placeTime(), placeSeason())}</div>`;
+  el.innerHTML = land + (SCENE_BITS[LOOK.theme] || []).map(([cls, n]) => Array.from({ length: n }, () => {
     k += 1;
     const r = (m) => rnd(k, m);
     return `<i class="${cls}" style="--x:${(r(1) * 100).toFixed(1)}vw;--y:${(r(2) * 100).toFixed(1)}vh;--d:${(8 + r(3) * 14).toFixed(1)}s;--dl:-${(r(4) * 20).toFixed(1)}s;--s:${(0.6 + r(5) * 0.9).toFixed(2)}"></i>`;
@@ -129,9 +129,9 @@ function setLook(part) {
 // one click handler for every look button on the page (event delegation)
 document.addEventListener('click', (e) => {
   const th = e.target.closest('[data-look-theme]'), a = e.target.closest('[data-look-accent]'), m = e.target.closest('[data-look-motion]');
-  if (th) setLook({ theme: th.dataset.lookTheme });
+  if (th) { setLook({ theme: th.dataset.lookTheme }); if (typeof drawLumiHome === 'function') drawLumiHome(); }
   if (a) setLook({ accent: a.dataset.lookAccent });
-  if (m) setLook({ motion: !LOOK.motion });
+  if (m) { setLook({ motion: !LOOK.motion }); if (typeof drawLumiHome === 'function') drawLumiHome(); }
 });
 function themeSwatches(small = false) {
   return `<div class="scenes${small ? ' compact' : ''}">${SCENES.map(([key, name, emo]) => `<button type="button" class="scene-opt${LOOK.theme === key ? ' on' : ''}" data-look-theme="${key}" aria-pressed="${LOOK.theme === key}" title="${name}">

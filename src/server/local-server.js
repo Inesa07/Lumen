@@ -21,7 +21,7 @@ import { FakeVision } from '../vision/fake.js';
 export const DEFAULT_SETTINGS = { daily_goal_min: 60, streak_min: 10, rhythm: null, mood_sens: 'normal', eye_rest: true, posture: true, blink: true,
   theme: 'fireflies', accent: '#F2B544', motion: true };
 // background scenes (older theme names are mapped to the closest scene in the browser)
-const THEMES = ['fireflies', 'space', 'ocean', 'forest', 'clouds', 'blossom'];
+const THEMES = ['fireflies', 'space', 'ocean', 'forest', 'clouds', 'blossom', 'city'];
 const ACCENTS = ['#F2B544', '#4CC9B0', '#FF8A70', '#9B8CFF', '#5AA9FF', '#F06BA8'];
 const ABSENT_SEC = 10 * 60;           // nobody in front of the camera for 10 minutes -> pause
 const DRAFT_EVERY_MS = 20000;         // a running lesson is saved as a draft every 20 s (crash / closed tab)

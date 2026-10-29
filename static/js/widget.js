@@ -35,6 +35,7 @@ async function widgetSummary() {
     mood: Object.entries(mood).filter(([k, v]) => MOOD[k] && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 3)
       .map(([k, v]) => ({ emoji: MOOD[k][0], label: t(MOOD[k][1]), pct: Math.round(v), color: MOOD_HEX[k] })),
     stars: m.stars,
+    place: LOOK.theme, stage_index: m.lumi.stage.index,       // where Lumi lives, and how big its home is
     lumi: { stage: t(m.lumi.stage.name), light: m.lumi.light, pct: m.lumi.stage.pct,
       next: m.lumi.stage.next ? m.lumi.stage.next.need : null },
     active: m.active ? { cls: m.active.class || '', attention: m.active.attention } : null,
