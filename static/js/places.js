@@ -10,7 +10,7 @@
 'use strict';
 
 const PLACES = [
-  ['fireflies', 'Meadow', '🌌'], ['forest', 'Forest', '🌲'], ['blossom', 'Garden', '🌸'], ['ocean', 'Ocean', '🐠'],
+  ['fireflies', 'Lake', '🏞️'], ['forest', 'Forest', '🌲'], ['blossom', 'Garden', '🌸'], ['ocean', 'Ocean', '🐠'],
   ['clouds', 'Sky', '🎈'], ['space', 'Space', '✨'],
 ];
 const OUTDOOR = ['fireflies', 'forest', 'blossom', 'clouds'];
@@ -64,6 +64,11 @@ function defsMaker(P) {
       seen.add(id);
       list.push(`<radialGradient id="${P}${id}" cx="${cx}" cy="${cy}" r="${r}">${stops.map(([o, c, a = 1]) => `<stop offset="${o}" stop-color="${c}" stop-opacity="${a}"/>`).join('')}</radialGradient>`);
       return `url(#${P}${id})`;
+    },
+    blur(id, std) {
+      if (seen.has(id)) return;
+      seen.add(id);
+      list.push(`<filter id="${P}${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${std}"/></filter>`);
     },
     id: (x) => `${P}${x}`,
     html: () => `<defs>${list.join('')}</defs>`,
@@ -359,6 +364,248 @@ function placeSky(place, o, D) {
   return s;
 }
 
+// ---------------------------------------------------------------- painted places (lake, forest, garden, sky islands)
+// A softer, storybook-painting look: misty air, light rays, far layers blurred (like a camera that
+// focuses on the front), glowing specks in the air. Painted in daylight colours; evening and night are
+// a colour wash on top, and the glowing things are drawn after the wash so they stay bright.
+const PAINTED = ['fireflies', 'forest', 'blossom', 'clouds'];
+// colour wash per time of day: [top colour, opacity], [middle], [bottom]
+const WASH = {
+  morning: [['#FFB38A', 0.18], ['#FFD2B0', 0.1], ['#FFB38A', 0.06]],
+  day: null,
+  evening: [['#4A3E9A', 0.55], ['#FF8A5C', 0.32], ['#3A2440', 0.38]],
+  night: [['#030820', 0.8], ['#0A1640', 0.66], ['#050C26', 0.7]],
+};
+
+/** Points along a quadratic curve (for moss on a branch, vines, …). */
+function quadPts(x0, y0, cx, cy, x1, y1, n) {
+  return Array.from({ length: n }, (_, i) => {
+    const t = (i + 0.5) / n, u = 1 - t;
+    return [u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1];
+  });
+}
+/** A soft blob of foliage: a dark under-layer and a lit top made of overlapping balls. */
+function foliage(x, y, r, dark, mid, light, k, n = 7) {
+  let s = '';
+  for (let i = 0; i < n; i++) { const a = plRnd(k, i) * 6.28, d = plRnd(k, i + 20) * r * 0.7; s += `<circle cx="${f1(x + Math.cos(a) * d)}" cy="${f1(y + Math.sin(a) * d * 0.6 + r * 0.12)}" r="${f1(r * (0.42 + plRnd(k, i + 40) * 0.25))}" fill="${dark}"/>`; }
+  for (let i = 0; i < n; i++) { const a = plRnd(k, i + 60) * 6.28, d = plRnd(k, i + 80) * r * 0.6; s += `<circle cx="${f1(x + Math.cos(a) * d - r * 0.08)}" cy="${f1(y + Math.sin(a) * d * 0.55 - r * 0.1)}" r="${f1(r * (0.3 + plRnd(k, i + 100) * 0.18))}" fill="${mid}"/>`; }
+  for (let i = 0; i < 3; i++) s += `<circle cx="${f1(x - r * 0.3 + plRnd(k, i + 120) * r * 0.5)}" cy="${f1(y - r * 0.35 + plRnd(k, i + 130) * r * 0.2)}" r="${f1(r * 0.14)}" fill="${light}" opacity=".85"/>`;
+  return s;
+}
+/** A cluster of small flowers with leaves under them. */
+function flowerBush(x, y, s, col, light, k) {
+  let p = '';
+  for (let i = 0; i < 5; i++) p += `<ellipse cx="${f1(x + (plRnd(k, i) - 0.5) * s * 3)}" cy="${f1(y - plRnd(k, i + 5) * s * 0.6)}" rx="${f1(s * 0.9)}" ry="${f1(s * 0.4)}" fill="#3E6B2E" transform="rotate(${f1((plRnd(k, i + 9) - 0.5) * 50)} ${f1(x)} ${f1(y)})"/>`;
+  for (let i = 0; i < 7; i++) {
+    const fx = x + (plRnd(k, i + 14) - 0.5) * s * 3, fy = y - s * 0.6 - plRnd(k, i + 21) * s * 1.4, r = s * (0.32 + plRnd(k, i + 28) * 0.2);
+    p += `<circle cx="${f1(fx)}" cy="${f1(fy)}" r="${f1(r)}" fill="${col}"/><circle cx="${f1(fx - r * 0.3)}" cy="${f1(fy - r * 0.3)}" r="${f1(r * 0.45)}" fill="${light}"/>`;
+  }
+  return `<g class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${f1(plRnd(k, 40) * 4)}s">${p}</g>`;
+}
+/** A big old tree: a twisted trunk with roots and bark lines. */
+function oldTrunk(x, y, top, wd, D, k, col = ['#6A5A6E', '#3E3346', '#2A2232']) {
+  const g = D.lin(`tr${k}`, [[0, col[0]], [0.55, col[1]], [1, col[2]]], 1, 0);
+  const lean = (plRnd(k, 1) - 0.5) * wd * 1.2;
+  let s = `<path d="M${f1(x - wd * 1.6)} ${f1(y)}Q${f1(x - wd * 0.7)} ${f1(y - wd * 0.6)} ${f1(x - wd * 0.55)} ${f1(y - wd * 1.6)}C${f1(x - wd * 0.8)} ${f1(y - (y - top) * 0.5)} ${f1(x - wd * 0.2 + lean)} ${f1(top + (y - top) * 0.3)} ${f1(x - wd * 0.35 + lean)} ${f1(top)}`
+    + `L${f1(x + wd * 0.45 + lean)} ${f1(top)}C${f1(x + wd * 0.35 + lean)} ${f1(top + (y - top) * 0.3)} ${f1(x + wd * 0.85)} ${f1(y - (y - top) * 0.5)} ${f1(x + wd * 0.6)} ${f1(y - wd * 1.6)}Q${f1(x + wd * 0.8)} ${f1(y - wd * 0.6)} ${f1(x + wd * 1.8)} ${f1(y)}Z" fill="${g}"/>`;
+  for (let i = 0; i < 4; i++) { const bx = x - wd * 0.3 + i * wd * 0.22 + lean * 0.4; s += `<path d="M${f1(bx)} ${f1(y - wd)}Q${f1(bx + (plRnd(k, i + 3) - 0.5) * wd * 0.6)} ${f1((y + top) / 2)} ${f1(bx + lean * 0.5)} ${f1(top + 6)}" stroke="${col[2]}" stroke-width=".9" fill="none" opacity=".55"/>`; }
+  s += `<path d="M${f1(x - wd * 0.45)} ${f1(y - wd * 1.2)}C${f1(x - wd * 0.6)} ${f1((y + top) / 2)} ${f1(x - wd * 0.2 + lean)} ${f1(top + (y - top) * 0.3)} ${f1(x - wd * 0.28 + lean)} ${f1(top + 4)}" stroke="#A89AB0" stroke-width="1.6" fill="none" opacity=".45"/>`;
+  return s;
+}
+function moss(pts, k, sz = 3.2) {
+  return pts.map(([x, y], i) => `<ellipse cx="${f1(x)}" cy="${f1(y - 1)}" rx="${f1(sz * (1 + plRnd(k, i) * 0.8))}" ry="${f1(sz * 0.6)}" fill="#7E9A2E"/><ellipse cx="${f1(x - 0.6)}" cy="${f1(y - 2)}" rx="${f1(sz * (0.7 + plRnd(k, i + 30) * 0.6))}" ry="${f1(sz * 0.42)}" fill="#C6D84A"/>`
+    + (plRnd(k, i + 60) > 0.6 ? `<circle cx="${f1(x + 1)}" cy="${f1(y - 3)}" r="1" fill="#FF8A3C"/>` : '')).join('');
+}
+function vines(pts, k, len = 30) {
+  return pts.map(([x, y], i) => {
+    const l = len * (0.5 + plRnd(k, i) * 0.8);
+    return `<path class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${f1(plRnd(k, i + 9) * 4)}s;animation-duration:6s" d="M${f1(x)} ${f1(y)}q${f1((plRnd(k, i + 3) - 0.5) * 6)} ${f1(l / 2)} ${f1((plRnd(k, i + 5) - 0.5) * 4)} ${f1(l)}" stroke="#5E7A3A" stroke-width=".9" fill="none" opacity=".85"/>`;
+  }).join('');
+}
+function motes(w, h, n, k, col = '#FFF6C0') {
+  let s = '';
+  for (let i = 0; i < n; i++) s += `<circle class="pl-glow" cx="${f1(plRnd(i, k) * w)}" cy="${f1(h * 0.1 + plRnd(i, k + 1) * h * 0.75)}" r="${f1(0.6 + plRnd(i, k + 2) * 1.1)}" fill="${col}" style="animation-delay:-${f1(plRnd(i, k + 3) * 3)}s"/>`;
+  return s;
+}
+function lightRays(w, h, D, x0, n = 3) {
+  const g = D.lin('lr', [[0, '#FFF4C2', 0.55], [1, '#FFF4C2', 0]]);
+  return `<g filter="url(#${D.id('b3')})">` + Array.from({ length: n }, (_, i) => {
+    const x = w * (x0 + i * 0.13);
+    return `<path class="pl-ray" d="M${f1(x)} -4L${f1(x + w * 0.05)} -4L${f1(x - w * 0.12)} ${f1(h * 0.85)}L${f1(x - w * 0.2)} ${f1(h * 0.85)}Z" fill="${g}" style="animation-delay:-${i * 2}s"/>`;
+  }).join('') + '</g>';
+}
+function birdsWhite(w, n, k) {
+  return Array.from({ length: n }, (_, i) => bird(w * (0.12 + plRnd(i, k) * 0.35), 18 + plRnd(i, k + 1) * 30, 0.6 + plRnd(i, k + 2) * 0.4, i + k, '#FFFFFF')).join('');
+}
+function stone(x, y, r, k) {
+  return `<ellipse cx="${f1(x)}" cy="${f1(y + r * 0.15)}" rx="${f1(r * 1.25)}" ry="${f1(r * 0.55)}" fill="#6E6672"/><ellipse cx="${f1(x - r * 0.15)}" cy="${f1(y - r * 0.05)}" rx="${f1(r * 1.05)}" ry="${f1(r * 0.48)}" fill="#B9AEB4"/><ellipse cx="${f1(x - r * 0.4)}" cy="${f1(y - r * 0.2)}" rx="${f1(r * 0.45)}" ry="${f1(r * 0.2)}" fill="#E6DCDE" opacity=".8"/>`;
+}
+
+/** The painted picture of a place, without Lumi and the home. Returns {art, glow}. */
+function paintedPlace(place, o, D) {
+  const { w, h, tod } = o;
+  const gy = h * 0.8, dusk = tod === 'evening' || tod === 'night';
+  const n = (b) => Math.max(1, Math.round(b * w / 400));
+  D.blur('b1', 0.7); D.blur('b2', 1.6); D.blur('b3', 3);
+  let art = '', glow = '';
+  const B = (lvl, inner) => `<g filter="url(#${D.id(lvl)})">${inner}</g>`;
+
+  if (place === 'forest') {
+    art += `<rect width="${w}" height="${h}" fill="${D.lin('fsky', [[0, '#B8E2E4'], [0.5, '#DDF0DC'], [1, '#EEF5D2']])}"/>`;
+    // far: pale giant trunks and canopies in the mist
+    let far = '';
+    for (let i = 0; i < n(7); i++) {
+      const x = (i + 0.3 + plRnd(i, 1) * 0.5) * w / n(7), wd = 5 + plRnd(i, 2) * 4;
+      far += `<path d="M${f1(x - wd)} ${f1(gy)}C${f1(x - wd * 0.6)} ${f1(gy * 0.6)} ${f1(x - wd * 1.4)} ${f1(gy * 0.3)} ${f1(x - wd * 0.5)} -5H${f1(x + wd * 0.5)}C${f1(x + wd * 1.2)} ${f1(gy * 0.3)} ${f1(x + wd * 0.6)} ${f1(gy * 0.6)} ${f1(x + wd)} ${f1(gy)}Z" fill="#A4C8C2"/>`
+        + `<path d="M${f1(x)} ${f1(gy * 0.38)}Q${f1(x + 30)} ${f1(gy * 0.22)} ${f1(x + 56)} ${f1(gy * 0.34)}" stroke="#A4C8C2" stroke-width="5" fill="none"/>`;
+    }
+    for (let i = 0; i < n(9); i++) far += foliage(plRnd(i, 4) * w, 4 + plRnd(i, 5) * 24, 24, '#A6CDB2', '#BBDCBE', '#DDF0CC', i + 5, 7);
+    art += B('b3', far);
+    // middle: darker trunks and leafy masses, a little soft
+    let mid = '';
+    for (let i = 0; i < n(4); i++) {
+      const x = (i + 0.5) * w / n(4) + (plRnd(i, 7) - 0.5) * 30;
+      mid += oldTrunk(x, gy - 4, -5, 7, D, i + 10, ['#7E8E8C', '#5E6E70', '#48565A']);
+    }
+    for (let i = 0; i < n(8); i++) mid += foliage(plRnd(i, 14) * w, -2 + plRnd(i, 15) * 22, 26, '#5E8E52', '#78A85C', '#AFCF6E', i + 16, 8);
+    art += B('b1', mid);
+    art += lightRays(w, h, D, 0.5, 4);
+    // ground: mossy, with a stream and stones
+    art += `<path d="${hillPath(w, h, gy - 3, 6, 61, 4)}" fill="${D.lin('fgr', [[0, '#9CC05A'], [0.45, '#6A9640'], [1, '#2F4C26']])}"/>`;
+    art += `<path d="M${f1(w * 0.16)} ${f1(gy + 1)}Q${f1(w * 0.36)} ${f1(gy + 5)} ${f1(w * 0.31)} ${f1(gy + 14)}T${f1(w * 0.42)} ${f1(h)}H${f1(w * 0.74)}Q${f1(w * 0.5)} ${f1(gy + 18)} ${f1(w * 0.46)} ${f1(gy + 10)}T${f1(w * 0.3)} ${f1(gy + 1)}Z" fill="${D.lin('stream', [[0, '#C6EBE0'], [0.5, '#86C4BA'], [1, '#3E7A78']])}"/>`
+      + `<path class="pl-ray" d="M${f1(w * 0.33)} ${f1(gy + 9)}h16M${f1(w * 0.42)} ${f1(gy + 19)}h22M${f1(w * 0.5)} ${f1(gy + 27)}h18" stroke="#F4FFFA" stroke-width="1" opacity=".7"/>`;
+    art += stone(w * 0.35, gy + 12, 4, 1) + stone(w * 0.47, gy + 25, 5.5, 2) + stone(w * 0.84, gy + 7, 6.5, 3) + stone(w * 0.2, gy + 10, 4.5, 4);
+    for (let i = 0; i < n(18); i++) {
+      const x = plRnd(i, 45) * w, y = gy + 2 + plRnd(i, 46) * (h - gy - 2);
+      if (x > w * 0.3 && x < w * 0.52 && y > gy + 6) continue;
+      art += tuft(x, y, 5 + plRnd(i, 47) * 5, '#7FB24A', '#4E8034', i + 200);
+    }
+    // the big old tree in front: its branch arches over everything, heavy with moss, flowers and vines
+    art += oldTrunk(w * 0.07, gy + 6, -10, 14, D, 30);
+    const bx0 = w * 0.07, by0 = gy * 0.48, c1x = w * 0.3, c1y = gy * 0.05, c2x = w * 0.62, c2y = gy * 0.32, bx1 = w * 1.02, by1 = gy * 0.1;
+    const bez = (t) => { const u = 1 - t; return [u * u * u * bx0 + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * bx1, u * u * u * by0 + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * by1]; };
+    const along = (k) => Array.from({ length: k }, (_, i) => bez((i + 0.5) / k));
+    art += `<path d="M${f1(bx0)} ${f1(by0)}C${f1(c1x)} ${f1(c1y)} ${f1(c2x)} ${f1(c2y)} ${f1(bx1)} ${f1(by1)}" stroke="${D.lin('br', [[0, '#5C4E62'], [1, '#3A3042']])}" stroke-width="10" fill="none" stroke-linecap="round"/>`
+      + `<path d="M${f1(bx0)} ${f1(by0 - 3.5)}C${f1(c1x)} ${f1(c1y - 3.5)} ${f1(c2x)} ${f1(c2y - 3.5)} ${f1(bx1)} ${f1(by1 - 3.5)}" stroke="#8C7E92" stroke-width="1.6" fill="none" opacity=".55"/>`;
+    // moss mats: little leafy mounds sitting on the branch, with orange flowers
+    art += along(n(9)).map(([x, y], i) => foliage(x, y - 5, 7 + plRnd(i, 33) * 4, '#6E8E2A', '#A8C23A', '#E0EC7A', i + 300, 6)
+      + (i % 2 ? Array.from({ length: 4 }, (_, j) => `<circle cx="${f1(x + (plRnd(i, j + 34) - 0.5) * 12)}" cy="${f1(y - 8 - plRnd(i, j + 38) * 5)}" r="1.1" fill="#FF7A3C"/>`).join('') : '')).join('');
+    art += vines(along(n(14)).map(([x, y]) => [x, y + 3]), 32, 40);
+    art += oldTrunk(w * 0.97, gy + 6, -10, 12, D, 33) + foliage(w * 0.95, gy * 0.42, 9, '#6E8E2A', '#A8C23A', '#E0EC7A', 340, 6);
+    art += foliage(w * 0.07, gy * 0.62, 8, '#6E8E2A', '#A8C23A', '#E0EC7A', 341, 5);
+    // flower beds by the stream, ferns
+    const cols = [['#E84FB0', '#FFB0E0'], ['#FF8A3C', '#FFD0A0'], ['#E8434F', '#FFA0A6'], ['#FFC93C', '#FFF0A8'], ['#B064E8', '#E0B8FF']];
+    for (let i = 0; i < n(14); i++) {
+      const x = plRnd(i, 40) * w, y = gy + 3 + plRnd(i, 41) * (h - gy - 5);
+      if (x > w * 0.29 && x < w * 0.52 && y > gy + 5) continue;          // not in the stream
+      art += flowerBush(x, y, 2.8 + plRnd(i, 42) * 1.8, ...cols[i % cols.length], i + 50);
+    }
+    for (let i = 0; i < n(4); i++) {
+      const x = w * (0.12 + plRnd(i, 43) * 0.75), y = gy + 3 + plRnd(i, 44) * 6;
+      art += `<g class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${i}s"><path d="M${f1(x)} ${f1(y)}Q${f1(x + 2)} ${f1(y - 10)} ${f1(x - 1)} ${f1(y - 16)}a3 3 0 1 1 3 3" stroke="#C6D84A" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>`;
+    }
+    art += B('b1', `<path d="M-6 ${f1(h)}Q${f1(w * 0.06)} ${f1(h - 26)} ${f1(w * 0.16)} ${f1(h - 8)}Q${f1(w * 0.1)} ${f1(h - 4)} ${f1(w * 0.14)} ${f1(h + 4)}Z" fill="#1F2E22"/><path d="M${f1(w + 6)} ${f1(h)}Q${f1(w * 0.93)} ${f1(h - 30)} ${f1(w * 0.82)} ${f1(h - 6)}Q${f1(w * 0.9)} ${f1(h - 2)} ${f1(w * 0.86)} ${f1(h + 4)}Z" fill="#1F2E22"/>`);
+    art += birdsWhite(w, n(6), 70);
+    for (let i = 0; i < n(4); i++) art += butterfly(w * (0.2 + plRnd(i, 75) * 0.6), gy - 10 - plRnd(i, 76) * 40, 0.55, '#FFFFFF', '#E6F2FF', i + 77);
+    glow += motes(w, h, dusk ? n(30) : n(18), 80, dusk ? '#E8FF9A' : '#FFF6C0');
+  } else if (place === 'blossom') {
+    art += `<rect width="${w}" height="${h}" fill="${D.lin('gsky', [[0, '#A9D6F5'], [0.55, '#FBE3EC'], [1, '#FFF1E2']])}"/>`;
+    let far = '';
+    for (let i = 0; i < n(8); i++) { const x = plRnd(i, 1) * w; far += foliage(x, gy - 26 - plRnd(i, 2) * 6, 14 + plRnd(i, 3) * 6, '#F3B9CD', '#F9CFDD', '#FFE8F0', i + 3, 6); }
+    art += B('b3', `<path d="${hillPath(w, h, gy - 22, 8, 71, 4)}" fill="#B9DDB0"/>` + far);
+    art += B('b1', `<path d="${hillPath(w, h, gy - 8, 6, 73, 3)}" fill="#9CCB86"/>` + Array.from({ length: n(5) }, (_, i) => foliage(plRnd(i, 9) * w, gy - 12, 9, '#7FB868', '#94C878', '#C6E6A6', i + 10, 5)).join(''));
+    art += lightRays(w, h, D, 0.62, 2);
+    art += `<path d="${hillPath(w, h, gy + 1, 5, 75, 3)}" fill="${D.lin('ggr', [[0, '#8FCB72'], [1, '#4E8A3E']])}"/>`;
+    // a small pond with water lilies, a stone path
+    art += `<ellipse cx="${f1(w * 0.36)}" cy="${f1(gy + 14)}" rx="${f1(w * 0.12)}" ry="9" fill="${D.lin('pond', [[0, '#BFE6EF'], [1, '#6FB2C4']])}"/><path d="M${f1(w * 0.28)} ${f1(gy + 12)}h22" stroke="#FFFFFF" stroke-width="1" opacity=".6"/>`
+      + [[0.31, 12], [0.4, 16], [0.36, 10]].map(([fx, dy], i) => `<ellipse cx="${f1(w * fx)}" cy="${f1(gy + dy)}" rx="3.4" ry="1.6" fill="#5FA052"/>${i === 1 ? `<circle cx="${f1(w * fx)}" cy="${f1(gy + dy - 1)}" r="1.4" fill="#FFB7D0"/>` : ''}`).join('');
+    for (let i = 0; i < 5; i++) art += `<ellipse cx="${f1(w * (0.6 - i * 0.012))}" cy="${f1(gy + 6 + i * 6)}" rx="${f1(4 + i)}" ry="${f1(1.6 + i * 0.3)}" fill="#E3D6C6"/><ellipse cx="${f1(w * (0.6 - i * 0.012) - 1)}" cy="${f1(gy + 5.5 + i * 6)}" rx="${f1(2.4 + i * 0.6)}" ry="${f1(0.8 + i * 0.2)}" fill="#F4ECE2"/>`;
+    // two big cherry trees: dark branches and clouds of blossom (soft under-layer, crisp highlights)
+    const cherry = (x, sc, k) => {
+      let c = `<path d="M${f1(x - 4 * sc)} ${f1(gy + 4)}C${f1(x - 2 * sc)} ${f1(gy - 30 * sc)} ${f1(x + 6 * sc)} ${f1(gy - 40 * sc)} ${f1(x)} ${f1(gy - 62 * sc)}M${f1(x + 1 * sc)} ${f1(gy - 40 * sc)}Q${f1(x - 18 * sc)} ${f1(gy - 52 * sc)} ${f1(x - 30 * sc)} ${f1(gy - 58 * sc)}M${f1(x + 2 * sc)} ${f1(gy - 46 * sc)}Q${f1(x + 20 * sc)} ${f1(gy - 56 * sc)} ${f1(x + 32 * sc)} ${f1(gy - 66 * sc)}" stroke="${D.lin('cb', [[0, '#6A4A52'], [1, '#3E2A32']])}" stroke-width="${f1(4.6 * sc)}" stroke-linecap="round" fill="none"/>`;
+      c += B('b1', foliage(x - 20 * sc, gy - 66 * sc, 22 * sc, '#E48AAE', '#F4A9C6', '#FFD6E6', k, 9) + foliage(x + 18 * sc, gy - 72 * sc, 24 * sc, '#E48AAE', '#F4A9C6', '#FFD6E6', k + 1, 9));
+      c += foliage(x - 2 * sc, gy - 78 * sc, 20 * sc, '#EC98BA', '#FFB8D2', '#FFE6F0', k + 2, 8);
+      for (let i = 0; i < 18; i++) c += `<circle cx="${f1(x + (plRnd(k, i) - 0.5) * 80 * sc)}" cy="${f1(gy - 70 * sc + (plRnd(k, i + 30) - 0.5) * 34 * sc)}" r="${f1(1.1 * sc)}" fill="#FFFFFF" opacity=".9"/>`;
+      return c;
+    };
+    art += cherry(w * 0.1, 1.1, 81) + cherry(w * 0.9, 0.95, 85);
+    const cols = [['#FF5C8A', '#FFC0D2'], ['#FFC93C', '#FFF0A8'], ['#9B7BFF', '#D8C8FF'], ['#FF8A4C', '#FFD0B0'], ['#FFFFFF', '#FFFFFF']];
+    for (let i = 0; i < n(11); i++) {
+      const x = plRnd(i, 90) * w, y = gy + 6 + plRnd(i, 91) * (h - gy - 8);
+      if ((x > w * 0.24 && x < w * 0.48 && y < gy + 24) || Math.abs(x - w * 0.58) < w * 0.05) continue;
+      art += flowerBush(x, y, 2.8 + plRnd(i, 92) * 1.6, ...cols[i % cols.length], i + 95);
+    }
+    art += butterfly(w * 0.42, gy - 44, 0.8, '#FFB13C', '#FF7A3C', 1) + butterfly(w * 0.74, gy - 58, 0.7, '#FFFFFF', '#CFE8FF', 2);
+    for (let i = 0; i < n(12); i++) art += `<path class="pl-petal" d="M${f1(plRnd(i, 96) * w)} -6q2 -2.4 4 0q-2 2.4 -4 0z" fill="#FFC2D8" style="animation-delay:-${f1(plRnd(i, 97) * 10)}s;animation-duration:${f1(9 + plRnd(i, 98) * 6)}s"/>`;
+    glow += motes(w, h, dusk ? n(18) : n(8), 99, dusk ? '#FFE8A0' : '#FFFFFF');
+  } else if (place === 'clouds') {
+    art += `<rect width="${w}" height="${h}" fill="${D.lin('csky', [[0, '#6FB6F2'], [0.6, '#BFE0FA'], [1, '#FCE8D6']])}"/>`;
+    art += B('b3', cloud(w * 0.2, 40, 18, '#FFFFFF', '#D6E6F6', 0.8) + cloud(w * 0.75, 30, 22, '#FFFFFF', '#D6E6F6', 0.7) + cloud(w * 0.5, 70, 26, '#FFF6EE', '#E8D8E6', 0.6));
+    // far floating islands
+    const island = (x, y, wd, k, blur) => {
+      const top = `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(wd)}" ry="${f1(wd * 0.18)}" fill="#7FBF5E"/><ellipse cx="${f1(x - wd * 0.15)}" cy="${f1(y - wd * 0.05)}" rx="${f1(wd * 0.7)}" ry="${f1(wd * 0.1)}" fill="#A6D877"/>`;
+      const rock = `<path d="M${f1(x - wd)} ${f1(y)}Q${f1(x - wd * 0.6)} ${f1(y + wd * 0.5)} ${f1(x)} ${f1(y + wd * 0.9)}Q${f1(x + wd * 0.6)} ${f1(y + wd * 0.5)} ${f1(x + wd)} ${f1(y)}Z" fill="${D.lin(`rk${k}`, [[0, '#B58E6E'], [1, '#6E5466']])}"/>`;
+      const tree = foliage(x + wd * 0.3, y - wd * 0.25, wd * 0.28, '#5E9E4E', '#7FBF5E', '#B9E08A', k, 6);
+      const fall = `<path d="M${f1(x - wd * 0.5)} ${f1(y + 2)}V${f1(y + wd * 1.4)}" stroke="#E8F6FF" stroke-width="${f1(wd * 0.06)}" opacity=".7"/>`;
+      return blur ? B(blur, rock + top + tree + fall) : rock + top + tree + fall;
+    };
+    art += island(w * 0.16, 58, 22, 1, 'b2') + island(w * 0.86, 44, 18, 2, 'b2');
+    art += balloon(w * 0.3, 30, 1.1, '#E8505B', '#FFD166', 1) + balloon(w * 0.7, 24, 0.75, '#3A86FF', '#F1F5FF', 2);
+    art += birdsWhite(w, 4, 110);
+    // the island Lumi lives on, resting on a soft cloud sea
+    art += `<path d="M${f1(w * 0.22)} ${f1(gy + 2)}Q${f1(w * 0.3)} ${f1(h + 30)} ${f1(w * 0.55)} ${f1(h + 40)}Q${f1(w * 0.82)} ${f1(h + 30)} ${f1(w * 0.92)} ${f1(gy + 2)}Z" fill="${D.lin('mrk', [[0, '#C29A78'], [0.6, '#8A6A70'], [1, '#5A4660']])}"/>`
+      + `<path d="M${f1(w * 0.5)} ${f1(gy + 6)}V${f1(h)}" stroke="#E8F6FF" stroke-width="3" opacity=".75"/>`
+      + `<ellipse cx="${f1(w * 0.57)}" cy="${f1(gy + 2)}" rx="${f1(w * 0.36)}" ry="7" fill="#6FB050"/><ellipse cx="${f1(w * 0.55)}" cy="${f1(gy)}" rx="${f1(w * 0.32)}" ry="5" fill="#9AD06C"/>`;
+    for (let i = 0; i < n(6); i++) art += flowerBush(w * (0.28 + plRnd(i, 112) * 0.58), gy + 1, 2.2, ...[['#FF5C8A', '#FFC0D2'], ['#FFC93C', '#FFF0A8'], ['#FFFFFF', '#FFFFFF']][i % 3], i + 113);
+    const bot = `<g fill="#FFFFFF">${Array.from({ length: n(12) + 1 }, (_, i) => `<circle cx="${f1(i * w / n(12))}" cy="${f1(h + 4 - plRnd(i, 114) * 8)}" r="${f1(14 + plRnd(i, 115) * 10)}"/>`).join('')}</g>`;
+    art += `<g opacity=".95">${bot}</g>`;
+    glow += motes(w, h, dusk ? n(14) : n(6), 116, '#FFFFFF');
+  } else {                                                             // fireflies: a lake under the mountains
+    art += `<rect width="${w}" height="${h}" fill="${D.lin('lsky', [[0, '#6FB3EC'], [0.45, '#CFE8F6'], [0.6, '#FBE6D2']])}"/>`
+      + (tod === 'day' || tod === 'morning' ? `<circle cx="${f1(w * 0.78)}" cy="26" r="38" fill="${D.rad('lsun', [[0, '#FFF3B0', 0.75], [1, '#FFF3B0', 0]])}"/><circle cx="${f1(w * 0.78)}" cy="26" r="9" fill="#FFF0A0"/>` : '');
+    const lake = h * 0.58;
+    // mountains far away (and their reflection in the lake)
+    const mtn = (yb, hh, col, dark, snow, seed) => {
+      let d = `M0 ${f1(yb)}`, caps = '', shadow = ''; const k = 6;
+      for (let i = 0; i <= k; i++) {
+        const x = i * w / k, y = yb - hh * (0.35 + plRnd(seed, i) * 0.65), vx = x - w / k / 2, vy = yb - hh * 0.25 * plRnd(seed, i + 9);
+        d += `L${f1(vx)} ${f1(vy)}L${f1(x)} ${f1(y)}`;
+        shadow += `<path d="M${f1(x)} ${f1(y)}L${f1(x + w / k / 2)} ${f1(yb - hh * 0.25 * plRnd(seed, i + 10))}L${f1(x + w / k / 2)} ${f1(yb)}L${f1(x + 4)} ${f1(yb)}Z" fill="${dark}"/>`;
+        if (snow && yb - y > hh * 0.55) { const c = (yb - y) * 0.28; caps += `<path d="M${f1(x)} ${f1(y)}L${f1(x - c * 0.9)} ${f1(y + c)}L${f1(x - c * 0.3)} ${f1(y + c * 0.75)}L${f1(x + c * 0.1)} ${f1(y + c * 1.05)}L${f1(x + c * 0.5)} ${f1(y + c * 0.8)}L${f1(x + c * 0.9)} ${f1(y + c)}Z" fill="#F6FAFF"/>`; }
+      }
+      d += `L${w} ${f1(yb)}Z`;
+      return `<path d="${d}" fill="${col}"/>${shadow}${caps}`;
+    };
+    const far = mtn(lake, 52, '#A7B6E0', '#8E9CCB', true, 3) + mtn(lake, 32, '#7E9CC4', '#6A86B0', false, 5);
+    art += B('b2', far);
+    art += B('b1', Array.from({ length: n(14) }, (_, i) => fir(i * w / n(14) + plRnd(i, 6) * 12, lake + 1, 12 + plRnd(i, 7) * 8, '#5E8A72', '#4A7460', false)).join(''));
+    // the lake: sky colours, a blurred upside-down copy of the mountains, light streaks
+    art += `<rect y="${f1(lake)}" width="${w}" height="${f1(gy - lake + 4)}" fill="${D.lin('lake', [[0, '#BFDDEE'], [1, '#6FA6C4']])}"/>`;
+    art += `<g opacity=".45" filter="url(#${D.id('b2')})" transform="translate(0 ${f1(lake * 2)}) scale(1 -1)">${far}</g>`;
+    for (let i = 0; i < n(6); i++) art += `<path class="pl-ray" d="M${f1(plRnd(i, 8) * w)} ${f1(lake + 4 + plRnd(i, 9) * (gy - lake - 6))}h${f1(10 + plRnd(i, 10) * 20)}" stroke="#FFFFFF" stroke-width=".8" opacity=".6" style="animation-delay:-${i}s"/>`;
+    art += B('b3', `<rect y="${f1(lake - 4)}" width="${w}" height="8" fill="#FFFFFF" opacity=".35"/>`);
+    // the shore in front
+    art += `<path d="${hillPath(w, h, gy + 2, 6, 81, 3)}" fill="${D.lin('shore', [[0, '#8DBE62'], [1, '#3E6E32']])}"/>`;
+    art += stone(w * 0.2, gy + 4, 6, 1) + stone(w * 0.27, gy + 8, 4, 2) + stone(w * 0.88, gy + 6, 5, 3);
+    for (let i = 0; i < n(7); i++) {                                 // reeds with cattails
+      const x = w * (0.02 + plRnd(i, 82) * 0.3), y = gy + 4 + plRnd(i, 83) * 6, hh = 18 + plRnd(i, 84) * 10;
+      art += `<g class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${f1(plRnd(i, 85) * 4)}s"><path d="M${f1(x)} ${f1(y)}Q${f1(x + 2)} ${f1(y - hh / 2)} ${f1(x + 1)} ${f1(y - hh)}" stroke="#4E7A38" stroke-width="1.2" fill="none"/><rect x="${f1(x - 0.4)}" y="${f1(y - hh - 1)}" width="2.6" height="6" rx="1.3" fill="#7A5232"/><path d="M${f1(x)} ${f1(y)}q-5 -8 -7 -14" stroke="#5E8A42" stroke-width="1" fill="none"/></g>`;
+    }
+    const cols = [['#FFFFFF', '#FFFFFF'], ['#FFC93C', '#FFF0A8'], ['#B064E8', '#E0B8FF'], ['#FF8A9A', '#FFD0D8']];
+    for (let i = 0; i < n(8); i++) art += flowerBush(w * (0.35 + plRnd(i, 86) * 0.6), gy + 6 + plRnd(i, 87) * (h - gy - 8), 2.4 + plRnd(i, 88) * 1.2, ...cols[i % cols.length], i + 89);
+    art += birdsWhite(w, 3, 120);
+    glow += motes(w, h * 0.95, dusk ? n(36) : n(8), 121, dusk ? '#F4F07A' : '#FFFFFF');
+    if (dusk) glow += Array.from({ length: n(14) }, (_, i) => `<circle class="pl-glow" cx="${f1(plRnd(i, 125) * w)}" cy="${f1(lake + 6 + plRnd(i, 126) * (gy - lake))}" r="1.2" fill="#F4F07A" opacity=".5" style="animation-delay:-${f1(plRnd(i, 127) * 3)}s"/>`).join('');
+  }
+  const wash = WASH[tod];
+  if (wash) art += `<rect width="${w}" height="${h}" fill="${D.lin('wash', [[0, ...wash[0]], [0.55, ...wash[1]], [1, ...wash[2]]])}"/>`;
+  if (tod === 'night') {
+    art += Array.from({ length: Math.round(40 * w / 400) }, (_, i) => `<circle class="pl-twinkle" cx="${f1(plRnd(i, 140) * w)}" cy="${f1(plRnd(i, 141) * h * 0.45)}" r="${f1(0.35 + plRnd(i, 142) * 0.8)}" fill="#fff" style="animation-delay:-${f1(plRnd(i, 143) * 3)}s"/>`).join('')
+      + `<circle cx="${f1(w * 0.86)}" cy="22" r="20" fill="${D.rad('pmg', [[0, '#F6F1C7', 0.3], [1, '#F6F1C7', 0]])}"/><circle cx="${f1(w * 0.86)}" cy="22" r="8.5" fill="#F6F1C7"/><circle cx="${f1(w * 0.86 - 2)}" cy="20" r="2" fill="#E2DCB0"/>`;
+  }
+  return { art, glow };
+}
+
 // ---------------------------------------------------------------- weather
 function placeWeather(place, kind, o) {
   if (!kind || !OUTDOOR.includes(place)) return '';
@@ -381,18 +628,23 @@ const HOME_COL = {               // wall, wall shadow, roof, roof shadow
 };
 /** The home grows with Lumi: a jar (stages 1-2), a lantern (3-4), a little house (5-6). lit = a warm window. */
 function placeHome(place, stage, lit, x, y, D, tod) {
-  return `<g transform="translate(${f1(x)} ${f1(y)}) scale(1.25)">${homeShape(place, stage, lit, D, tod)}</g>`;
+  return `<g transform="translate(${f1(x)} ${f1(y)}) scale(${homeScale(stage)})">${homeShape(place, stage, lit, D, tod)}</g>`;
 }
 function homeShape(place, stage, lit, D, tod) {
   const [wall, wall2, roof, roof2] = (HOME_COL[place] || HOME_COL.fireflies).map((c) => shade(c, tod === 'night' ? 'evening' : tod));
   const glow = lit ? `<circle class="pl-glow" cx="0" cy="-18" r="26" fill="${D.rad('hg', [[0, '#FFD983', 0.55], [1, '#FFD983', 0]])}"/>` : '';
-  const shadow = `<ellipse cx="0" cy="1" rx="${stage <= 1 ? 14 : stage <= 3 ? 16 : 32}" ry="3" fill="#000" opacity=".18"/>`;
-  if (stage <= 1) {                                                   // a glass jar with a cork and a ribbon
-    return `${shadow}${glow}<path d="M-11 -26Q-13 -26 -13 -22V-6Q-13 0 -7 0H7Q13 0 13 -6V-22Q13 -26 11 -26Z" fill="${D.lin('jar', [[0, '#FFFFFF', 0.45], [0.5, '#D8EEFF', 0.18], [1, '#FFFFFF', 0.4]], 1, 0)}" stroke="rgba(255,255,255,.85)" stroke-width="1.2"/>`
-      + (lit ? `<circle cx="0" cy="-12" r="6" fill="${D.rad('jl', [[0, '#FFF6B0'], [1, '#FFD34D', 0]])}"/>` : '')
-      + `<rect x="-9" y="-33" width="18" height="8" rx="2" fill="${D.lin('cork', [[0, '#C99A62'], [1, '#8F6630']])}"/><rect x="-10.5" y="-27" width="21" height="3" rx="1.5" fill="${roof}"/>`
-      + `<path d="M8 -26q5 2 3 7" stroke="${roof}" stroke-width="1.4" fill="none"/>`
-      + `<path d="M-9 -22V-6" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".7"/><path d="M-5.5 -22V-17" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>`;
+  const shadow = `<ellipse cx="0" cy="1" rx="${stage <= 1 ? 11 : stage <= 3 ? 16 : 32}" ry="2.6" fill="#000" opacity=".18"/>`;
+  if (stage <= 1) {                                                   // a little glass jar: cork, twine bow, a leaf, a glow inside
+    return `${shadow}${glow}`
+      + `<path d="M-8 -22Q-11 -21 -11 -16V-5Q-11 0 -6 0H6Q11 0 11 -5V-16Q11 -21 8 -22Z" fill="${D.lin('jar', [[0, '#FFFFFF', 0.5], [0.35, '#DDF1FF', 0.16], [0.75, '#DDF1FF', 0.1], [1, '#FFFFFF', 0.42]], 1, 0)}" stroke="rgba(255,255,255,.9)" stroke-width=".9"/>`
+      + `<ellipse cx="0" cy="-1.8" rx="8.6" ry="1.6" fill="#FFFFFF" opacity=".35"/>`
+      + `<circle cx="0" cy="-10" r="${lit ? 7 : 4.5}" fill="${D.rad('jl', [[0, '#FFFBD0'], [0.4, '#F4E84E', 0.7], [1, '#F4E84E', 0]])}" class="pl-glow"/>`
+      + `<circle cx="-2.5" cy="-12" r=".8" fill="#FFF6B0"/><circle cx="2.8" cy="-7" r=".7" fill="#FFF6B0"/><circle cx="1" cy="-14.5" r=".6" fill="#FFF6B0"/>`
+      + `<path d="M-8.6 -22.4Q0 -24.4 8.6 -22.4V-20.6Q0 -22.6 -8.6 -20.6Z" fill="#FFFFFF" opacity=".75"/>`
+      + `<path d="M-6.2 -28.5Q-6.6 -23 -5.8 -22.6H5.8Q6.6 -23 6.2 -28.5Q0 -30 -6.2 -28.5Z" fill="${D.lin('cork', [[0, '#D9AE78'], [1, '#9C7038']])}"/><path d="M-4 -27.5v4M0 -28v4.4M4 -27.5v4" stroke="#8A6030" stroke-width=".5" opacity=".6"/>`
+      + `<path d="M-8.4 -21.2Q0 -19.4 8.4 -21.2" stroke="#C49A6C" stroke-width="1.4" fill="none"/><path d="M5 -20.4q4 -1.6 3.6 1.8q-2.4 .4 -3.6 -1.8zM5 -20.4q2.6 2.6 .6 4.4q-1.6 -1.6 -.6 -4.4z" fill="#C49A6C"/>`
+      + `<path d="M-5 -28.6q-3.6 -4.2 -.4 -6.4q2.4 2.6 .4 6.4z" fill="#6FB050"/><path d="M-5 -28.6q-1.2 -3 -.6 -5.4" stroke="#3E7A32" stroke-width=".5" fill="none"/>`
+      + `<path d="M-8 -17V-5.5" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" opacity=".8"/><path d="M-5.4 -17.5V-14" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" opacity=".6"/>`;
   }
   if (stage <= 3) {                                                   // a lantern: dark frame, warm glass
     const pane = D.lin('pane', [[0, lit ? '#FFF2B0' : '#FFF7DA'], [1, lit ? '#FFC24B' : '#F1DFA8']]);
@@ -420,7 +672,8 @@ function homeShape(place, stage, lit, D, tod) {
     + `<rect x="0" y="-6.5" width="18" height="4" rx="1" fill="${shade('#8A5A35', tod)}"/><circle cx="4" cy="-8" r="1.8" fill="#FF6B9A"/><circle cx="9" cy="-8.4" r="1.8" fill="#FFC93C"/><circle cx="14" cy="-8" r="1.8" fill="#FF6B9A"/>`;
 }
 const PLACE_LUMI = 54;
-const homeTop = (stage) => 1.25 * (stage <= 1 ? 33 : stage <= 3 ? 47 : 50);
+const homeScale = (stage) => (stage <= 1 ? 1 : stage <= 3 ? 1.1 : 1.25);
+const homeTop = (stage) => homeScale(stage) * (stage <= 1 ? 34 : stage <= 3 ? 47 : 50);
 
 // ---------------------------------------------------------------- animations (inside the SVG, so the widget gets them too)
 const PLACE_CSS = `<style>
@@ -468,7 +721,10 @@ function placeScene(o) {
   const P = `pl${o.id || 'a'}`;
   const D = defsMaker(P);
   const opt = { w, h, tod, season, gy };
-  const sky = placeSky(place, opt, D), land = placeLand(place, opt, D), weather = placeWeather(place, o.weather, opt);
+  let sky, land, glow = '';
+  if (PAINTED.includes(place)) { const p = paintedPlace(place, opt, D); sky = ''; land = p.art; glow = p.glow; }
+  else { sky = placeSky(place, opt, D); land = placeLand(place, opt, D); }
+  const weather = placeWeather(place, o.weather, opt);
   const home = placeHome(place, stage, lit, hx, gy + 2, D, tod);
   // where Lumi is: flying around in the day, at the door in the morning and evening, inside at night
   const L = PLACE_LUMI;
@@ -482,7 +738,7 @@ function placeScene(o) {
     } else lumi = `<g class="pl-hop"><g transform="translate(${f1(hx - 54 - L / 2)} ${f1(gy - L + 6)})">${o.lumi}</g></g>`;
   }
   return `<svg class="place-svg place-${place}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMax slice" role="img" aria-label="${o.label || 'Lumi\'s home'}">`
-    + PLACE_CSS + D.html() + sky + land + weather
+    + PLACE_CSS + D.html() + sky + land + weather + glow
     + (tod === 'night' && stage <= 3 ? lumi + home : home + lumi)
     + '</svg>';
 }
