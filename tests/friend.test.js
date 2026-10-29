@@ -1,19 +1,19 @@
-// Lumi and the achievements: pure rules over the saved lessons.
+// Lumi: light from focused minutes, stages, outfits by stage.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { metrics, evaluate, lightOf, stageOf, friendState, newsSince, outfitsFor } from '../src/core/friend.js';
+import { metrics, lightOf, stageOf, friendState, newsSince, outfitsFor } from '../src/core/friend.js';
 
 process.env.TZ = 'Asia/Yerevan';
 const at = (y, m, d, h = 15) => new Date(y, m - 1, d, h).getTime() / 1000;
 const lesson = (ts, o = {}) => ({ started_at: ts, duration_sec: 30 * 60, focused_min: 20, longest_focus: 8, eye_rests: 1,
   pickups: [], outcome: null, status: 'finished', ...o });
 
-test('no lessons: Spark with 0 light, nothing reached', () => {
+test('no lessons: Spark with 0 light', () => {
   const st = friendState([], []);
   assert.equal(st.light, 0);
   assert.equal(st.stage.name, 'Spark');
-  assert.ok(st.achievements.every((a) => a.tier === 0));
   assert.equal(st.outfit, 'none');
+  assert.equal(st.first_time, true);
 });
 
 test('metrics count habits, not just hours', () => {
@@ -40,52 +40,20 @@ test('better weeks: only a week right after a smaller week', () => {
   assert.equal(metrics(s).better_weeks, 1);   // week of Oct 12 beat Oct 5; Oct 26 has a gap week before it
 });
 
-test('tiers, light and stages', () => {
-  const m = { lessons: 10, focused_min: 100, longest_focus: 0, plans_done: 0, eye_rests: 0, reviews_got: 0,
-    best_streak: 0, phone_free: 0, early: 0, better_weeks: 0, comebacks: 0 };
-  const ev = evaluate(m);
-  const L = ev.find((e) => e.id === 'lessons');
-  assert.equal(L.tier, 2); assert.equal(L.next, 50); assert.equal(L.pct, 0);
-  const F = ev.find((e) => e.id === 'focus');
-  assert.equal(F.tier, 1); assert.equal(F.pct, Math.round(100 * 40 / 240));
-  // 100 focused + lessons bronze 10 + silver 25 + focus bronze 10
-  assert.equal(lightOf(m, ev), 145);
+test('light is the focused minutes; stages; outfits come with stages', () => {
+  assert.equal(lightOf({ focused_min: 145 }), 145);
   assert.equal(stageOf(145).name, 'Firefly');
   assert.equal(stageOf(1200).next, null);
   assert.equal(stageOf(29).pct, 97);
-});
-
-test('news: only tiers not yet celebrated; outfits unlock by stage and achievement', () => {
-  const ev = evaluate({ lessons: 10, focused_min: 0 });
-  assert.deepEqual(newsSince({ seen: { lessons: 1 }, stage: 0 }, ev, 1).tiers.map((t) => [t.id, t.tier]), [['lessons', 2]]);
-  assert.equal(newsSince({ seen: { lessons: 1 }, stage: 0 }, ev, 1).grew, 1);
-  const o = outfitsFor(1, ev);
-  assert.ok(o.find((x) => x.id === 'bow').unlocked);
-  assert.ok(o.find((x) => x.id === 'cap').unlocked);
+  const o = outfitsFor(2);
+  assert.ok(o.find((x) => x.id === 'bow').unlocked && o.find((x) => x.id === 'scarf').unlocked);
   assert.ok(!o.find((x) => x.id === 'crown').unlocked);
-});
-
-test('quest of the day: stable pick, checked against that day only, adds light', async () => {
-  const { questFor, questProgress, QUESTS, QUEST_REWARD } = await import('../src/core/friend.js');
-  assert.equal(questFor('2026-10-26').id, questFor('2026-10-26').id);
-  assert.ok(new Set(['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25', '2026-10-26'].map((k) => questFor(k).id)).size > 2);
-  // find a day whose quest is "focus20" and check it
-  let key = null;
-  for (let d = 1; d <= 28 && !key; d += 1) { const k = `2026-11-${String(d).padStart(2, '0')}`; if (questFor(k).id === 'focus20') key = k; }
-  const [y, m, d] = key.split('-').map(Number);
-  const s = [lesson(at(y, m, d), { focused_min: 12 }), lesson(at(y, m, d, 18), { focused_min: 9 }), lesson(at(y, m, d + 1), { focused_min: 50 })];
-  const q = questProgress(key, s);
-  assert.equal(q.done, true); assert.equal(q.value, 20);
-  assert.equal(questProgress(key, s.slice(0, 1)).done, false);
-  assert.ok(QUESTS.length >= 6 && QUEST_REWARD === 15);
-});
-
-test('sky: one star per lesson, paused parts joined', async () => {
-  const { skyOf } = await import('../src/core/friend.js');
-  const sky = skyOf([lesson(at(2026, 10, 5), { id: 'a', lesson_id: 'L1', avg_attention: 80 }),
-    lesson(at(2026, 10, 5, 17), { id: 'b', lesson_id: 'L1', avg_attention: 60 }), lesson(at(2026, 10, 6), { id: 'c', avg_attention: 90 })]);
-  assert.equal(sky.length, 2);
-  assert.equal(sky[0].focused_min, 40); assert.equal(sky[0].att, 70);
+  const n = newsSince({ stage: 1 }, 3);
+  assert.equal(n.grew, 3);
+  assert.deepEqual(n.outfits, ['Cosy scarf', 'Flower', 'Headphones', 'Smart glasses']);
+  assert.equal(newsSince({ stage: 3 }, 3).grew, null);
+  const st = friendState([lesson(at(2026, 10, 5), { focused_min: 40 })], [], { stage: 0, outfit: 'bow' });
+  assert.equal(st.light, 40); assert.equal(st.stage.index, 1); assert.equal(st.outfit, 'bow');
 });
 
 test('diary: a page per day, kind sentences from the lesson', async () => {

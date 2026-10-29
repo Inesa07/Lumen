@@ -316,7 +316,7 @@ export const render = ({ output, error }) => {
         </div>) : <div className="glass dream muted">{old ? L.update : L.no_dream}</div>}
         {SIZE === "large" && g && (<div className="chips">
           <span className="chip glass">🎯 {fmt(g.today)}</span><span className="chip glass">🔥 {g.streak}</span>
-          <span className="chip glass">🔆 {s.lumi.light}</span><span className="chip glass">🏅 {s.lumi.medals}</span>
+          <span className="chip glass">🔆 {s.lumi.light}</span><span className="chip glass">⭐ {(s.stars && s.stars.total) || 0}</span>
         </div>)}
       </div>
     </div>

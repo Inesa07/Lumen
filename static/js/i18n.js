@@ -378,6 +378,36 @@ function translateText(key) {
   ['Snow', 'Снег', 'Ձյուն'], ['Fog', 'Туман', 'Մառախուղ'], ['Storm', 'Гроза', 'Ամպրոպ'],
 ].forEach((x) => i18nAdd(...x));
 
+// simpler Lumi: light = focused minutes, stars = the dream
+[
+  ['New for Lumi:', 'Новое для Луми:', 'Նոր Լումիի համար՝'],
+  ["I'm a little firefly. Every minute you really focus gives me light, and with enough light I grow. Stars from your lessons take you to your dream!",
+    'Я маленький светлячок. Каждая минута, когда ты по-настоящему сосредоточен, даёт мне свет, и от света я расту. А звёзды за уроки ведут тебя к мечте!',
+    'Ես փոքրիկ լուսատտիկ եմ։ Ամեն րոպե, երբ իսկապես կենտրոնացած ես, ինձ լույս է տալիս, և լույսից ես մեծանում եմ։ Իսկ դասերի աստղերը քեզ տանում են դեպի երազանքդ։'],
+  ['Last lesson', 'Последний урок', 'Վերջին դասը'], ['{n} focused minutes', '{n} минут фокуса', '{n} կենտրոնացած րոպե'],
+  ['No phone', 'Без телефона', 'Առանց հեռախոսի'], ['New focus record!', 'Новый рекорд фокуса!', 'Կենտրոնացման նոր ռեկորդ։'],
+  ['This lesson gave you 1 star!', 'За этот урок ты получил 1 звезду!', 'Այս դասը քեզ տվեց 1 աստղ։'],
+  ['This lesson gave you {n} stars!', 'За этот урок ты получил звёзд: {n}!', 'Այս դասը քեզ տվեց {n} աստղ։'],
+  ['No stars this time', 'В этот раз без звёзд', 'Այս անգամ առանց աստղերի'],
+  ['Every 10 minutes of real focus give a star.', 'Каждые 10 минут настоящего фокуса дают звезду.', 'Իսկական կենտրոնացման ամեն 10 րոպեն մեկ աստղ է տալիս։'],
+  ["You reached today's 8 stars. Rest is important too! 🌙", 'Сегодня ты собрал все 8 звёзд. Отдыхать тоже важно! 🌙', 'Այսօր հավաքեցիր բոլոր 8 աստղերը։ Հանգիստն էլ է կարևոր 🌙'],
+  ['Your dream: {a} / {b} ⭐', 'Твоя мечта: {a} / {b} ⭐', 'Քո երազանքը՝ {a} / {b} ⭐'],
+  ['next ⭐ in 1 min', 'следующая ⭐ через 1 мин', 'հաջորդ ⭐-ը 1 րոպեից'], ['next ⭐ in {n} min', 'следующая ⭐ через {n} мин', 'հաջորդ ⭐-ը {n} րոպեից'],
+  ['A soft “ding” when Lumi grows or a dream gets closer.', 'Тихий «дзынь», когда Луми растёт или мечта становится ближе.', 'Մեղմ «զնգոց», երբ Լումին մեծանում է կամ երազանքը մոտենում է։'],
+  ['Every minute you are really focused gives Lumi 1 light. With more light Lumi grows, and every new stage brings Lumi new clothes. <br>Light is never taken away. <br><b>Stars ⭐ are different:</b> they come from a good lesson and take you to your dream.',
+    'Каждая минута настоящего фокуса даёт Луми 1 свет. От света Луми растёт, а на каждой новой стадии получает новую одежду. <br>Свет никогда не отнимается. <br><b>Звёзды ⭐ — это другое:</b> их дают за хороший урок, и они ведут к мечте.',
+    'Իսկական կենտրոնացման ամեն րոպեն Լումիին 1 լույս է տալիս։ Լույսից Լումին մեծանում է, և ամեն նոր փուլում նոր հագուստ է ստանում։ <br>Լույսը երբեք չի վերցվում։ <br><b>Աստղերը ⭐ ուրիշ են՝</b> դրանք տրվում են լավ դասի համար և տանում են դեպի երազանքդ։'],
+  ['Lumi is your study firefly. It grows from your light (1 light for every focused minute): Spark → Little light → Firefly → Bright → Glowing → Star firefly. <br><b>Why:</b> learning is easier with a friend who notices your effort.',
+    'Луми — твой светлячок для учёбы. Он растёт от света (1 свет за каждую минуту фокуса): Искорка → Огонёк → Светлячок → Яркий → Сияющий → Звёздный светлячок. <br><b>Зачем:</b> учиться легче с другом, который замечает твои старания.',
+    'Լումին քո ուսման լուսատտիկն է։ Նա մեծանում է լույսից (1 լույս ամեն կենտրոնացած րոպեի համար)՝ Կայծիկ → Լուսիկ → Լուսատտիկ → Պայծառ → Շողշողուն → Աստղային լուսատտիկ։ <br><b>Ինչու՝</b> սովորելն ավելի հեշտ է ընկերոջ հետ, ով նկատում է քո ջանքերը։'],
+  ['A short summary for you: time studied, focus, phone, the dream and a line about the last lesson. Without opening the app.',
+    'Короткая сводка для вас: время занятий, фокус, телефон, мечта и пара слов о последнем уроке. Без открытия приложения.',
+    'Կարճ ամփոփում ձեզ համար՝ պարապմունքի ժամանակը, կենտրոնացումը, հեռախոսը, երազանքը և մի քանի բառ վերջին դասի մասին։ Առանց հավելվածը բացելու։'],
+  ["Lumi, its little world, your dream and today's goal on your Mac desktop. Needs a free Lumen account and the free Übersicht app.",
+    'Луми, его маленький мир, твоя мечта и цель на сегодня на рабочем столе Mac. Нужны бесплатный аккаунт Lumen и бесплатное приложение Übersicht.',
+    'Լումին, նրա փոքրիկ աշխարհը, քո երազանքը և այսօրվա նպատակը Mac-ի աշխատասեղանին։ Պետք են անվճար Lumen հաշիվ և անվճար Übersicht հավելված։'],
+].forEach((x) => i18nAdd(...x));
+
 // units: [one, few, many] for Russian (Armenian nouns stay singular after numbers)
 const UNITS = {
   lesson: [['урок', 'урока', 'уроков'], 'դաս'], 'focused minute': [['минута фокуса', 'минуты фокуса', 'минут фокуса'], 'կենտրոնացած րոպե'],

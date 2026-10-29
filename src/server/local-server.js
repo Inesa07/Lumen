@@ -11,7 +11,7 @@ import { SessionTracker, PROFILE_VERSION } from '../core/tracker.js';
 import { mmss } from '../core/util.js';
 import * as stats from '../core/stats.js';
 import { friendState } from '../core/friend.js';
-import { dreamState, guessSize, guessEmoji, priceOf, sizePrompt, readSize, readEmoji, SIZE_DAYS, MAX_TEXT } from '../core/dream.js';
+import { dreamState, lessonStars, guessSize, guessEmoji, priceOf, sizePrompt, readSize, readEmoji, SIZE_DAYS, MAX_TEXT } from '../core/dream.js';
 import { ValidationRun, FakeFollower, CSV_HEADER } from '../core/validate.js';
 import { Tutor, AIError, lessonContext } from '../core/ai.js';
 import { TodoStore, NoteStore, ChatStore, ReviewStore } from '../data/stores.js';
@@ -486,6 +486,10 @@ export class LocalServer {
     if (p === '/api/friend') return this.friend();
     if (p === '/api/parent') return this.parentInfo();
     if (p === '/api/dream') return this.dream();
+    if (p === '/api/stars') {                       // the stars of one lesson (for its report)
+      const one = lessonStars(this.reports()).find((x) => x.lesson_id === q.lesson);
+      return one || { stars: 0, focus: 0, nophone: 0, record: 0 };
+    }
     if (p === '/api/mini') return this.mini();
     if (p === '/api/export') return { app: 'lumen', version: 1, exported_at: Date.now() / 1000, data: this.exportData() };
     return [{ error: 'not found' }, 404];
@@ -506,8 +510,8 @@ export class LocalServer {
       mood_today: stats.moodMix(todaySums), mood_week: stats.moodMix(sums.filter((s) => s.started_at >= today0 - 6 * 86400)),
       dream: this.dream().current,
       last_lesson_at: reps.reduce((a, r) => Math.max(a, (r.started_at || 0) + (r.duration_sec || 0)), 0) || null,
-      lumi: { stage: f.stage, light: f.light, outfit: f.outfit, quest: f.quest, birthday: f.birthday,
-        medals: f.achievements.reduce((a, x) => a + x.tier, 0) },
+      lumi: { stage: f.stage, light: f.light, outfit: f.outfit, birthday: f.birthday },
+      stars: (() => { const d = this.dream(); return { total: d.stars_total, today: d.stars_today }; })(),
       active: snap && snap.mode === 'session' ? { title: snap.title, class: snap.class, attention: snap.attention, state: snap.state, reason: snap.reason, elapsed: snap.elapsed } : null,
     };
   }
@@ -577,9 +581,7 @@ export class LocalServer {
     const saved = { ...(this.db.getValue('friend') || {}) };
     const st = this.friend();
     if (body.seen) {
-      saved.seen = Object.fromEntries(st.achievements.map((a) => [a.id, a.tier]));
       saved.stage = st.stage.index;
-      if (st.quest.done) saved.quest_day = st.quest.day;
     }
     if (typeof body.sound === 'boolean') saved.sound = body.sound;
     // birthday: only month and day ("MM-DD"), never the year, so no age is stored

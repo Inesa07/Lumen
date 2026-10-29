@@ -1,5 +1,5 @@
 // mini.js: "Lumen mini", a small always-at-hand window (Safari → File → Add to Dock).
-// Lumi, today's focus against the goal, the streak, today's mood, the quest of the day and,
+// Lumi, today's focus against the goal, the streak, today's mood, the dream and,
 // while a lesson runs, live attention. It refreshes itself, and pulls new lessons from the
 // account every few minutes, because this window can stay open all day.
 'use strict';
@@ -35,11 +35,11 @@ async function viewMini() {
       ${m.active ? `<a class="mini-live" href="#/session"><span class="dot-live"></span>
         <span><b>${t('Studying now')}</b> · ${esc(m.active.class || '')}<br><small>${t('attention')} ${m.active.attention}% · ${t(m.active.state)}</small></span></a>` : ''}
       <section class="mini-lumi">
-        ${lumiSVG({ mood: m.active ? (m.active.state === 'Focused' ? 'happy' : 'wait') : restingMood(), stage: L.stage.index, outfit: L.outfit, extra: hol && hol.extra, size: 96 })}
+        ${lumiSVG({ mood: m.active ? (m.active.state === 'Focused' ? 'happy' : 'wait') : restingMood(), stage: L.stage.index, outfit: L.outfit, extra: hol && hol.extra, size: 96, dream: m.dream })}
         <div><div class="eyebrow">${t('Lumi · {name}', { name: esc(t(L.stage.name)) })}</div>
           <div class="mini-say">${esc(hol ? hol.line : greetLine({ birthday: L.birthday }))}</div>
           <div class="lightbar"><i style="width:${L.stage.pct}%"></i></div>
-          <div class="muted small">🔆 ${t('{n} light', { n: L.light })} · 🏅 ${t('{n} medals', { n: L.medals })}</div></div>
+          <div class="muted small">🔆 ${t('{n} light', { n: L.light })}</div></div>
       </section>
       <section class="mini-today">
         <div class="mini-ring" style="--p:${ring}"><b>${ring}%</b></div>
@@ -49,9 +49,7 @@ async function viewMini() {
         <div class="mini-streak" title="${t('Day streak 🔥')}">🔥<b>${g.streak}</b></div>
       </section>
       <section class="mini-card"><div class="eyebrow">${moodLabel}</div>${moodRow(mood)}</section>
-      <section class="mini-card mini-quest${L.quest.done ? ' done' : ''}"><span>${L.quest.icon}</span>
-        <div><div class="eyebrow">${t('Quest of the day')}</div><b>${esc(t(L.quest.text))}</b></div>
-        <span class="qv">${L.quest.done ? '✓' : `${L.quest.value}/${L.quest.need}`}</span></section>
+      ${m.dream ? `<section class="mini-card">${dreamLine(m.dream)}</section>` : ''}
       <a class="btn primary mini-start" href="${m.active ? '#/session' : '#/'}">▶ ${t(m.active ? 'Back to the lesson' : 'Start a lesson')}</a>
     </main>`;
   };

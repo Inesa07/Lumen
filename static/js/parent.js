@@ -68,7 +68,7 @@ function parentSetup() {
       <div class="card pfeat"><span class="pfeat-ic">🤖</span><b>AI tutor: your decision</b>
         <span class="muted small">The AI tutor is off until you allow it. Only you can switch it on or off.</span></div>
       <div class="card pfeat"><span class="pfeat-ic">📧</span><b>Weekly report by email</b>
-        <span class="muted small">A short summary for you: time studied, focus, phone, Lumi's diary. Without opening the app.</span></div>
+        <span class="muted small">A short summary for you: time studied, focus, phone, the dream and a line about the last lesson. Without opening the app.</span></div>
       <div class="card pfeat"><span class="pfeat-ic">🔒</span><b>Protected by a PIN</b>
         <span class="muted small">Your child can't change these settings or read your page by accident.</span></div>
     </div>
@@ -130,18 +130,13 @@ function weeklyReportText(w, f, d) {
   L.push(`🎯 ${t('Really focused')}: ${hm(tw.focused_min)}${w.change_pct == null ? '' : ` (${w.change_pct >= 0 ? '+' : ''}${w.change_pct}% ${t('vs last week')})`}`);
   L.push(`👀 ${t('Average attention')}: ${tw.avg == null ? '–' : `${tw.avg}%`}`);
   L.push(`📱 ${t('Phone came out')}: ${tw.pickups ?? 0} ${tUnit('time', tw.pickups ?? 0)}`);
-  L.push(`🔥 ${t('Best streak')}: ${f.metrics.best_streak} · 🏅 ${f.achievements.reduce((a, x) => a + x.tier, 0)} ${t('medals')} · Lumi: ${t(f.stage.name)}`);
+  L.push(`🔥 ${t('Best streak')}: ${f.metrics.best_streak} · Lumi: ${t(f.stage.name)} (🔆 ${f.light})`);
   if (f.dream) L.push(`🎁 ${t('Dream')}: ${f.dream.emoji} ${f.dream.text} · ⭐ ${f.dream.earned}/${f.dream.need}`);
   if (w.best_day) L.push(`⭐ ${t('Best day')}: ${w.best_day.label} ${w.best_day.date}, ${hm(w.best_day.focused_min)}`);
   if (w.classes.length) { L.push('', `${t('By class')}:`); w.classes.slice(0, 6).forEach((c) => L.push(`  • ${c.name}: ${hm(c.study_min)}, ${hm(c.focused_min)} ${t('focused')}`)); }
-  const recent = f.diary.slice(0, 3);
-  if (recent.length) {
-    L.push('', `📔 ${t("Lumi's diary")}:`);
-    recent.forEach((day) => {
-      const date = new Date(day.ts * 1000).toLocaleDateString(LOCALE(), { weekday: 'long', day: 'numeric', month: 'long' });
-      day.lessons.forEach((l) => L.push(`  ${date}: ${l.lines.map((x) => diarySentence(x, false)).filter(Boolean).join(' ')}`));
-    });
-  }
+  // one or two simple sentences about the last lesson
+  const last = f.diary[0] && f.diary[0].lessons.at(-1);
+  if (last) L.push('', `📔 ${t('Last lesson')}: ${last.lines.slice(0, 2).map((x) => diarySentence(x, false)).filter(Boolean).join(' ')}`);
   L.push('', t('Sent from Lumen, a study coach. The camera is analysed on the device; no video leaves it.'));
   return L.join('\n');
 }
@@ -151,7 +146,6 @@ async function parentDashboard(p) {
   const [d, w, f, priv] = await Promise.all([loadOverview(), api('/api/week'), api('/api/friend'),
     api('/api/parent', { verify: true, pin: parentPin }).catch(() => ({}))]);
   const tw = w.this;
-  const medals = f.achievements.reduce((a, x) => a + x.tier, 0);
   const recent = d.lessons.slice(0, 6);
   const when = (ts) => new Date(ts * 1000).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   app.innerHTML = shell('parent', `
@@ -188,7 +182,7 @@ async function parentDashboard(p) {
       <section class="card side parent-lumi">
         ${lumiSVG({ mood: 'happy', stage: f.stage.index, outfit: f.outfit, size: 110, dream: f.dream })}
         <b>${t('Lumi · {name}', { name: esc(t(f.stage.name)) })}</b>
-        <span class="muted small">🔆 ${f.light} ${t('light')} · 🏅 ${medals} ${t('medals')} · 🗺️ ${f.metrics.quests_done} ${t('quests')}</span>
+        <span class="muted small">🔆 ${f.light} ${t('light')}${f.dream ? ` · ⭐ ${f.dream.earned}/${f.dream.need}` : ''}</span>
         <span class="small">${t('Best streak')}: ${f.metrics.best_streak} · ${t('Lessons')}: ${f.metrics.lessons}</span>
       </section>
     </div>
@@ -199,10 +193,6 @@ async function parentDashboard(p) {
           <form class="mailrow" id="needForm"><input class="field" id="needIn" type="number" min="1" max="999" value="${f.dream.need}" aria-label="${t('Stars needed')}" style="width:90px">
           <button class="btn ghost" type="submit">${t('Save')}</button></form></div>`
         : `<p class="muted small" style="margin:0">${t('No dream yet. Your child can write one on the Lumi page after talking with you.')}</p>`}
-    </section>
-    <section class="card">
-      <h2 class="display" style="font-size:18px;margin:0 0 12px">Lumi's diary</h2>
-      ${f.diary.length ? f.diary.slice(0, 3).map(diaryDayHTML).join('') : `<p class="empty">${t('The diary starts after the first lesson.')}</p>`}
     </section>
     <section class="card parent-controls">
       <h2 class="display" style="font-size:18px;margin:0">PIN</h2>

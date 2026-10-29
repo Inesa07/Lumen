@@ -1635,3 +1635,15 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 
 .emoji-pick .ep.auto { grid-column: span 2; font-size: 14px; font-weight: 600; color: var(--text); }
 .dp-pic { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
+
+/* lesson: Lumi shines brighter with focus; when the next star comes */
+.lumi-btn { --shine: 3px; filter: drop-shadow(0 0 var(--shine) rgba(255,233,122,.85)); transition: filter 1.5s ease; }
+.lumi-star { display: block; margin-top: 4px; font-size: 12px; font-weight: 600; text-align: center; padding: 3px 8px; border-radius: 99px;
+  background: color-mix(in srgb, var(--c-yellow) 18%, var(--surface)); white-space: nowrap; }
+.lumi-star:empty { display: none; }
+/* report: this lesson's stars */
+.starscard { display: flex; gap: 18px; align-items: center;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c-yellow) 16%, var(--surface)), var(--surface)); }
+.stars-big { font-size: 34px; font-weight: 800; white-space: nowrap; }
+.stars-why { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; }
+.stars-why span { padding: 5px 10px; border-radius: 99px; background: var(--surface-2); }

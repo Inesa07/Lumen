@@ -294,6 +294,7 @@ async function viewReport(id) {
     r.class ? `#/class/${encodeURIComponent(r.class)}` : '#/history')}
   <main class="wrap" style="display:flex;flex-direction:column;gap:24px">
     ${parts}
+    <section class="card starscard" id="repStars" hidden></section>
     ${(r.tasks || []).length ? `<section class="card plancard">
       <div class="block-head" style="margin-bottom:10px"><h2 class="display" style="font-size:18px;margin:0">🎯 Session plan</h2>
         <span class="chip ${r.outcome === 'yes' ? 'Focused' : r.outcome === 'partly' ? 'break' : r.outcome === 'no' ? 'Lost' : 'break'}">${r.tasks.filter((t) => t.done).length} of ${r.tasks.length} done</span></div>
@@ -338,8 +339,28 @@ async function viewReport(id) {
     $('#repNotes').hidden = false;
     notesWidget($('#repNoteGrid'), notes, {});
   }).catch(() => {});
-  lumiNews();                           // new medals or a new stage after this lesson
+  repStars(r);
+  lumiNews();                           // a new stage of Lumi after this lesson
   pushWidget(true);                     // the Mac widget shows the new numbers
+}
+
+/** "This lesson gave you 3 ⭐": where the stars came from, so a child learns how to get them. */
+async function repStars(r) {
+  const [x, dr] = await Promise.all([api(`/api/stars?lesson=${encodeURIComponent(r.lesson_id || r.id)}`), api('/api/dream')]).catch(() => [null, null]);
+  const box = $('#repStars');
+  if (!x || !box) return;
+  const parts = [];
+  if (x.focus) parts.push(`⏱️ ${t('{n} focused minutes', { n: x.focus * 10 })} → <b>${x.focus} ⭐</b>`);
+  if (x.nophone) parts.push(`📵 ${t('No phone')} → <b>1 ⭐</b>`);
+  if (x.record) parts.push(`🏆 ${t('New focus record!')} → <b>3 ⭐</b>`);
+  const capped = x.focus + x.nophone + x.record > x.stars;
+  const d = dr && dr.current;
+  box.hidden = false;
+  box.innerHTML = `<div class="stars-big">⭐ ${x.stars}</div>
+    <div class="stars-txt"><h2 class="display" style="font-size:20px;margin:0">${x.stars ? (x.stars === 1 ? t('This lesson gave you 1 star!') : t('This lesson gave you {n} stars!', { n: x.stars })) : t('No stars this time')}</h2>
+      ${parts.length ? `<div class="stars-why">${parts.map((p) => `<span>${p}</span>`).join('')}</div>` : `<p class="muted small" style="margin:4px 0 0">${t('Every 10 minutes of real focus give a star.')}</p>`}
+      ${capped ? `<p class="muted small" style="margin:6px 0 0">${t('You reached today\'s 8 stars. Rest is important too! 🌙')}</p>` : ''}
+      ${d ? `<p class="small" style="margin:6px 0 0">${esc(d.emoji)} ${t('Your dream: {a} / {b} ⭐', { a: d.earned, b: d.need })}</p>` : ''}</div>`;
 }
 
 function goalRing(g) {

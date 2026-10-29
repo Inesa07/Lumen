@@ -34,11 +34,11 @@ async function widgetSummary() {
     study_min: m.today.study_min, lessons: m.today.lessons,
     mood: Object.entries(mood).filter(([k, v]) => MOOD[k] && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 3)
       .map(([k, v]) => ({ emoji: MOOD[k][0], label: t(MOOD[k][1]), pct: Math.round(v), color: MOOD_HEX[k] })),
-    lumi: { stage: t(m.lumi.stage.name), light: m.lumi.light, medals: m.lumi.medals, pct: m.lumi.stage.pct,
+    stars: m.stars,
+    lumi: { stage: t(m.lumi.stage.name), light: m.lumi.light, pct: m.lumi.stage.pct,
       next: m.lumi.stage.next ? m.lumi.stage.next.need : null },
-    quest: { icon: m.lumi.quest.icon, text: t(m.lumi.quest.text), value: m.lumi.quest.value, need: m.lumi.quest.need, done: m.lumi.quest.done },
     active: m.active ? { cls: m.active.class || '', attention: m.active.attention } : null,
-    labels: { goal: t("Today's goal"), streak: t('Day streak 🔥'), quest: t('Quest of the day'), focused: t('focused'), mood: t('Mood today'),
+    labels: { goal: t("Today's goal"), streak: t('Day streak 🔥'), focused: t('focused'), mood: t('Mood today'),
       none: t("Let's start today's first lesson!"), studying: t('Studying now'),
       morning: t('Lumi is waking up'), day: t('Lumi is flying around'), evening: t('Lumi is getting cosy'), night: t('Lumi is sleeping'),
       happy: t('Happy: you studied today! ✨'), missing: t('Lumi misses you. A short lesson? 🌙'), waiting: t("Waiting for today's lesson"),
@@ -108,7 +108,7 @@ function widgetCard() {
   return `<section class="card widgetcard" id="widgetCard">
     <div class="setrow" style="padding:0;border:0;background:none">
       <div><h2 style="margin:0 0 4px;font-size:17px">🖥️ ${t('Mac widget')}</h2>
-        <p class="muted small" style="margin:0">${t('Lumi, today\'s goal, streak, mood and quest on your Mac desktop. Needs a free Lumen account and the free Übersicht app (or the Xcode widget).')}</p></div>
+        <p class="muted small" style="margin:0">${t('Lumi, its little world, your dream and today\'s goal on your Mac desktop. Needs a free Lumen account and the free Übersicht app.')}</p></div>
       ${!Lumen.user || Lumen.fake && !Lumen.client ? `<a class="btn ghost" href="#/account">${t('Sign in')}</a>`
         : `<div class="btnrow">${on ? `<button class="btn ghost" id="wDisc">${t('Disconnect')}</button>` : ''}<button class="btn primary" id="wConn">${t(on ? 'New key' : 'Connect widget')}</button></div>`}
     </div>

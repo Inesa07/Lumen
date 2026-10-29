@@ -1,6 +1,6 @@
 // friend.js: Lumi the firefly. Draws Lumi (SVG), picks its mood from what the camera sees,
-// shows it in lessons and on Home, and runs the Lumi page with its wardrobe and achievements.
-// The rules (light, stages, achievements) live in src/core/friend.js.
+// shows it in lessons and on Home, and runs the Lumi page with its wardrobe.
+// The rules (light = focused minutes, stages, outfits) live in src/core/friend.js.
 'use strict';
 
 // ---------------------------------------------------------------- drawing
@@ -200,7 +200,8 @@ async function lumiLesson(d) {
     dock.className = 'lumi-dock';
     dock.innerHTML = `<div class="lumi-bubble" id="lumiBubble" role="status" aria-live="polite"></div>
       <div class="lumi-me"><button class="lumi-btn" id="lumiBtn" type="button" aria-label="Lumi: say it again"></button>
-      <span class="lumi-gain" id="lumiGain" title="Light Lumi got in this lesson" hidden></span></div>`;
+      <span class="lumi-gain" id="lumiGain" title="Light Lumi got in this lesson" hidden></span>
+      <span class="lumi-star" id="lumiStar" title="Stars for your dream"></span></div>`;
     appEl.appendChild(dock);
     // tap Lumi: hear the last line again; long words can be switched off on the Lumi page
     $('#lumiBtn').onclick = () => { lumiSay(); };
@@ -224,6 +225,11 @@ async function lumiLesson(d) {
     const g = $('#lumiGain');
     g.hidden = !lumiLive.gained;
     g.textContent = `🔆 +${lumiLive.gained}`;
+    // Lumi shines brighter the longer you focus in this lesson
+    $('#lumiBtn').style.setProperty('--shine', `${Math.min(26, 3 + lumiLive.gained * 0.7)}px`);
+    // stars: every 10 focused minutes of this lesson give one, so show when the next one comes
+    const fm = d.focused_live, got = Math.floor(fm / 10), left = 10 - (fm % 10);
+    $('#lumiStar').innerHTML = `${got ? `⭐ ${got} · ` : ''}${left === 1 ? t('next ⭐ in 1 min') : t('next ⭐ in {n} min', { n: left })}`;
   }
   if (d.eye_rest_result === 'done') { lumiLive.partyUntil = now + 5000; }
   let key = now < lumiLive.partyUntil ? 'party' : lumiMoodOf(d);
@@ -289,10 +295,6 @@ function lumiJourney(d) {
 window.addEventListener('hashchange', () => { lumiLive.info = null; });
 
 // ---------------------------------------------------------------- Lumi on Home
-function questLine(q) {
-  return `<div class="questline${q.done ? ' done' : ''}"><span>${q.icon}</span><span><b>${t('Quest:')}</b> ${esc(t(q.text))}</span>
-    <span class="qv">${q.done ? '✓' : `${q.value}/${q.need}`}</span></div>`;
-}
 function lumiHomeCard(f, g = null) {
   const hol = lumiHoliday(f);
   const line = f.first_time ? t("Hi! I'm Lumi, your study firefly. Focus to give me light and I will grow!")
@@ -304,112 +306,28 @@ function lumiHomeCard(f, g = null) {
     <div class="lumicard-txt"><div class="eyebrow">${t('Lumi · {name}', { name: esc(t(f.stage.name)) })}</div>
       <div class="lumicard-line">${line}</div>
       <div class="lightbar" aria-label="Light ${f.light}"><i style="width:${f.stage.pct}%"></i></div>
-      <div class="muted small">🔆 ${t('{n} light', { n: f.light })}${f.achievements.some((a) => a.tier) ? ` · 🏅 ${t('{n} medals', { n: f.achievements.reduce((a, x) => a + x.tier, 0) })}` : ''}</div>
+      <div class="muted small">🔆 ${t('{n} light', { n: f.light })}</div>
       ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${g.streak === 1 ? t('1 day in a row') : t('{n} days in a row', { n: g.streak })}</span></div>
         <div class="lightbar goalbar"><i style="width:${g.pct}%"></i></div>` : ''}
-      ${questLine(f.quest)}${f.dream ? dreamLine(f.dream) : ''}</div>
+      ${f.dream ? dreamLine(f.dream) : ''}</div>
     <span class="chev">›</span></a>`;
 }
 
-// ---------------------------------------------------------------- the star sky
-// FNV-1a + a final "avalanche" mix, so similar ids (L1, L2…) land far apart on the sky
-const hash = (str) => {
-  let h = 2166136261;
-  for (const ch of String(str)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
-  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
-  return h >>> 0;
-};
-function skySVG(stars) {
-  const W = 1000, H = 300;
-  // weeks go left to right like a timeline across the sky; inside its column a week's lessons
-  // are scattered and joined into a small constellation
-  const wk = (ts) => { const d = new Date(ts * 1000); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
-  const weeks = [...new Set(stars.map((s) => wk(s.started_at)))].sort((a, b) => a - b);
-  const col = (W - 170) / Math.max(weeks.length, 6);
-  const pts = stars.map((s) => {
-    const wi = weeks.indexOf(wk(s.started_at));
-    return { ...s, x: 40 + wi * col + (hash(`${s.lesson_id}x`) % Math.max(1, Math.round(col * 0.85))),
-      y: 26 + (hash(`${s.lesson_id}y`) % (H - 52)), r: 1.6 + Math.min(4.4, s.focused_min / 12) };
-  });
-  const lines = [];
-  for (let i = 1; i < pts.length; i += 1) if (wk(pts[i].started_at) === wk(pts[i - 1].started_at)) lines.push(`M${pts[i - 1].x} ${pts[i - 1].y}L${pts[i].x} ${pts[i].y}`);
-  const date = (ts) => new Date(ts * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  return `<svg class="sky" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${stars.length} stars, one for every lesson">
-    ${Array.from({ length: 70 }, (_, i) => { const h = hash(`bg${i}`); return `<circle cx="${h % W}" cy="${(h >>> 10) % H}" r="${0.4 + (h % 7) / 10}" fill="#fff" opacity="${0.15 + (h % 30) / 100}"/>`; }).join('')}
-    <circle cx="${W - 70}" cy="54" r="26" fill="#FFF6C8" opacity=".9"/><circle cx="${W - 58}" cy="46" r="24" fill="#1A1440" opacity=".92"/>
-    <path d="${lines.join('')}" stroke="rgba(255,240,180,.25)" stroke-width="1" fill="none"/>
-    ${pts.map((p, i) => `<a href="#/report/${encodeURIComponent(p.id)}"><g class="star" style="animation-delay:${(i % 9) * 0.35}s">
-      <circle cx="${p.x}" cy="${p.y}" r="${p.r * 3}" fill="${p.att >= 80 ? '#FFE27A' : '#CFE3FF'}" opacity=".15"/>
-      <circle cx="${p.x}" cy="${p.y}" r="${p.r}" fill="${p.att >= 80 ? '#FFE27A' : '#EAF2FF'}"/>
-      <title>${esc(p.title)}${p.cls ? ` · ${esc(p.cls)}` : ''} · ${date(p.started_at)} · ${p.focused_min} min focused</title></g></a>`).join('')}
-  </svg>`;
-}
-
-/** How to unlock an outfit, in the chosen language. */
+/** When an outfit unlocks, in the chosen language. */
 function outfitHow(o, stages = []) {
-  if (o.stage != null) return t('Reach stage “{name}”', { name: t((stages[o.stage] || {}).name || '') });
-  const a = { lessons: 'Learner', deep: 'Deep diver', review: 'Memory master', streak: 'Day by day', eyes: 'Eye care' }[o.ach[0]];
-  return `${t(a || o.ach[0])} · ${t(['', 'Bronze', 'Silver', 'Gold'][o.ach[1]])}`;
+  return t('Reach stage “{name}”', { name: t((stages[o.stage] || {}).name || '') });
 }
 
-// ---------------------------------------------------------------- medals
-const MEDAL = ['var(--track)', '#CD7F32', '#C3CCD6', '#F2C14E'];
-// metal colours: light, middle, dark (for the shine) and the ribbon colours
-const METAL = {
-  1: ['#F3C08C', '#C07A3A', '#7A4419', '#C0392B', '#2E86DE'],
-  2: ['#FFFFFF', '#C9D1DA', '#808A96', '#2E86DE', '#E8EEF5'],
-  3: ['#FFF4B0', '#F2C14E', '#A87A08', '#E74C3C', '#F7DC6F'],
-};
-let medalSeq = 0;
-/** A real medal: ribbon + metal disc with the achievement's picture. Not earned = grey and faded. */
-function medalSVG(tier, icon, earned, size = 64, label = '') {
-  const id = `md${medalSeq += 1}`;
-  const [l, m, d, r1, r2] = earned ? METAL[tier] : ['#5A6070', '#454B5A', '#2E3340', '#3A3F4C', '#4A505E'];
-  return `<svg class="medal${earned ? ' won' : ''}" width="${size}" height="${Math.round(size * 1.3)}" viewBox="0 0 100 130" role="img" aria-label="${esc(label)}">
-    <defs><radialGradient id="${id}" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${l}"/><stop offset=".55" stop-color="${m}"/><stop offset="1" stop-color="${d}"/></radialGradient></defs>
-    <path d="M28 0h20l12 48H40z" fill="${r1}"/><path d="M52 0h20L60 48H40z" fill="${r2}"/><path d="M38 40h24v12H38z" fill="${d}"/>
-    <circle cx="50" cy="88" r="38" fill="url(#${id})" stroke="${d}" stroke-width="3"/>
-    <circle cx="50" cy="88" r="29" fill="none" stroke="${l}" stroke-opacity=".7" stroke-width="2" stroke-dasharray="3 3"/>
-    <text x="50" y="99" text-anchor="middle" font-size="30" style="${earned ? '' : 'filter:grayscale(1);opacity:.45'}">${icon}</text>
-    ${earned ? '' : '<g transform="translate(70 112)"><circle r="11" fill="#1B202B" stroke="#3A4152"/><rect x="-5" y="-2" width="10" height="8" rx="1.5" fill="#A3AABB"/><path d="M-3-2v-3a3 3 0 0 1 6 0v3" fill="none" stroke="#A3AABB" stroke-width="1.6"/></g>'}
-  </svg>`;
-}
-function medalsSection(f, medals) {
-  // the shelf shows the best medal of each achievement, gold first
-  const won = f.achievements.filter((a) => a.tier).map((a) => ({ a, k: a.tier })).sort((x, y) => y.k - x.k);
-  const tierName = ['', 'Bronze', 'Silver', 'Gold'];
-  return `<section class="card medalcase">
-      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">🏅 ${t('My medals')} ${info('ach', 'achievements')}</h2>
-        <span class="muted small">${t('🏅 {a} of {b} medals', { a: medals, b: f.achievements.length * 3 })}</span></div>
-      <div class="shelf">${won.length ? won.map(({ a, k }) => `<div class="shelf-item" title="${esc(t(a.name))} · ${t(tierName[k])}">
-          ${medalSVG(k, a.icon, true, 62, `${t(a.name)} · ${t(tierName[k])}`)}<span>${esc(t(a.name))}</span></div>`).join('')
-        : `<p class="muted" style="margin:0">${t('No medals yet. Your first one is very close: finish a lesson!')}</p>`}</div>
-      <h3 class="ach-h">${t('All medals')}</h3>
-      <div class="achgrid">${f.achievements.map((a) => `<div class="ach t${a.tier}">
-        <div class="ach-body"><div class="ach-top"><b>${a.icon} ${esc(t(a.name))}</b></div>
-          <div class="muted small">${esc(t(a.what))}</div>
-          <div class="ach-medals">${[1, 2, 3].map((k) => `<div class="ach-m${a.tier >= k ? ' won' : ''}">${medalSVG(k, a.icon, a.tier >= k, 44, `${t(a.name)} · ${t(tierName[k])}`)}
-            <span>${a.tiers[k - 1]}</span></div>`).join('')}</div>
-          ${a.next !== null ? `<div class="achbar"><i style="width:${a.pct}%"></i></div>
-            <div class="small">${t('{a} / {b} {unit} · next: {tier}', { a: a.value, b: a.next, unit: esc(tUnit(a.unit, a.next)), tier: t(tierName[a.tier + 1]) })} <span class="muted">${t('(+{n} light)', { n: [10, 25, 60][a.tier] })}</span></div>`
-          : `<div class="small" style="color:var(--c-yellow)">${t('★ Gold! All done.')}</div>`}
-        </div></div>`).join('')}</div>
-    </section>`;
-}
-
-// ---------------------------------------------------------------- the Lumi page
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
 async function viewLumi() {
   closeStream();
   const f = await api('/api/friend');
   lumiLive.info = f;
-  const medals = f.achievements.reduce((a, x) => a + x.tier, 0);
   const hol = lumiHoliday(f);
   const friends = Math.max(0, f.stage.index - 2);
   const [bm, bd] = (f.birthday || '-').split('-');
   app.innerHTML = shell('lumi', `
-  ${pageHead(t('{a} light · {b} medals', { a: f.light, b: medals }), 'Lumi', '', '')}
+  ${pageHead(t('{n} light', { n: f.light }), 'Lumi', '', '')}
   <main class="wrap" style="display:flex;flex-direction:column;gap:22px">
     <section class="card lumi-hero tod-${lumiTime()}">
       <div class="lumi-stage-pic" id="lumiBig">
@@ -426,20 +344,6 @@ async function viewLumi() {
     </section>
 
     ${dreamSection()}
-
-    <section class="card questcard${f.quest.done ? ' done' : ''}">
-      <div class="quest-ic">${f.quest.icon}</div>
-      <div style="flex:1"><div class="eyebrow">Quest of the day ${info('quest', 'quest')}</div><b>${esc(t(f.quest.text))}</b>
-        <div class="achbar"><i style="width:${Math.round(100 * f.quest.value / f.quest.need)}%"></i></div>
-        <div class="muted small">${f.quest.done ? t('Done! +15 light ✨ A new quest comes tomorrow.') : t('{a} / {b} {unit} · +15 light', { a: f.quest.value, b: f.quest.need, unit: esc(tUnit(f.quest.unit, f.quest.need)) })}</div></div>
-    </section>
-
-${medalsSection(f, medals)}
-
-    <section class="card diarycard">
-      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">📔 Lumi's diary</h2><span class="muted small">${t('Lumi writes a few lines after every lesson')}</span></div>
-      ${diaryBook(f)}
-    </section>
 
     <section class="card">
       <h2 class="display" style="font-size:18px;margin:0 0 14px">How Lumi grows</h2>
@@ -459,7 +363,7 @@ ${medalsSection(f, medals)}
       <h2 class="display" style="font-size:18px;margin:0">Lumi's settings</h2>
       <div class="lset"><div><b>Lumi in lessons</b><div class="muted small">Lumi sits in the corner, cheers you on and travels with you.</div></div>
         <button class="switch${f.show_in_lessons ? ' on' : ''}" id="lumiShow" role="switch" aria-checked="${f.show_in_lessons}" aria-label="Show Lumi in lessons"><span></span></button></div>
-      <div class="lset"><div><b>Sounds</b><div class="muted small">A soft “ding” for medals, growing and quests. Turn off in a classroom or library.</div></div>
+      <div class="lset"><div><b>Sounds</b><div class="muted small">A soft “ding” when Lumi grows or a dream gets closer. Turn off in a classroom or library.</div></div>
         <button class="switch${f.sound ? ' on' : ''}" id="lumiSoundSw" role="switch" aria-checked="${f.sound}" aria-label="Lumi sounds"><span></span></button></div>
       <div class="lset"><div><b>Birthday party 🎂</b><div class="muted small">Optional. Lumi celebrates with you. Only the month and day are saved, never the year.</div></div>
         <div class="bday"><select class="field" id="bdM" aria-label="Birthday month"><option value="">month</option>${MONTHS.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}"${bm === String(i + 1).padStart(2, '0') ? ' selected' : ''}>${new Date(2026, i, 1).toLocaleDateString(LOCALE(), { month: 'long' })}</option>`).join('')}</select>
@@ -488,34 +392,28 @@ ${medalsSection(f, medals)}
     toast(m && d ? 'Lumi wrote it down 🎂' : 'Birthday removed');
   };
   $('#bdM').onchange = saveBday; $('#bdD').onchange = saveBday;
-  wireDiary(f);
   drawDream();
   lumiNews(f);
   if (typeof pushWidget === 'function') pushWidget();
 }
 
 // ---------------------------------------------------------------- celebrations
-// After a lesson (and on Home / Lumi) new medals, a new stage and a finished quest are celebrated once.
+// The first visit and a new stage (with its new outfits) are celebrated once.
 async function lumiNews(given = null) {
   const f = given || await api('/api/friend').catch(() => null);
   if (!f || $('#lumiParty') || location.hash === '#/mini') return;   // not in the small window
-  const { tiers, grew, quest } = f.news;
-  if (!f.first_time && !tiers.length && grew == null && !quest) { dreamNews(); return; }
+  const { grew, outfits } = f.news;
+  if (!f.first_time && grew == null) { dreamNews(); return; }
   const box = document.createElement('div');
   box.id = 'lumiParty';
   box.className = 'lumi-party';
   box.setAttribute('role', 'dialog');
   box.setAttribute('aria-modal', 'true');
-  const tierName = ['', 'Bronze', 'Silver', 'Gold'];
-  const list = (quest ? `<li><span class="ach-medal sm" style="--m:var(--c-green)">${quest.icon}</span><b>${t('Quest done!')}</b> · ${t('(+{n} light)', { n: 15 })}</li>` : '')
-    + tiers.slice(0, 5).map((m) => `<li>${medalSVG(m.tier, m.icon, true, 30)}<b>${esc(t(m.name))}</b> · ${t(tierName[m.tier])}</li>`).join('')
-    + (tiers.length > 5 ? `<li class="muted">…and ${tiers.length - 5} more</li>` : '');
-  const title = t(f.first_time ? 'Meet Lumi!' : grew != null ? 'Lumi grew into a {name}!'
-    : tiers.length > 1 ? 'New medals!' : tiers.length ? 'New medal!' : 'Quest complete!', { name: grew != null ? esc(t(f.stages[grew].name)) : '' });
+  const list = grew != null && outfits.length ? `<li>👗 <b>${t('New for Lumi:')}</b> ${outfits.map((o) => esc(t(o))).join(', ')}</li>` : '';
+  const title = t(f.first_time ? 'Meet Lumi!' : 'Lumi grew into a {name}!', { name: grew != null ? esc(t(f.stages[grew].name)) : '' });
   const text = f.first_time
-    ? t("I'm a little firefly. Every minute you really focus gives me light, and with enough light I grow. Good habits win medals that give extra light!")
-      + (tiers.length ? t(' You already earned {n} medals:', { n: tiers.length }) : '')
-    : grew != null ? esc(t(f.stages[grew].line)) : t(tiers.length ? 'Each medal gives Lumi extra light ✨' : 'You did the quest of the day. Lumi glows a little brighter!');
+    ? t("I'm a little firefly. Every minute you really focus gives me light, and with enough light I grow. Stars from your lessons take you to your dream!")
+    : esc(t(f.stages[grew].line));
   box.innerHTML = `<div class="card lumi-party-card">
     <div class="confetti" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 6) * 0.15}s;--c:${['var(--c-yellow)', 'var(--c-pink)', 'var(--c-blue)', 'var(--c-green)', 'var(--c-violet)', 'var(--c-orange)'][i % 6]}"></i>`).join('')}</div>
     ${lumiSVG({ mood: 'party', stage: f.stage.index, outfit: f.outfit, size: 150, dream: f.dream })}
@@ -523,7 +421,7 @@ async function lumiNews(given = null) {
     ${list ? `<ul class="partylist">${list}</ul>` : ''}
     <button class="btn primary big" id="partyOk">${t(f.first_time ? "Let's go! ✨" : 'Yay! ✨')}</button></div>`;
   document.body.appendChild(box);
-  lumiSound(grew != null ? 'grow' : tiers.length ? 'medal' : 'quest', f);
+  lumiSound(grew != null ? 'grow' : 'quest', f);
   const close = async () => { box.remove(); await api('/api/friend', { seen: true }).catch(() => {}); dreamNews(); };
   $('#partyOk').onclick = close;
   $('#partyOk').focus();
@@ -570,28 +468,6 @@ function diaryDayHTML(day) {
   const date = new Date(day.ts * 1000).toLocaleDateString(LOCALE(), { weekday: 'long', day: 'numeric', month: 'long' });
   return `<article class="diary-day"><h3>${esc(date)}</h3>${day.lessons.map((l) => `<p>${l.lines.map((x) => diarySentence(x)).filter(Boolean).join(' ')}</p>`).join('')}</article>`;
 }
-function diaryBook(f) {
-  if (!f.diary.length) return `<p class="empty">${t('The diary starts after the first lesson.')}</p>`;
-  return `<div class="diary-book"><div class="diary-page" id="diaryPage">${diaryDayHTML(f.diary[0])}</div>
-    <div class="diary-nav"><button class="btn ghost" id="diaryOlder" ${f.diary.length > 1 ? '' : 'disabled'}>← ${t('Older')}</button>
-      <span class="muted small" id="diaryPos">${f.diary.length} / ${f.diary.length}</span>
-      <button class="btn ghost" id="diaryNewer" disabled>${t('Newer')} →</button></div></div>`;
-}
-function wireDiary(f) {
-  let i = 0;
-  const go = (k) => {
-    i = Math.max(0, Math.min(f.diary.length - 1, i + k));
-    const pg = $('#diaryPage');
-    pg.classList.remove('turn'); void pg.offsetWidth; pg.classList.add('turn');
-    pg.innerHTML = diaryDayHTML(f.diary[i]);
-    // the list is newest first (i = 0), but pages are numbered in time order: the newest day is N / N
-    $('#diaryPos').textContent = `${f.diary.length - i} / ${f.diary.length}`;
-    $('#diaryOlder').disabled = i >= f.diary.length - 1;
-    $('#diaryNewer').disabled = i === 0;
-  };
-  if ($('#diaryOlder')) { $('#diaryOlder').onclick = () => go(1); $('#diaryNewer').onclick = () => go(-1); }
-}
-
 // ---------------------------------------------------------------- Lumi on empty pages
 // Any "empty" message on any page gets a small Lumi next to it (one observer for the whole app).
 (() => {
