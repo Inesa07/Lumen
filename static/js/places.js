@@ -441,6 +441,87 @@ function stone(x, y, r, k) {
   return `<ellipse cx="${f1(x)}" cy="${f1(y + r * 0.15)}" rx="${f1(r * 1.25)}" ry="${f1(r * 0.55)}" fill="#6E6672"/><ellipse cx="${f1(x - r * 0.15)}" cy="${f1(y - r * 0.05)}" rx="${f1(r * 1.05)}" ry="${f1(r * 0.48)}" fill="#B9AEB4"/><ellipse cx="${f1(x - r * 0.4)}" cy="${f1(y - r * 0.2)}" rx="${f1(r * 0.45)}" ry="${f1(r * 0.2)}" fill="#E6DCDE" opacity=".8"/>`;
 }
 
+
+/** A natural ridge line: a few big peaks, then made rough by halving the segments again and again. */
+function ridge(w, base, height, seed, peaks = 3, rough = 0.42, levels = 6) {
+  let pts = [[-10, base - height * 0.2]];
+  for (let i = 0; i < peaks; i++) {
+    const x = (i + 0.3 + plRnd(seed, i) * 0.4) * w / peaks;
+    pts.push([x - w / peaks * 0.3, base - height * (0.35 + plRnd(seed, i + 10) * 0.2)], [x, base - height * (0.75 + plRnd(seed, i + 20) * 0.25)]);
+  }
+  pts.push([w + 10, base - height * 0.3]);
+  let amp = height * rough;
+  for (let l = 0; l < levels; l++) {
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      out.push([(x0 + x1) / 2 + (plRnd(seed + l * 7, i) - 0.5) * (x1 - x0) * 0.2, (y0 + y1) / 2 + (plRnd(seed + l * 13, i + 50) - 0.5) * amp], [x1, y1]);
+    }
+    pts = out; amp *= 0.5;
+  }
+  return pts;
+}
+/** A mountain range: rock with sunlit and shadow faces, gullies, snow on the high parts. */
+function range(w, base, height, seed, col, dark, light, snowLine, D, k) {
+  const pts = ridge(w, base, height, seed);
+  const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${f1(x)} ${f1(y)}`).join('');
+  let s = `<path d="${line}L${f1(w + 10)} ${f1(base + 2)}L-10 ${f1(base + 2)}Z" fill="${D.lin(`mt${k}`, [[0, light], [0.55, col], [1, dark]])}"/>`;
+  // shadow faces: under every high point, the side away from the sun is darker (a soft wedge, clipped to the rock)
+  const clip = D.id(`mc${k}`);
+  let faces = '';
+  pts.forEach(([x, y], i) => {
+    const win = pts.slice(Math.max(0, i - 7), i + 8);
+    if (base - y < height * 0.35 || win.some((p) => p[1] < y)) return;
+    const dh = base - y;
+    faces += `<path d="M${f1(x)} ${f1(y)}L${f1(x + dh * 1.1)} ${f1(base)}L${f1(x + dh * 0.12)} ${f1(base)}Z" fill="${dark}" opacity=".42"/>`
+      + `<path d="M${f1(x)} ${f1(y)}L${f1(x - dh * 0.25)} ${f1(base)}L${f1(x - dh * 0.9)} ${f1(base)}Z" fill="#FFFFFF" opacity=".12"/>`;
+  });
+  s += `<clipPath id="${clip}"><path d="${line}L${f1(w + 10)} ${f1(base + 2)}L-10 ${f1(base + 2)}Z"/></clipPath><g clip-path="url(#${clip})"><g filter="url(#${D.id('b1')})">${faces}</g></g>`;
+  // snow: a band under the ridge, only where the ridge is above the snow line, with a ragged lower edge
+  if (snowLine != null) {
+    let snow = '', open = false;
+    for (let i = 0; i < pts.length; i++) {
+      const [x, y] = pts[i];
+      if (y < snowLine) {
+        const depth = Math.min(snowLine - y, height * 0.22) * (0.6 + plRnd(seed, i + 300) * 0.6);
+        snow += `${open ? 'L' : 'M'}${f1(x)} ${f1(y)}`; open = true;
+        pts[i].snowY = y + depth;
+      } else if (open) { snow += `L${f1(x)} ${f1(y)}`; snow += pts.slice(0, i).reverse().filter((p) => p.snowY).map((p) => `L${f1(p[0])} ${f1(p.snowY)}`).join('') + 'Z'; pts.forEach((p) => { delete p.snowY; }); open = false; }
+    }
+    if (snow) s += `<path d="${snow}" fill="#F7FAFF" opacity=".95"/>`;
+  }
+  return s;
+}
+/** A dense tree line: many firs of different sizes in two rows, darker at the foot. */
+function treeLine(w, base, k, back, front, dark) {
+  let s = `<rect x="-5" y="${f1(base - 4)}" width="${f1(w + 10)}" height="6" fill="${back}"/>`;
+  const row = (count, hmin, hmax, c1, c2, off) => {
+    const xs = Array.from({ length: count }, (_, i) => (i + plRnd(k + off, i)) * w / count).sort((a, b) => a - b);
+    return xs.map((x, i) => fir(x, base + 1, hmin + plRnd(k + off, i + 100) * (hmax - hmin), c1, c2, false)).join('');
+  };
+  s += row(Math.round(46 * w / 400), 7, 15, back, mix(back, dark, 0.35), 1);
+  s += row(Math.round(36 * w / 400), 9, 20, front, dark, 2);
+  return s;
+}
+/** A big tree in front: a tapering trunk with roots, branches reaching up into a full, lit crown. */
+function bigTree(x, y, hh, D, k, side = 1) {
+  const g = D.lin(`bt${k}`, [[0, '#7A6A5E'], [0.5, '#5A4A40'], [1, '#3A2E28']], 1, 0);
+  const tw = hh * 0.07;
+  let s = `<path d="M${f1(x - tw * 2.2)} ${f1(y)}Q${f1(x - tw * 0.9)} ${f1(y - tw)} ${f1(x - tw * 0.8)} ${f1(y - hh * 0.3)}Q${f1(x - tw * 0.5)} ${f1(y - hh * 0.6)} ${f1(x - tw * 0.25 + side * tw)} ${f1(y - hh * 0.85)}`
+    + `L${f1(x + tw * 0.35 + side * tw)} ${f1(y - hh * 0.85)}Q${f1(x + tw * 0.7)} ${f1(y - hh * 0.6)} ${f1(x + tw * 0.9)} ${f1(y - hh * 0.3)}Q${f1(x + tw)} ${f1(y - tw)} ${f1(x + tw * 2.4)} ${f1(y)}Z" fill="${g}"/>`;
+  // branches
+  [[-0.55, 0.5, -1], [-0.68, 0.62, 1], [-0.45, 0.38, 1]].forEach(([dy, len, dir], i) => {
+    const bx = x + side * tw * 0.4, by = y + dy * hh;
+    s += `<path d="M${f1(bx)} ${f1(by)}Q${f1(bx + dir * hh * len * 0.4)} ${f1(by - hh * 0.12)} ${f1(bx + dir * hh * len * 0.75)} ${f1(by - hh * 0.22)}" stroke="#4A3C34" stroke-width="${f1(tw * (0.7 - i * 0.12))}" stroke-linecap="round" fill="none"/>`;
+  });
+  s += `<path d="M${f1(x - tw * 0.55)} ${f1(y - hh * 0.05)}Q${f1(x - tw * 0.4)} ${f1(y - hh * 0.5)} ${f1(x - tw * 0.05 + side * tw)} ${f1(y - hh * 0.82)}" stroke="#A89480" stroke-width="${f1(tw * 0.28)}" opacity=".45" fill="none"/>`;
+  // the crown: many leaf clusters, dark inside, lit on top
+  const cx = x + side * hh * 0.12, cy = y - hh * 0.92, R = hh * 0.42;
+  for (let i = 0; i < 16; i++) { const a = plRnd(k, i) * 6.28, d = Math.sqrt(plRnd(k, i + 20)) * R; s += foliage(cx + Math.cos(a) * d * 1.25, cy + Math.sin(a) * d * 0.7, R * (0.32 + plRnd(k, i + 40) * 0.16), '#3E6A34', '#5E8E44', '#9CC45E', k * 50 + i, 6); }
+  for (let i = 0; i < 6; i++) { const a = -2.4 + plRnd(k, i + 60) * 1.6, d = R * (0.55 + plRnd(k, i + 70) * 0.35); s += foliage(cx + Math.cos(a) * d * 1.1, cy + Math.sin(a) * d * 0.7, R * 0.24, '#5E8E44', '#86B456', '#C8E27A', k * 50 + 30 + i, 5); }
+  return s;
+}
+
 /** The painted picture of a place, without Lumi and the home. Returns {art, glow}. */
 function paintedPlace(place, o, D) {
   const { w, h, tod } = o;
@@ -467,7 +548,7 @@ function paintedPlace(place, o, D) {
       const x = (i + 0.5) * w / n(4) + (plRnd(i, 7) - 0.5) * 30;
       mid += oldTrunk(x, gy - 4, -5, 7, D, i + 10, ['#7E8E8C', '#5E6E70', '#48565A']);
     }
-    for (let i = 0; i < n(8); i++) mid += foliage(plRnd(i, 14) * w, -2 + plRnd(i, 15) * 22, 26, '#5E8E52', '#78A85C', '#AFCF6E', i + 16, 8);
+    for (let i = 0; i < n(10); i++) mid += foliage(plRnd(i, 14) * w, 2 + plRnd(i, 15) * 30, 24, '#5E8E52', '#78A85C', '#AFCF6E', i + 16, 8);
     art += B('b1', mid);
     art += lightRays(w, h, D, 0.5, 4);
     // ground: mossy, with a stream and stones
@@ -480,19 +561,8 @@ function paintedPlace(place, o, D) {
       if (x > w * 0.3 && x < w * 0.52 && y > gy + 6) continue;
       art += tuft(x, y, 5 + plRnd(i, 47) * 5, '#7FB24A', '#4E8034', i + 200);
     }
-    // the big old tree in front: its branch arches over everything, heavy with moss, flowers and vines
-    art += oldTrunk(w * 0.07, gy + 6, -10, 14, D, 30);
-    const bx0 = w * 0.07, by0 = gy * 0.48, c1x = w * 0.3, c1y = gy * 0.05, c2x = w * 0.62, c2y = gy * 0.32, bx1 = w * 1.02, by1 = gy * 0.1;
-    const bez = (t) => { const u = 1 - t; return [u * u * u * bx0 + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * bx1, u * u * u * by0 + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * by1]; };
-    const along = (k) => Array.from({ length: k }, (_, i) => bez((i + 0.5) / k));
-    art += `<path d="M${f1(bx0)} ${f1(by0)}C${f1(c1x)} ${f1(c1y)} ${f1(c2x)} ${f1(c2y)} ${f1(bx1)} ${f1(by1)}" stroke="${D.lin('br', [[0, '#5C4E62'], [1, '#3A3042']])}" stroke-width="10" fill="none" stroke-linecap="round"/>`
-      + `<path d="M${f1(bx0)} ${f1(by0 - 3.5)}C${f1(c1x)} ${f1(c1y - 3.5)} ${f1(c2x)} ${f1(c2y - 3.5)} ${f1(bx1)} ${f1(by1 - 3.5)}" stroke="#8C7E92" stroke-width="1.6" fill="none" opacity=".55"/>`;
-    // moss mats: little leafy mounds sitting on the branch, with orange flowers
-    art += along(n(9)).map(([x, y], i) => foliage(x, y - 5, 7 + plRnd(i, 33) * 4, '#6E8E2A', '#A8C23A', '#E0EC7A', i + 300, 6)
-      + (i % 2 ? Array.from({ length: 4 }, (_, j) => `<circle cx="${f1(x + (plRnd(i, j + 34) - 0.5) * 12)}" cy="${f1(y - 8 - plRnd(i, j + 38) * 5)}" r="1.1" fill="#FF7A3C"/>`).join('') : '')).join('');
-    art += vines(along(n(14)).map(([x, y]) => [x, y + 3]), 32, 40);
-    art += oldTrunk(w * 0.97, gy + 6, -10, 12, D, 33) + foliage(w * 0.95, gy * 0.42, 9, '#6E8E2A', '#A8C23A', '#E0EC7A', 340, 6);
-    art += foliage(w * 0.07, gy * 0.62, 8, '#6E8E2A', '#A8C23A', '#E0EC7A', 341, 5);
+    // two big trees in front frame the clearing, their crowns filling the top corners
+    art += bigTree(w * 0.05, gy + 8, h * 1.05, D, 30, 1) + bigTree(w * 0.96, gy + 8, h * 1.1, D, 33, -1);
     // flower beds by the stream, ferns
     const cols = [['#E84FB0', '#FFB0E0'], ['#FF8A3C', '#FFD0A0'], ['#E8434F', '#FFA0A6'], ['#FFC93C', '#FFF0A8'], ['#B064E8', '#E0B8FF']];
     for (let i = 0; i < n(14); i++) {
@@ -564,24 +634,14 @@ function paintedPlace(place, o, D) {
     art += `<rect width="${w}" height="${h}" fill="${D.lin('lsky', [[0, '#6FB3EC'], [0.45, '#CFE8F6'], [0.6, '#FBE6D2']])}"/>`
       + (tod === 'day' || tod === 'morning' ? `<circle cx="${f1(w * 0.78)}" cy="26" r="38" fill="${D.rad('lsun', [[0, '#FFF3B0', 0.75], [1, '#FFF3B0', 0]])}"/><circle cx="${f1(w * 0.78)}" cy="26" r="9" fill="#FFF0A0"/>` : '');
     const lake = h * 0.58;
-    // mountains far away (and their reflection in the lake)
-    const mtn = (yb, hh, col, dark, snow, seed) => {
-      let d = `M0 ${f1(yb)}`, caps = '', shadow = ''; const k = 6;
-      for (let i = 0; i <= k; i++) {
-        const x = i * w / k, y = yb - hh * (0.35 + plRnd(seed, i) * 0.65), vx = x - w / k / 2, vy = yb - hh * 0.25 * plRnd(seed, i + 9);
-        d += `L${f1(vx)} ${f1(vy)}L${f1(x)} ${f1(y)}`;
-        shadow += `<path d="M${f1(x)} ${f1(y)}L${f1(x + w / k / 2)} ${f1(yb - hh * 0.25 * plRnd(seed, i + 10))}L${f1(x + w / k / 2)} ${f1(yb)}L${f1(x + 4)} ${f1(yb)}Z" fill="${dark}"/>`;
-        if (snow && yb - y > hh * 0.55) { const c = (yb - y) * 0.28; caps += `<path d="M${f1(x)} ${f1(y)}L${f1(x - c * 0.9)} ${f1(y + c)}L${f1(x - c * 0.3)} ${f1(y + c * 0.75)}L${f1(x + c * 0.1)} ${f1(y + c * 1.05)}L${f1(x + c * 0.5)} ${f1(y + c * 0.8)}L${f1(x + c * 0.9)} ${f1(y + c)}Z" fill="#F6FAFF"/>`; }
-      }
-      d += `L${w} ${f1(yb)}Z`;
-      return `<path d="${d}" fill="${col}"/>${shadow}${caps}`;
-    };
-    const far = mtn(lake, 52, '#A7B6E0', '#8E9CCB', true, 3) + mtn(lake, 32, '#7E9CC4', '#6A86B0', false, 5);
-    art += B('b2', far);
-    art += B('b1', Array.from({ length: n(14) }, (_, i) => fir(i * w / n(14) + plRnd(i, 6) * 12, lake + 1, 12 + plRnd(i, 7) * 8, '#5E8A72', '#4A7460', false)).join(''));
+    // mountains far away (and their reflection in the lake): a pale far range and a nearer, darker one
+    const far = B('b2', range(w, lake, 70, 7, '#A9B8DE', '#8A98C4', '#DCE4F6', lake - 44, D, 1))
+      + B('b1', range(w, lake, 44, 19, '#7F97BE', '#5E739C', '#B9C8E2', lake - 36, D, 2));
+    art += far;
+    art += B('b1', treeLine(w, lake + 1, 31, '#6C9482', '#3E6A52', '#2C4E3C'));
     // the lake: sky colours, a blurred upside-down copy of the mountains, light streaks
     art += `<rect y="${f1(lake)}" width="${w}" height="${f1(gy - lake + 4)}" fill="${D.lin('lake', [[0, '#BFDDEE'], [1, '#6FA6C4']])}"/>`;
-    art += `<g opacity=".45" filter="url(#${D.id('b2')})" transform="translate(0 ${f1(lake * 2)}) scale(1 -1)">${far}</g>`;
+    art += `<g opacity=".4" filter="url(#${D.id('b2')})" transform="translate(0 ${f1(lake * 2)}) scale(1 -1)">${far}${treeLine(w, lake + 1, 31, '#6C9482', '#3E6A52', '#2C4E3C')}</g>`;
     for (let i = 0; i < n(6); i++) art += `<path class="pl-ray" d="M${f1(plRnd(i, 8) * w)} ${f1(lake + 4 + plRnd(i, 9) * (gy - lake - 6))}h${f1(10 + plRnd(i, 10) * 20)}" stroke="#FFFFFF" stroke-width=".8" opacity=".6" style="animation-delay:-${i}s"/>`;
     art += B('b3', `<rect y="${f1(lake - 4)}" width="${w}" height="8" fill="#FFFFFF" opacity=".35"/>`);
     // the shore in front
