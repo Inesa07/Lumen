@@ -522,6 +522,57 @@ function bigTree(x, y, hh, D, k, side = 1) {
   return s;
 }
 
+// ---- storybook shapes: big, smooth, simple forms with soft gradients (like a picture book), no noise
+/** One smooth mountain: a lit face, a shaded face, a snow cap with a soft wavy edge. */
+function peak(x, base, top, wL, wR, col, shadeCol, snow, D, k) {
+  const hh = base - top;
+  const shape = `M${f1(x - wL)} ${f1(base)}Q${f1(x - wL * 0.38)} ${f1(base - hh * 0.32)} ${f1(x - 3)} ${f1(top + 2)}Q${f1(x)} ${f1(top - 1.5)} ${f1(x + 3)} ${f1(top + 2)}Q${f1(x + wR * 0.38)} ${f1(base - hh * 0.36)} ${f1(x + wR)} ${f1(base)}Z`;
+  const id = D.id(`pk${k}`);
+  let s = `<clipPath id="${id}"><path d="${shape}"/></clipPath><path d="${shape}" fill="${col}"/>`;
+  s += `<g clip-path="url(#${id})"><path d="M${f1(x + 1)} ${f1(top)}Q${f1(x + wR * 0.08)} ${f1(top + hh * 0.45)} ${f1(x - wL * 0.06)} ${f1(base + 2)}H${f1(x + wR + 4)}V${f1(top)}Z" fill="${shadeCol}"/>`;
+  if (snow) {
+    const sy = top + hh * 0.3;
+    s += `<path d="M${f1(x - wL)} ${f1(top - 4)}H${f1(x + wR)}V${f1(sy)}Q${f1(x + wR * 0.25)} ${f1(sy - hh * 0.06)} ${f1(x + wR * 0.12)} ${f1(sy + hh * 0.05)}Q${f1(x)} ${f1(sy - hh * 0.08)} ${f1(x - wL * 0.12)} ${f1(sy + hh * 0.06)}Q${f1(x - wL * 0.25)} ${f1(sy - hh * 0.04)} ${f1(x - wL)} ${f1(sy + hh * 0.02)}Z" fill="#FBFDFF"/>`
+      + `<path d="M${f1(x + 1)} ${f1(top)}Q${f1(x + wR * 0.08)} ${f1(top + hh * 0.45)} ${f1(x - wL * 0.06)} ${f1(base + 2)}H${f1(x + wR + 4)}V${f1(top)}Z" fill="#B9C9E8" opacity=".55" clip-path="none"/>`;
+  }
+  return s + '</g>';
+}
+/** A row of smooth mountains across the picture. */
+function peaks(w, base, hmin, hmax, count, col, shadeCol, snow, D, k) {
+  let s = '';
+  for (let i = 0; i < count; i++) {
+    const x = (i + 0.2 + plRnd(k, i) * 0.6) * w / count, hh = hmin + plRnd(k, i + 10) * (hmax - hmin);
+    const wd = w / count * (0.75 + plRnd(k, i + 20) * 0.5);
+    s += peak(x, base, base - hh, wd, wd * (0.9 + plRnd(k, i + 30) * 0.4), col, shadeCol, snow && hh > hmin + (hmax - hmin) * 0.35, D, `${k}_${i}`);
+  }
+  return s;
+}
+/** A slender storybook fir: one tall shape with soft, slightly curved sides, lit on the left. */
+function slimFir(x, base, hh, light, darkC) {
+  const wd = hh * 0.26;
+  return `<path d="M${f1(x)} ${f1(base - hh)}Q${f1(x - wd * 0.35)} ${f1(base - hh * 0.45)} ${f1(x - wd)} ${f1(base)}H${f1(x)}Z" fill="${light}"/>`
+    + `<path d="M${f1(x)} ${f1(base - hh)}Q${f1(x + wd * 0.35)} ${f1(base - hh * 0.45)} ${f1(x + wd)} ${f1(base)}H${f1(x)}Z" fill="${darkC}"/>`;
+}
+/** A grove of firs of different heights (tall in the middle), overlapping. */
+function grove(cx, base, spread, count, hmin, hmax, light, darkC, k) {
+  const trees = Array.from({ length: count }, (_, i) => {
+    const t = (i + plRnd(k, i)) / count, x = cx + (t - 0.5) * spread;
+    const mid = 1 - Math.abs(t - 0.5) * 1.4;
+    return [x, hmin + (hmax - hmin) * Math.max(0.15, mid) * (0.7 + plRnd(k, i + 40) * 0.5)];
+  }).sort((a, b) => b[1] - a[1]);
+  return trees.map(([x, hh]) => slimFir(x, base, hh, light, darkC)).join('');
+}
+/** A round storybook tree: a slim trunk and one soft crown with a gradient (light top left). */
+function roundTree(x, base, hh, D, k, c = ['#9CCB6A', '#5E9A48', '#3E7438']) {
+  const r = hh * 0.36, cy = base - hh + r;
+  const g = D.rad(`rt${k}`, [[0, c[0]], [0.6, c[1]], [1, c[2]]], 0.35, 0.3, 0.8);
+  return `<path d="M${f1(x - hh * 0.03)} ${f1(base)}L${f1(x - hh * 0.015)} ${f1(cy)}H${f1(x + hh * 0.015)}L${f1(x + hh * 0.03)} ${f1(base)}Z" fill="#5A4636"/>`
+    + `<path d="M${f1(x)} ${f1(cy + r * 0.2)}L${f1(x - r * 0.35)} ${f1(cy - r * 0.2)}M${f1(x)} ${f1(cy + r * 0.35)}L${f1(x + r * 0.4)} ${f1(cy - r * 0.05)}" stroke="#5A4636" stroke-width="${f1(hh * 0.012 + 0.4)}"/>`
+    + `<path d="M${f1(x - r)} ${f1(cy + r * 0.15)}C${f1(x - r * 1.1)} ${f1(cy - r * 0.7)} ${f1(x - r * 0.4)} ${f1(cy - r * 1.15)} ${f1(x + r * 0.1)} ${f1(cy - r * 1.05)}C${f1(x + r * 0.8)} ${f1(cy - r * 1.05)} ${f1(x + r * 1.15)} ${f1(cy - r * 0.4)} ${f1(x + r)} ${f1(cy + r * 0.2)}C${f1(x + r * 0.9)} ${f1(cy + r * 0.8)} ${f1(x - r * 0.85)} ${f1(cy + r * 0.85)} ${f1(x - r)} ${f1(cy + r * 0.15)}Z" fill="${g}"/>`
+    + `<ellipse cx="${f1(x - r * 0.35)}" cy="${f1(cy - r * 0.45)}" rx="${f1(r * 0.32)}" ry="${f1(r * 0.2)}" fill="#FFFFFF" opacity=".18"/>`;
+}
+const mistBand = (w, y, hh, D, k, op = 0.7) => `<rect y="${f1(y - hh / 2)}" width="${w}" height="${f1(hh)}" fill="${D.lin(`mist${k}`, [[0, '#FFFFFF', 0], [0.5, '#FFFFFF', op], [1, '#FFFFFF', 0]])}"/>`;
+
 /** The painted picture of a place, without Lumi and the home. Returns {art, glow}. */
 function paintedPlace(place, o, D) {
   const { w, h, tod } = o;
@@ -533,23 +584,17 @@ function paintedPlace(place, o, D) {
 
   if (place === 'forest') {
     art += `<rect width="${w}" height="${h}" fill="${D.lin('fsky', [[0, '#B8E2E4'], [0.5, '#DDF0DC'], [1, '#EEF5D2']])}"/>`;
-    // far: pale giant trunks and canopies in the mist
-    let far = '';
-    for (let i = 0; i < n(7); i++) {
-      const x = (i + 0.3 + plRnd(i, 1) * 0.5) * w / n(7), wd = 5 + plRnd(i, 2) * 4;
-      far += `<path d="M${f1(x - wd)} ${f1(gy)}C${f1(x - wd * 0.6)} ${f1(gy * 0.6)} ${f1(x - wd * 1.4)} ${f1(gy * 0.3)} ${f1(x - wd * 0.5)} -5H${f1(x + wd * 0.5)}C${f1(x + wd * 1.2)} ${f1(gy * 0.3)} ${f1(x + wd * 0.6)} ${f1(gy * 0.6)} ${f1(x + wd)} ${f1(gy)}Z" fill="#A4C8C2"/>`
-        + `<path d="M${f1(x)} ${f1(gy * 0.38)}Q${f1(x + 30)} ${f1(gy * 0.22)} ${f1(x + 56)} ${f1(gy * 0.34)}" stroke="#A4C8C2" stroke-width="5" fill="none"/>`;
-    }
-    for (let i = 0; i < n(9); i++) far += foliage(plRnd(i, 4) * w, 4 + plRnd(i, 5) * 24, 24, '#A6CDB2', '#BBDCBE', '#DDF0CC', i + 5, 7);
-    art += B('b3', far);
-    // middle: darker trunks and leafy masses, a little soft
-    let mid = '';
-    for (let i = 0; i < n(4); i++) {
-      const x = (i + 0.5) * w / n(4) + (plRnd(i, 7) - 0.5) * 30;
-      mid += oldTrunk(x, gy - 4, -5, 7, D, i + 10, ['#7E8E8C', '#5E6E70', '#48565A']);
-    }
-    for (let i = 0; i < n(10); i++) mid += foliage(plRnd(i, 14) * w, 2 + plRnd(i, 15) * 30, 24, '#5E8E52', '#78A85C', '#AFCF6E', i + 16, 8);
-    art += B('b1', mid);
+    // layers of trees from far to near, with mist between them (each layer darker and sharper)
+    const layer = (L, count, hmin, hmax, light, darkC, roundC, base) => {
+      let t = '';
+      for (let i = 0; i < count; i++) {
+        const x = (i + plRnd(L, i) * 0.9) * w / count, hh = hmin + plRnd(L, i + 9) * (hmax - hmin);
+        t += plRnd(L, i + 19) < 0.62 ? slimFir(x, base, hh, light, darkC) : roundTree(x, base, hh * 0.8, D, `${L}_${i}`, roundC);
+      }
+      return t;
+    };
+    art += layer(1, n(16), 40, 70, '#A9CDBF', '#93BBAE', ['#C2DCC6', '#A9CDB8', '#93BBAE'], gy - 18) + mistBand(w, gy - 26, 40, D, 'f1', 0.6);
+    art += layer(2, n(12), 50, 86, '#79A88E', '#5E8E78', ['#A6CC8E', '#7FAE78', '#5E8E68'], gy - 10) + mistBand(w, gy - 14, 26, D, 'f2', 0.45);
     art += lightRays(w, h, D, 0.5, 4);
     // ground: mossy, with a stream and stones
     art += `<path d="${hillPath(w, h, gy - 3, 6, 61, 4)}" fill="${D.lin('fgr', [[0, '#9CC05A'], [0.45, '#6A9640'], [1, '#2F4C26']])}"/>`;
@@ -561,8 +606,9 @@ function paintedPlace(place, o, D) {
       if (x > w * 0.3 && x < w * 0.52 && y > gy + 6) continue;
       art += tuft(x, y, 5 + plRnd(i, 47) * 5, '#7FB24A', '#4E8034', i + 200);
     }
-    // two big trees in front frame the clearing, their crowns filling the top corners
-    art += bigTree(w * 0.05, gy + 8, h * 1.05, D, 30, 1) + bigTree(w * 0.96, gy + 8, h * 1.1, D, 33, -1);
+    // near trees at the sides, big and clear
+    art += slimFir(w * 0.03, gy + 8, h * 1.0, '#3E7A5A', '#2A5A44') + roundTree(w * 0.13, gy + 6, h * 0.62, D, 'n1')
+      + slimFir(w * 0.97, gy + 8, h * 1.05, '#3E7A5A', '#2A5A44') + roundTree(w * 0.87, gy + 6, h * 0.55, D, 'n2');
     // flower beds by the stream, ferns
     const cols = [['#E84FB0', '#FFB0E0'], ['#FF8A3C', '#FFD0A0'], ['#E8434F', '#FFA0A6'], ['#FFC93C', '#FFF0A8'], ['#B064E8', '#E0B8FF']];
     for (let i = 0; i < n(14); i++) {
@@ -634,14 +680,19 @@ function paintedPlace(place, o, D) {
     art += `<rect width="${w}" height="${h}" fill="${D.lin('lsky', [[0, '#6FB3EC'], [0.45, '#CFE8F6'], [0.6, '#FBE6D2']])}"/>`
       + (tod === 'day' || tod === 'morning' ? `<circle cx="${f1(w * 0.78)}" cy="26" r="38" fill="${D.rad('lsun', [[0, '#FFF3B0', 0.75], [1, '#FFF3B0', 0]])}"/><circle cx="${f1(w * 0.78)}" cy="26" r="9" fill="#FFF0A0"/>` : '');
     const lake = h * 0.58;
-    // mountains far away (and their reflection in the lake): a pale far range and a nearer, darker one
-    const far = B('b2', range(w, lake, 70, 7, '#A9B8DE', '#8A98C4', '#DCE4F6', lake - 44, D, 1))
-      + B('b1', range(w, lake, 44, 19, '#7F97BE', '#5E739C', '#B9C8E2', lake - 36, D, 2));
-    art += far;
-    art += B('b1', treeLine(w, lake + 1, 31, '#6C9482', '#3E6A52', '#2C4E3C'));
+    // mountains: three layers, each nearer one darker and bluer; snow on the tall ones
+    const far = peaks(w, lake, 46, 72, n(3), '#C9D3EE', '#AEB9DD', true, D, 41)
+      + mistBand(w, lake - 10, 24, D, 'a', 0.55)
+      + peaks(w, lake, 26, 46, n(4), '#97AAD6', '#7C8FC2', true, D, 42)
+      + mistBand(w, lake - 4, 14, D, 'b', 0.45);
+    const trees = grove(w * 0.12, lake + 1, w * 0.3, n(13), 8, 24, '#4F8A6A', '#2F5E4A', 5)
+      + grove(w * 0.82, lake + 1, w * 0.34, n(14), 8, 26, '#4F8A6A', '#2F5E4A', 6)
+      + grove(w * 0.5, lake + 1, w * 0.18, n(6), 6, 13, '#6A9E80', '#46765E', 7)
+      + `<path d="M0 ${f1(lake + 1)}Q${f1(w * 0.25)} ${f1(lake - 3)} ${f1(w * 0.5)} ${f1(lake)}T${w} ${f1(lake - 1)}V${f1(lake + 2)}H0Z" fill="#3E6E58"/>`;
+    art += far + trees;
     // the lake: sky colours, a blurred upside-down copy of the mountains, light streaks
     art += `<rect y="${f1(lake)}" width="${w}" height="${f1(gy - lake + 4)}" fill="${D.lin('lake', [[0, '#BFDDEE'], [1, '#6FA6C4']])}"/>`;
-    art += `<g opacity=".4" filter="url(#${D.id('b2')})" transform="translate(0 ${f1(lake * 2)}) scale(1 -1)">${far}${treeLine(w, lake + 1, 31, '#6C9482', '#3E6A52', '#2C4E3C')}</g>`;
+    art += `<g opacity=".38" filter="url(#${D.id('b2')})" transform="translate(0 ${f1(lake * 2 + 2)}) scale(1 -1)">${far}${trees}</g>`;
     for (let i = 0; i < n(6); i++) art += `<path class="pl-ray" d="M${f1(plRnd(i, 8) * w)} ${f1(lake + 4 + plRnd(i, 9) * (gy - lake - 6))}h${f1(10 + plRnd(i, 10) * 20)}" stroke="#FFFFFF" stroke-width=".8" opacity=".6" style="animation-delay:-${i}s"/>`;
     art += B('b3', `<rect y="${f1(lake - 4)}" width="${w}" height="8" fill="#FFFFFF" opacity=".35"/>`);
     // the shore in front
