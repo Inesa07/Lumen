@@ -70,6 +70,24 @@ function defsMaker(P) {
       seen.add(id);
       list.push(`<filter id="${P}${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${std}"/></filter>`);
     },
+    // a painted edge: noise moves the outline a little, like a brush
+    paint(id, scale, freq, seed) {
+      if (seen.has(id)) return;
+      seen.add(id);
+      list.push(`<filter id="${P}${id}" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="${freq}" numOctaves="3" seed="${seed}"/><feDisplacementMap in="SourceGraphic" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/></filter>`);
+    },
+    // paper grain over the picture
+    grain(id) {
+      if (seen.has(id)) return;
+      seen.add(id);
+      list.push(`<filter id="${P}${id}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="5"/><feColorMatrix type="saturate" values="0"/></filter>`);
+    },
+    // water: stretched noise that wobbles reflections sideways
+    ripple(id) {
+      if (seen.has(id)) return;
+      seen.add(id);
+      list.push(`<filter id="${P}${id}" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".004 .12" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="6" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".6"/></filter>`);
+    },
     id: (x) => `${P}${x}`,
     html: () => `<defs>${list.join('')}</defs>`,
   };
@@ -633,57 +651,127 @@ function paintedPlace(place, o, D) {
   const B = (lvl, inner) => `<g filter="url(#${D.id(lvl)})">${inner}</g>`;
 
   if (place === 'forest') {
-    art += `<rect width="${w}" height="${h}" fill="${D.lin('fsky', [[0, '#B8E2E4'], [0.5, '#DDF0DC'], [1, '#EEF5D2']])}"/>`;
-    // layers of trees from far to near, with mist between them (each layer darker and sharper)
-    const layer = (L, count, hmin, hmax, light, darkC, roundC, base) => {
-      let t = '';
-      for (let i = 0; i < count; i++) {
-        const x = (i + plRnd(L, i) * 0.9) * w / count, hh = hmin + plRnd(L, i + 9) * (hmax - hmin);
-        t += plRnd(L, i + 19) < 0.62 ? slimFir(x, base, hh, light, darkC) : roundTree(x, base, hh * 0.8, D, `${L}_${i}`, roundC);
+    // ---- the fairy forest: giant mossy trees arching over a clearing, sun rays through blue-green mist,
+    // bright flowers, a pond in front. Edges are made uneven by a noise filter, so shapes look painted.
+    D.paint('pt1', 3, 0.04, 3); D.paint('pt2', 5, 0.025, 7); D.paint('pt3', 2.2, 0.09, 11);
+    const P1 = D.id('pt1'), P2 = D.id('pt2'), P3 = D.id('pt3');
+    art += `<rect width="${w}" height="${h}" fill="${D.lin('ffsky', [[0, '#A9DCE3'], [0.45, '#D4EEE4'], [0.75, '#BFE0CC'], [1, '#8FBF9E']])}"/>`;
+    // far: misty trunks and arches, pale teal, soft
+    let far = '';
+    for (let i = 0; i < n(6); i++) {
+      const x = (i + 0.4 + plRnd(i, 1) * 0.4) * w / n(6), wd = 6 + plRnd(i, 2) * 6;
+      far += `<path d="M${f1(x - wd * 1.6)} ${f1(gy)}C${f1(x - wd)} ${f1(gy * 0.7)} ${f1(x - wd * 1.3)} ${f1(gy * 0.35)} ${f1(x - wd * 0.6)} -6H${f1(x + wd * 0.6)}C${f1(x + wd * 1.4)} ${f1(gy * 0.35)} ${f1(x + wd)} ${f1(gy * 0.7)} ${f1(x + wd * 1.7)} ${f1(gy)}Z" fill="#9CC7C6"/>`
+        + `<path d="M${f1(x)} ${f1(gy * (0.3 + plRnd(i, 3) * 0.15))}C${f1(x + 25)} ${f1(gy * 0.12)} ${f1(x + 55)} ${f1(gy * 0.18)} ${f1(x + 80)} ${f1(gy * 0.36)}" stroke="#9CC7C6" stroke-width="${f1(4 + plRnd(i, 4) * 3)}" fill="none"/>`;
+    }
+    for (let i = 0; i < n(10); i++) far += `<ellipse cx="${f1(plRnd(i, 5) * w)}" cy="${f1(plRnd(i, 6) * gy * 0.45)}" rx="${f1(22 + plRnd(i, 7) * 18)}" ry="${f1(10 + plRnd(i, 8) * 8)}" fill="#B6D9C6" opacity=".9"/>`;
+    art += `<g filter="url(#${D.id('b3')})"><g filter="url(#${P2})">${far}</g></g>`;
+    // middle: big purple-grey trunks with mossy arms, a little soft
+    const limb = (x0, y0, c1x, c1y, c2x, c2y, x1, y1, w0, w1, col) => {
+      // a branch with a width that changes from w0 to w1 along a curve (drawn as a filled band)
+      const pts = [], N = 18;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N, u = 1 - t;
+        const x = u * u * u * x0 + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * x1, y = u * u * u * y0 + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * y1;
+        const dx = 3 * u * u * (c1x - x0) + 6 * u * t * (c2x - c1x) + 3 * t * t * (x1 - c2x), dy = 3 * u * u * (c1y - y0) + 6 * u * t * (c2y - c1y) + 3 * t * t * (y1 - c2y);
+        const L = Math.hypot(dx, dy) || 1, wd = (w0 + (w1 - w0) * t) / 2;
+        pts.push([x, y, -dy / L * wd, dx / L * wd]);
       }
-      return t;
+      const top = pts.map(([x, y, nx, ny]) => [x + nx, y + ny]), bot = pts.map(([x, y, nx, ny]) => [x - nx, y - ny]).reverse();
+      return { d: `M${[...top, ...bot].map(([x, y]) => `${f1(x)} ${f1(y)}`).join('L')}Z`, upper: pts.map(([x, y, nx, ny]) => (ny < 0 ? [x + nx, y + ny] : [x - nx, y - ny])), col };
     };
-    art += layer(1, n(16), 40, 70, '#A9CDBF', '#93BBAE', ['#C2DCC6', '#A9CDB8', '#93BBAE'], gy - 18) + mistBand(w, gy - 26, 40, D, 'f1', 0.6);
-    art += layer(2, n(12), 50, 86, '#79A88E', '#5E8E78', ['#A6CC8E', '#7FAE78', '#5E8E68'], gy - 10) + mistBand(w, gy - 14, 26, D, 'f2', 0.45);
-    art += lightRays(w, h, D, 0.5, 4);
-    // ground: mossy, with a stream and stones
-    art += `<path d="${hillPath(w, h, gy - 3, 6, 61, 4)}" fill="${D.lin('fgr', [[0, '#9CC05A'], [0.45, '#6A9640'], [1, '#2F4C26']])}"/>`;
-    art += `<path d="M${f1(w * 0.16)} ${f1(gy + 1)}Q${f1(w * 0.36)} ${f1(gy + 5)} ${f1(w * 0.31)} ${f1(gy + 14)}T${f1(w * 0.42)} ${f1(h)}H${f1(w * 0.74)}Q${f1(w * 0.5)} ${f1(gy + 18)} ${f1(w * 0.46)} ${f1(gy + 10)}T${f1(w * 0.3)} ${f1(gy + 1)}Z" fill="${D.lin('stream', [[0, '#C6EBE0'], [0.5, '#86C4BA'], [1, '#3E7A78']])}"/>`
-      + `<path class="pl-ray" d="M${f1(w * 0.33)} ${f1(gy + 9)}h16M${f1(w * 0.42)} ${f1(gy + 19)}h22M${f1(w * 0.5)} ${f1(gy + 27)}h18" stroke="#F4FFFA" stroke-width="1" opacity=".7"/>`;
-    art += stone(w * 0.35, gy + 12, 4, 1) + stone(w * 0.47, gy + 25, 5.5, 2) + stone(w * 0.84, gy + 7, 6.5, 3) + stone(w * 0.2, gy + 10, 4.5, 4);
-    for (let i = 0; i < n(18); i++) {
-      const x = plRnd(i, 45) * w, y = gy + 2 + plRnd(i, 46) * (h - gy - 2);
-      if (x > w * 0.3 && x < w * 0.52 && y > gy + 6) continue;
-      art += tuft(x, y, 5 + plRnd(i, 47) * 5, '#7FB24A', '#4E8034', i + 200);
+    // a carpet of moss along the top of a branch: a wavy band, darker underneath, lit on top, with tiny flowers
+    const mossStrip = (pts, th, k) => {
+      const up = pts.map(([x, y], i) => [x, y - th * (0.6 + plRnd(k, i) * 0.8)]);
+      const band = `M${pts.map(([x, y]) => `${f1(x)} ${f1(y + th * 0.25)}`).join('L')}L${up.reverse().map(([x, y]) => `${f1(x)} ${f1(y)}`).join('L')}Z`;
+      let m = `<path d="${band}" fill="#7E8E2C"/>`;
+      const up2 = pts.map(([x, y], i) => `${f1(x)} ${f1(y - th * (0.55 + plRnd(k, i + 50) * 0.7))}`);
+      m += `<path d="M${pts.map(([x, y]) => `${f1(x)} ${f1(y - th * 0.15)}`).join('L')}L${up2.reverse().join('L')}Z" fill="${D.lin(`ms${k}`, [[0, '#E2D85A'], [1, '#A9B23A']])}"/>`;
+      pts.forEach(([x, y], i) => {
+        if (plRnd(k, i + 90) > 0.5) m += `<circle cx="${f1(x)}" cy="${f1(y - th * 0.9)}" r="${f1(th * 0.22)}" fill="#F08A3C"/><circle cx="${f1(x + th * 0.3)}" cy="${f1(y - th * 1.05)}" r="${f1(th * 0.16)}" fill="#FF6A4C"/>`;
+        if (plRnd(k, i + 120) > 0.6) m += `<circle cx="${f1(x - th * 0.3)}" cy="${f1(y - th * 0.8)}" r="${f1(th * 0.14)}" fill="#FFF3A0"/>`;
+      });
+      return m;
+    };
+    const mossOn = (pts, sz, k, bright = true) => pts.map(([x, y], i) => {
+      const r = sz * (0.8 + plRnd(k, i) * 0.7);
+      return `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(r * 1.5)}" ry="${f1(r * 0.75)}" fill="${bright ? '#8E9C2E' : '#7E8E52'}"/>`
+        + `<ellipse cx="${f1(x - r * 0.2)}" cy="${f1(y - r * 0.3)}" rx="${f1(r * 1.1)}" ry="${f1(r * 0.5)}" fill="${bright ? '#D6CF4A' : '#A9B474'}"/>`
+        + (bright && plRnd(k, i + 40) > 0.55 ? `<circle cx="${f1(x + r * 0.5)}" cy="${f1(y - r * 0.6)}" r="${f1(r * 0.35)}" fill="#F08A3C"/><circle cx="${f1(x + r * 0.1)}" cy="${f1(y - r * 0.8)}" r="${f1(r * 0.25)}" fill="#FF6A4C"/>` : '');
+    }).join('');
+    const drips = (pts, k, len) => pts.filter((_, i) => i % 2).map(([x, y], i) => {
+      const l = len * (0.4 + plRnd(k, i) * 0.9);
+      return `<path d="M${f1(x - 1.2)} ${f1(y)}Q${f1(x - 0.6)} ${f1(y + l * 0.6)} ${f1(x + 0.3)} ${f1(y + l)}Q${f1(x + 0.6)} ${f1(y + l * 0.5)} ${f1(x + 1.2)} ${f1(y)}Z" fill="#7E8A3A" opacity=".85"/>`;
+    }).join('');
+    let mid = '';
+    for (const [x, k] of [[w * 0.36, 1], [w * 0.62, 2], [w * 0.8, 3]]) {
+      const tw = 9 + plRnd(k, 9) * 4;
+      mid += `<path d="M${f1(x - tw * 2)} ${f1(gy - 2)}C${f1(x - tw)} ${f1(gy - 10)} ${f1(x - tw * 1.2)} ${f1(gy * 0.5)} ${f1(x - tw * 0.4)} -6H${f1(x + tw * 0.6)}C${f1(x + tw * 1.3)} ${f1(gy * 0.5)} ${f1(x + tw)} ${f1(gy - 10)} ${f1(x + tw * 2.2)} ${f1(gy - 2)}Z" fill="${D.lin(`mtk${k}`, [[0, '#8A8C9A'], [1, '#5C5E70']], 1, 0)}"/>`;
+      const a = limb(x, gy * 0.42, x + 30, gy * 0.18, x + 70, gy * 0.12, x + 110, gy * 0.26, 9, 3, '#6E6E80');
+      mid += `<path d="${a.d}" fill="#6E6E80"/>` + mossStrip(a.upper, 4.5, k * 10).replace(/#E2D85A/g, '#C9CC7E').replace(/#A9B23A/g, '#9AA66A').replace(/#7E8E2C/g, '#7E8A62');
     }
-    // a wooden bridge over the stream, a deer in the clearing, a rabbit by the flowers
-    art += woodBridge(w * 0.4, gy + 12, w * 0.13, D);
-    art += deer(w * 0.24, gy - 1, 0.95, 1) + rabbit(w * 0.78, gy + 10, 1.1, 1);
-    // near trees at the sides, big and clear
-    art += slimFir(w * 0.03, gy + 8, h * 1.0, '#3E7A5A', '#2A5A44') + roundTree(w * 0.13, gy + 6, h * 0.62, D, 'n1')
-      + slimFir(w * 0.97, gy + 8, h * 1.05, '#3E7A5A', '#2A5A44') + roundTree(w * 0.87, gy + 6, h * 0.55, D, 'n2');
-    // flower beds by the stream, ferns
-    const cols = [['#E84FB0', '#FFB0E0'], ['#FF8A3C', '#FFD0A0'], ['#E8434F', '#FFA0A6'], ['#FFC93C', '#FFF0A8'], ['#B064E8', '#E0B8FF']];
+    art += `<g filter="url(#${D.id('b1')})"><g filter="url(#${P1})">${mid}</g></g>`;
+    // the canopy: masses of golden-green leaves along the top, some hanging down
+    let canopy = '';
     for (let i = 0; i < n(14); i++) {
-      const x = plRnd(i, 40) * w, y = gy + 3 + plRnd(i, 41) * (h - gy - 5);
-      if (x > w * 0.29 && x < w * 0.52 && y > gy + 5) continue;          // not in the stream
-      art += flowerBush(x, y, 2.8 + plRnd(i, 42) * 1.8, ...cols[i % cols.length], i + 50);
+      const x = plRnd(i, 140) * w, y = -6 + plRnd(i, 141) * 22;
+      canopy += foliage(x, y, 14 + plRnd(i, 142) * 10, '#6E8A34', '#A9B840', '#E6DA6A', i + 143, 7);
     }
-    for (let i = 0; i < n(4); i++) {
-      const x = w * (0.12 + plRnd(i, 43) * 0.75), y = gy + 3 + plRnd(i, 44) * 6;
-      art += `<g class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${i}s"><path d="M${f1(x)} ${f1(y)}Q${f1(x + 2)} ${f1(y - 10)} ${f1(x - 1)} ${f1(y - 16)}a3 3 0 1 1 3 3" stroke="#C6D84A" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>`;
+    art += `<g filter="url(#${P1})">${canopy}</g>`;
+    // sun rays from the top right through the leaves
+    const rg = D.lin('frays', [[0, '#FFF2B4', 0.6], [1, '#FFF2B4', 0]]);
+    art += `<g filter="url(#${D.id('b3')})">${[0, 1, 2, 3].map((i) => `<path class="pl-ray" d="M${f1(w * (0.66 + i * 0.09))} -6L${f1(w * (0.7 + i * 0.09))} -6L${f1(w * (0.42 + i * 0.07))} ${f1(gy + 6)}L${f1(w * (0.36 + i * 0.07))} ${f1(gy + 6)}Z" fill="${rg}" style="animation-delay:-${i * 1.7}s"/>`).join('')}</g>`;
+    // the mossy ground and flower bank
+    art += `<g filter="url(#${P1})"><path d="${hillPath(w, h, gy - 4, 6, 91, 4)}" fill="${D.lin('fbank', [[0, '#A9B94E'], [0.35, '#6E9640'], [1, '#2E4A2A']])}"/></g>`;
+    // the big tree in front (left): buttress roots, a huge arm arching over everything, moss and hanging moss
+    const tx = w * 0.07, tw = 20;
+    let front = `<path d="M${f1(tx - tw * 2.6)} ${f1(gy + 10)}C${f1(tx - tw * 1.6)} ${f1(gy - 2)} ${f1(tx - tw * 1.1)} ${f1(gy - 30)} ${f1(tx - tw * 0.8)} ${f1(gy * 0.55)}C${f1(tx - tw * 0.7)} ${f1(gy * 0.3)} ${f1(tx - tw * 0.3)} ${f1(gy * 0.1)} ${f1(tx - tw * 0.2)} -8H${f1(tx + tw * 0.9)}C${f1(tx + tw * 0.8)} ${f1(gy * 0.2)} ${f1(tx + tw * 0.9)} ${f1(gy * 0.45)} ${f1(tx + tw * 1.1)} ${f1(gy * 0.6)}C${f1(tx + tw * 1.3)} ${f1(gy - 26)} ${f1(tx + tw * 2)} ${f1(gy - 4)} ${f1(tx + tw * 3.2)} ${f1(gy + 10)}Z" fill="${D.lin('ftk', [[0, '#6A5A70'], [0.5, '#4A3C52'], [1, '#2E2436']], 1, 0)}"/>`;
+    front += `<path d="M${f1(tx - tw * 0.4)} ${f1(gy - 6)}C${f1(tx - tw * 0.5)} ${f1(gy * 0.5)} ${f1(tx - tw * 0.2)} ${f1(gy * 0.2)} ${f1(tx)} -6" stroke="#9C8AA4" stroke-width="2" fill="none" opacity=".45"/>`;
+    const arm = limb(tx + tw * 0.6, gy * 0.42, w * 0.3, gy * 0.02, w * 0.62, gy * 0.18, w * 1.04, gy * 0.02, 17, 7, '#4E4058');
+    const arm2 = limb(tx + tw * 0.4, gy * 0.2, w * 0.18, gy * -0.08, w * 0.3, gy * -0.02, w * 0.42, -6, 10, 6, '#4E4058');
+    front += `<path d="${arm2.d}" fill="#4A3C54"/><path d="${arm.d}" fill="${D.lin('farm', [[0, '#5E4E68'], [1, '#3A2E44']])}"/>`;
+    front += drips(arm.upper.map(([x, y], i) => [x, y + 14 - i * 0.3]), 31, 26) + mossStrip(arm.upper, 9, 32) + mossStrip(arm2.upper, 6.5, 33)
+      + mossStrip([[tx + tw * 0.7, gy * 0.5], [tx + tw * 0.9, gy * 0.55], [tx + tw * 1.05, gy * 0.62], [tx + tw * 1.15, gy * 0.7]], 5, 34);
+    art += `<g filter="url(#${P3})">${front}</g>`;
+    // the right tree
+    const rx = w * 0.97;
+    art += `<g filter="url(#${P3})"><path d="M${f1(rx - 34)} ${f1(gy + 10)}C${f1(rx - 18)} ${f1(gy - 4)} ${f1(rx - 14)} ${f1(gy * 0.5)} ${f1(rx - 10)} -8H${f1(w + 10)}V${f1(gy + 10)}Z" fill="${D.lin('frk', [[0, '#5A4A62'], [1, '#2E2436']], 1, 0)}"/>${mossStrip([[rx - 10, gy * 0.3], [rx - 11, gy * 0.42], [rx - 12, gy * 0.55], [rx - 14, gy * 0.68], [rx - 17, gy * 0.8]], 6, 35)}</g>`;
+    // flower beds along the bank: big bright blossoms
+    const bloom = (x, y, sz, petal, centre, k) => {
+      let b = `<path d="M${f1(x)} ${f1(y)}V${f1(y - sz * 2.4)}" stroke="#3E6E2E" stroke-width="${f1(sz * 0.18)}"/><path d="M${f1(x)} ${f1(y - sz * 0.6)}q${f1(sz * 1.4)} ${f1(-sz * 0.4)} ${f1(sz * 1.8)} ${f1(-sz * 1.4)}q${f1(-sz * 1.2)} 0 ${f1(-sz * 1.8)} ${f1(sz * 0.9)}z" fill="#4E8A3A"/>`;
+      for (let i = 0; i < 7; i++) b += `<ellipse cx="${f1(x)}" cy="${f1(y - sz * 2.4 - sz * 0.6)}" rx="${f1(sz * 0.32)}" ry="${f1(sz * 0.66)}" fill="${petal}" transform="rotate(${f1(i * 51.4 + plRnd(k, i) * 10)} ${f1(x)} ${f1(y - sz * 2.4)})"/>`;
+      return `<g class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${f1(plRnd(k, 9) * 4)}s">${b}<circle cx="${f1(x)}" cy="${f1(y - sz * 2.4)}" r="${f1(sz * 0.3)}" fill="${centre}"/></g>`;
+    };
+    const fl = [['#E84FB0', '#FFD84A'], ['#B85CE8', '#FFE27A'], ['#FF7A3C', '#FFE27A'], ['#E8434F', '#FFD0A0'], ['#FFC93C', '#C2621E']];
+    for (let i = 0; i < n(16); i++) {
+      const x = w * (0.12 + plRnd(i, 40) * 0.8), y = gy + 1 + plRnd(i, 41) * 8;
+      art += i % 3 ? flowerBush(x, y, 2.6 + plRnd(i, 42) * 1.4, fl[i % 5][0], '#FFD6EE', i + 50) : bloom(x, y, 3 + plRnd(i, 43) * 1.6, fl[i % 5][0], fl[i % 5][1], i + 60);
     }
-    art += B('b1', `<path d="M-6 ${f1(h)}Q${f1(w * 0.06)} ${f1(h - 26)} ${f1(w * 0.16)} ${f1(h - 8)}Q${f1(w * 0.1)} ${f1(h - 4)} ${f1(w * 0.14)} ${f1(h + 4)}Z" fill="#1F2E22"/><path d="M${f1(w + 6)} ${f1(h)}Q${f1(w * 0.93)} ${f1(h - 30)} ${f1(w * 0.82)} ${f1(h - 6)}Q${f1(w * 0.9)} ${f1(h - 2)} ${f1(w * 0.86)} ${f1(h + 4)}Z" fill="#1F2E22"/>`);
-    art += birdsWhite(w, n(6), 70);
-    for (let i = 0; i < n(4); i++) art += butterfly(w * (0.2 + plRnd(i, 75) * 0.6), gy - 10 - plRnd(i, 76) * 40, 0.55, '#FFFFFF', '#E6F2FF', i + 77);
-    glow += motes(w, h, dusk ? n(30) : n(18), 80, dusk ? '#E8FF9A' : '#FFF6C0');
+    // big leafy plants and bushes along the bank
+    const leafFan = (x, y, sz, c1, c2, k) => `<g class="pl-sway" style="transform-origin:${f1(x)}px ${f1(y)}px;animation-delay:-${f1(plRnd(k, 1) * 4)}s">`
+      + [-1.1, -0.6, -0.15, 0.3, 0.8, 1.2].map((a, i) => { const tx2 = x + Math.sin(a) * sz * 2.2, ty2 = y - Math.cos(a) * sz * 2; return `<path d="M${f1(x)} ${f1(y)}Q${f1(x + Math.sin(a) * sz * 0.6 - sz * 0.5)} ${f1(y - Math.cos(a) * sz * 1.3)} ${f1(tx2)} ${f1(ty2)}Q${f1(x + Math.sin(a) * sz * 0.9 + sz * 0.5)} ${f1(y - Math.cos(a) * sz)} ${f1(x)} ${f1(y)}Z" fill="${i % 2 ? c1 : c2}"/>`; }).join('') + '</g>';
+    art += `<g filter="url(#${P1})">${[0.16, 0.3, 0.55, 0.74, 0.86].map((fx, i) => foliage(w * fx, gy - 2, 9 + plRnd(i, 150) * 5, '#2E5A34', '#3E7440', '#6E9A4A', i + 151, 6)).join('')}</g>`;
+    art += leafFan(w * 0.21, gy + 4, 5, '#3E7A4A', '#5E9A58', 1) + leafFan(w * 0.9, gy + 3, 6, '#3E7A4A', '#5E9A58', 2) + leafFan(w * 0.58, gy + 2, 4, '#4E8A50', '#6EAA60', 3);
+    // the pond in front: dark teal water with the light and the flowers reflected in it, stones
+    const pond = `M0 ${f1(gy + 10)}Q${f1(w * 0.2)} ${f1(gy + 6)} ${f1(w * 0.42)} ${f1(gy + 11)}Q${f1(w * 0.56)} ${f1(gy + 15)} ${f1(w * 0.5)} ${f1(h)}H0Z`;
+    art += `<path d="${pond}" fill="${D.lin('fpond', [[0, '#8FC2B0'], [0.4, '#4E8A80'], [1, '#2A4E4A']])}"/>`;
+    art += `<g opacity=".55" filter="url(#${D.id('b2')})">${[0, 1, 2, 3, 4].map((i) => `<rect x="${f1(w * (0.05 + i * 0.09))}" y="${f1(gy + 12 + plRnd(i, 70) * 6)}" width="${f1(6 + plRnd(i, 71) * 8)}" height="${f1(10 + plRnd(i, 72) * 8)}" fill="${fl[i % 5][0]}" opacity=".5"/>`).join('')}<rect x="${f1(w * 0.3)}" y="${f1(gy + 12)}" width="${f1(w * 0.14)}" height="20" fill="#FFF2B4" opacity=".55"/></g>`;
+    for (let i = 0; i < n(5); i++) art += `<path class="pl-ray" d="M${f1(w * (0.04 + plRnd(i, 73) * 0.4))} ${f1(gy + 14 + plRnd(i, 74) * 14)}h${f1(8 + plRnd(i, 75) * 14)}" stroke="#E6FFF6" stroke-width=".8" opacity=".7"/>`;
+    art += stone(w * 0.12, gy + 22, 7, 1) + stone(w * 0.27, gy + 16, 5, 2) + stone(w * 0.4, gy + 26, 6.5, 3);
+    // dark roots and leaves in front, like looking out from the bushes
+    art += `<g filter="url(#${D.id('b1')})"><path d="M-6 ${f1(h)}C${f1(w * 0.04)} ${f1(h - 18)} ${f1(w * 0.1)} ${f1(h - 12)} ${f1(w * 0.18)} ${f1(h - 2)}L${f1(w * 0.2)} ${f1(h + 4)}Z" fill="#1E2A24"/><path d="M${f1(w + 6)} ${f1(h)}C${f1(w * 0.95)} ${f1(h - 22)} ${f1(w * 0.88)} ${f1(h - 10)} ${f1(w * 0.8)} ${f1(h - 1)}L${f1(w * 0.78)} ${f1(h + 4)}Z" fill="#1E2A24"/>`
+      + `<path d="M${f1(w * 0.9)} ${f1(h + 2)}q4 -16 14 -22q-4 12 -6 24z" fill="#24382A"/></g>`;
+    // white birds in the light, butterflies, glowing specks
+    art += Array.from({ length: n(7) }, (_, i) => bird(w * (0.14 + plRnd(i, 76) * 0.22), 14 + plRnd(i, 77) * 34, 0.7 + plRnd(i, 78) * 0.5, i + 79, '#FFFFFF')).join('');
+    for (let i = 0; i < n(5); i++) art += butterfly(w * (0.22 + plRnd(i, 80) * 0.6), gy - 6 - plRnd(i, 81) * 36, 0.5, '#FFFFFF', '#E6F6FF', i + 82);
+    glow += motes(w, h, dusk ? n(36) : n(22), 85, dusk ? '#E8FF9A' : '#FFF6C0');
     if (dusk) {
-      glow += owl(w * 0.13, gy - h * 0.42, 1.2);
-      for (let i = 0; i < n(5); i++) {                                // glowing mushrooms
-        const x = w * (0.08 + plRnd(i, 78) * 0.84), y = gy + 4 + plRnd(i, 79) * 12;
-        glow += `<circle class="pl-glow" cx="${f1(x)}" cy="${f1(y - 4)}" r="6" fill="${D.rad('gm', [[0, '#7FF0FF', 0.6], [1, '#7FF0FF', 0]])}"/><path d="M${f1(x - 0.8)} ${f1(y)}V${f1(y - 3)}H${f1(x + 0.8)}V${f1(y)}Z" fill="#DFF6FF"/><path d="M${f1(x - 3)} ${f1(y - 3)}Q${f1(x)} ${f1(y - 7.5)} ${f1(x + 3)} ${f1(y - 3)}Z" fill="#7FF0FF"/>`;
+      for (let i = 0; i < n(5); i++) {
+        const x = w * (0.1 + plRnd(i, 86) * 0.8), y = gy + 2 + plRnd(i, 87) * 6;
+        glow += `<circle class="pl-glow" cx="${f1(x)}" cy="${f1(y - 4)}" r="6" fill="${D.rad('fgm', [[0, '#7FF0FF', 0.6], [1, '#7FF0FF', 0]])}"/><path d="M${f1(x - 0.8)} ${f1(y)}V${f1(y - 3)}H${f1(x + 0.8)}V${f1(y)}Z" fill="#DFF6FF"/><path d="M${f1(x - 3)} ${f1(y - 3)}Q${f1(x)} ${f1(y - 7.5)} ${f1(x + 3)} ${f1(y - 3)}Z" fill="#7FF0FF"/>`;
       }
     }
+    art += `<rect width="${w}" height="${h}" filter="url(#${D.id('grain')})" opacity=".08"/>`;
+    D.grain('grain');
   } else if (place === 'blossom') {
     art += `<rect width="${w}" height="${h}" fill="${D.lin('gsky', [[0, '#A9D6F5'], [0.55, '#FBE3EC'], [1, '#FFF1E2']])}"/>`;
     let far = '';
@@ -743,15 +831,13 @@ function paintedPlace(place, o, D) {
     art += `<rect width="${w}" height="${h}" fill="${D.lin('lsky', [[0, '#6FB3EC'], [0.45, '#CFE8F6'], [0.6, '#FBE6D2']])}"/>`
       + (tod === 'day' || tod === 'morning' ? `<circle cx="${f1(w * 0.78)}" cy="26" r="38" fill="${D.rad('lsun', [[0, '#FFF3B0', 0.75], [1, '#FFF3B0', 0]])}"/><circle cx="${f1(w * 0.78)}" cy="26" r="9" fill="#FFF0A0"/>` : '');
     const lake = h * 0.58;
-    // mountains: three layers, each nearer one darker and bluer; snow on the tall ones
-    const far = peaks(w, lake, 46, 72, n(3), '#C9D3EE', '#AEB9DD', true, D, 41)
-      + mistBand(w, lake - 10, 24, D, 'a', 0.55)
-      + peaks(w, lake, 26, 46, n(4), '#97AAD6', '#7C8FC2', true, D, 42)
-      + mistBand(w, lake - 4, 14, D, 'b', 0.45);
-    const trees = grove(w * 0.12, lake + 1, w * 0.3, n(13), 8, 24, '#4F8A6A', '#2F5E4A', 5)
-      + grove(w * 0.82, lake + 1, w * 0.34, n(14), 8, 26, '#4F8A6A', '#2F5E4A', 6)
-      + grove(w * 0.5, lake + 1, w * 0.18, n(6), 6, 13, '#6A9E80', '#46765E', 7)
-      + `<path d="M0 ${f1(lake + 1)}Q${f1(w * 0.25)} ${f1(lake - 3)} ${f1(w * 0.5)} ${f1(lake)}T${w} ${f1(lake - 1)}V${f1(lake + 2)}H0Z" fill="#3E6E58"/>`;
+    // realistic mountains: rough ridges, rock gradient, shadow faces, snow; edges roughened like paint
+    D.paint('lp1', 4, 0.05, 21); D.paint('lp2', 2.5, 0.12, 23);
+    const far = `<g filter="url(#${D.id('b1')})"><g filter="url(#${D.id('lp1')})">${range(w, lake, 76, 7, '#AEB8D2', '#7E8AAE', '#E4E8F4', lake - 46, D, 1)}</g></g>`
+      + mistBand(w, lake - 14, 26, D, 'a', 0.5)
+      + `<g filter="url(#${D.id('lp1')})">${range(w, lake, 46, 19, '#6E7F9E', '#4A5878', '#A9B6CE', lake - 38, D, 2)}</g>`
+      + mistBand(w, lake - 4, 12, D, 'b', 0.4);
+    const trees = `<g filter="url(#${D.id('lp2')})">${treeLine(w, lake + 1, 31, '#4E6E5E', '#2E4E40', '#1E3A2E')}</g>`;
     art += far + trees;
     // the lake: sky colours, a blurred upside-down copy of the mountains, light streaks
     art += `<rect y="${f1(lake)}" width="${w}" height="${f1(gy - lake + 4)}" fill="${D.lin('lake', [[0, '#BFDDEE'], [1, '#6FA6C4']])}"/>`;
