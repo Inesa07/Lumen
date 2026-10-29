@@ -313,9 +313,10 @@ function lumiHomeCard(f, g = null) {
     <span class="chev">›</span></a>`;
 }
 
-/** When an outfit unlocks, in the chosen language. */
-function outfitHow(o, stages = []) {
-  return t('Reach stage “{name}”', { name: t((stages[o.stage] || {}).name || '') });
+/** When an outfit unlocks: at how much light, and how much is still missing. */
+function outfitHow(o, f) {
+  const need = (f.stages[o.stage] || {}).need || 0;
+  return t('at {n} 🔆 · {k} more', { n: need, k: Math.max(0, need - f.light) });
 }
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -353,10 +354,10 @@ async function viewLumi() {
     </section>
 
     <section class="card">
-      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Wardrobe</h2><span class="muted small">tap to dress Lumi</span></div>
+      <div class="block-head"><h2 class="display" style="font-size:18px;margin:0">Wardrobe ${info('wardrobe', 'Wardrobe')}</h2><span class="muted small">tap to dress Lumi</span></div>
       <div class="wardrobe">${f.outfits.map((o) => `<button type="button" class="outfit${o.id === f.outfit ? ' on' : ''}" data-outfit="${o.id}" ${o.unlocked ? '' : 'disabled'} aria-pressed="${o.id === f.outfit}">
         ${lumiSVG({ mood: 'happy', stage: Math.max(2, f.stage.index), outfit: o.id, size: 70, locked: !o.unlocked, label: o.name })}
-        <b>${esc(t(o.name))}</b><span class="muted small">${o.unlocked ? (o.id === f.outfit ? t('wearing') : '&nbsp;') : `🔒 ${esc(outfitHow(o, f.stages))}`}</span></button>`).join('')}</div>
+        <b>${esc(t(o.name))}</b><span class="muted small">${o.unlocked ? (o.id === f.outfit ? t('wearing') : '&nbsp;') : `🔒 ${esc(outfitHow(o, f))}`}</span></button>`).join('')}</div>
     </section>
 
     <section class="card lumi-settings">

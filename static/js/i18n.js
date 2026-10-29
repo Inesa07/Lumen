@@ -381,6 +381,11 @@ function translateText(key) {
 // simpler Lumi: light = focused minutes, stars = the dream
 [
   ['New for Lumi:', 'Новое для Луми:', 'Նոր Լումիի համար՝'],
+  ['at {n} 🔆 · {k} more', 'при {n} 🔆 · ещё {k}', '{n} 🔆-ի դեպքում · էլի {k}'],
+  ['Clothes come with <b>light 🔆</b>, not with stars. Every minute you really focus gives Lumi 1 light. At 30, 120, 300, 600 and 1200 light Lumi grows, and each time new clothes open. Under every locked outfit you see how much light is still missing.',
+    'Одежда открывается <b>светом 🔆</b>, а не звёздами. Каждая минута настоящего фокуса даёт Луми 1 свет. При 30, 120, 300, 600 и 1200 света Луми растёт, и каждый раз открывается новая одежда. Под каждым закрытым нарядом видно, сколько света ещё не хватает.',
+    'Հագուստը բացվում է <b>լույսով 🔆</b>, ոչ թե աստղերով։ Իսկական կենտրոնացման ամեն րոպեն Լումիին 1 լույս է տալիս։ 30, 120, 300, 600 և 1200 լույսի դեպքում Լումին մեծանում է, և ամեն անգամ նոր հագուստ է բացվում։ Ամեն փակ հագուստի տակ երևում է, թե որքան լույս է դեռ պակասում։'],
+  ['Wardrobe', 'Гардероб', 'Զգեստապահարան'],
   ["I'm a little firefly. Every minute you really focus gives me light, and with enough light I grow. Stars from your lessons take you to your dream!",
     'Я маленький светлячок. Каждая минута, когда ты по-настоящему сосредоточен, даёт мне свет, и от света я расту. А звёзды за уроки ведут тебя к мечте!',
     'Ես փոքրիկ լուսատտիկ եմ։ Ամեն րոպե, երբ իսկապես կենտրոնացած ես, ինձ լույս է տալիս, և լույսից ես մեծանում եմ։ Իսկ դասերի աստղերը քեզ տանում են դեպի երազանքդ։'],
