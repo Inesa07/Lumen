@@ -699,6 +699,7 @@ code.cmd { font-family: ui-monospace, Menlo, monospace; background: var(--bg); b
   .ai-main { height: 100vh; }
   .sugs { grid-template-columns: 1fr; }
   .composer-tip { display: none; }
+  .micbtn { margin-left: auto; }
 }
 .composer-bar .sendbtn { margin-left: auto; } .composer-tip { margin-left: auto; } .composer-tip + .sendbtn { margin-left: 0; }
 
@@ -1155,7 +1156,25 @@ body { background:
 .lumi .lids { opacity: 0; animation: blink 4.5s infinite; }
 @keyframes blink { 0%, 93%, 100% { opacity: 0; } 95%, 97% { opacity: 1; } }
 /* faces per mood */
-.lumi .eyes-happy, .lumi .grin, .lumi .yawn { display: none; }
+.lumi .eyes-happy, .lumi .grin, .lumi .yawn, .lumi .sad, .lumi .eyes-closed, .lumi .zzz { display: none; }
+/* misses you: looks up and away, a little sad, dimmer */
+.lumi.m-miss .pupils { transform: translate(-1.5px, -2px); }
+.lumi.m-miss .smile { display: none; }
+.lumi.m-miss .sad { display: inline; }
+.lumi.m-miss .glow { opacity: .4; animation-duration: 5s; }
+.lumi.m-miss .float { animation-duration: 6s; }
+/* fell asleep waiting: eyes closed, z z Z, the light almost out */
+.lumi.m-asleep .eyes-open, .lumi.m-asleep .smile { display: none; }
+.lumi.m-asleep .eyes-closed, .lumi.m-asleep .zzz { display: inline; }
+.lumi.m-asleep .glow { opacity: .18; animation: none; }
+.lumi.m-asleep .tail { filter: saturate(.4) brightness(.8); }
+.lumi.m-asleep .wing { animation-play-state: paused; }
+.lumi.m-asleep .float { animation-duration: 7s; }
+.lumi.m-asleep .zzz text { animation: zzz 3s ease-in-out infinite; opacity: 0; }
+.lumi.m-asleep .zzz text:nth-child(2) { animation-delay: .6s; }
+.lumi.m-asleep .zzz text:nth-child(3) { animation-delay: 1.2s; }
+@keyframes zzz { 0% { opacity: 0; transform: translateY(4px); } 30%, 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+.still .lumi .zzz text { animation: none; opacity: 1; }
 .lumi.m-hello .eyes-open, .lumi.m-party .eyes-open, .lumi.m-rest .eyes-open { display: none; }
 .lumi.m-hello .eyes-happy, .lumi.m-party .eyes-happy, .lumi.m-rest .eyes-happy { display: inline; }
 .lumi.m-party .smile, .lumi.m-hello .smile { display: none; }
@@ -1681,3 +1700,17 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 .lumi .lumi-page { transform-box: fill-box; transform-origin: left center; animation: pageFlip 7s ease-in-out infinite; }
 @keyframes pageFlip { 0%, 80%, 100% { transform: scaleX(1); } 88% { transform: scaleX(-1); opacity: .6; } 89% { opacity: 0; } 90% { transform: scaleX(1); opacity: 0; } 95% { opacity: 1; } }
 .still .lumi .lumi-page { animation: none; }
+
+.freeze { margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: rgba(140,200,255,.14); font-size: 12px; white-space: nowrap; }
+
+/* 🎤 ask with your voice */
+.micbtn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-2); background: transparent; color: var(--text-2, var(--text)); display: grid; place-items: center; cursor: pointer; margin-left: 8px; }
+.aipop .micbtn { margin-left: auto; }
+.micbtn:hover { color: var(--text); border-color: var(--accent); }
+.micbtn.on { background: var(--coral, #E07A5F); border-color: transparent; color: #fff; animation: micPulse 1.2s ease-in-out infinite; }
+@keyframes micPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224,122,95,.5); } 50% { box-shadow: 0 0 0 8px rgba(224,122,95,0); } }
+.micbtn + .sendbtn { margin-left: 8px; }
+/* 🖼️ pictures drawn by the AI */
+.ai-pic { margin: 10px 0; padding: 12px; border-radius: 16px; background: #fff; max-width: 460px; }
+.ai-pic img { display: block; width: 100%; height: auto; }
+.ai-pic.drawing { background: var(--surface-2); color: var(--text-2, var(--text)); font-size: 14px; }

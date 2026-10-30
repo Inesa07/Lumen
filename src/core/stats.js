@@ -115,6 +115,44 @@ export function classes(sums, lessonsList) {
   return out.sort((a, b) => b.last_at - a.last_at);
 }
 
+export const FREEZE_EVERY = 5;   // every 5 streak days earn one 🧊 freeze
+export const FREEZE_MAX = 2;
+
+/**
+ * The day streak, with streak freezes (like Duolingo), computed from the history alone so nothing must be
+ * bought or switched on: you start with one 🧊, every FREEZE_EVERY days in a row earn another (at most FREEZE_MAX),
+ * and a missed day uses one automatically instead of burning the streak. A frozen day keeps the streak but
+ * doesn't add to it. Today never breaks it: the day isn't over yet.
+ * @param {string[]} dayKeys days (YYYY-MM-DD) that reached the streak minimum
+ */
+export function streakRun(dayKeys, now = Date.now() / 1000) {
+  const set = new Set(dayKeys);
+  const today = dayKey(now);
+  const out = { streak: 0, best: 0, freezes: 1, frozen: [] };
+  if (!set.size) return out;
+  const first = [...set].sort()[0];
+  const [y, m, d] = first.split('-').map(Number);
+  let run = 0, frozenNow = [];
+  for (let i = 0; ; i += 1) {
+    const k = dayKey(new Date(y, m - 1, d + i, 12).getTime() / 1000);
+    if (k > today) break;
+    if (set.has(k)) {
+      run += 1;
+      if (run % FREEZE_EVERY === 0) out.freezes = Math.min(FREEZE_MAX, out.freezes + 1);
+    } else if (k === today) {
+      break;
+    } else if (run > 0 && out.freezes > 0) {
+      out.freezes -= 1; frozenNow.push(k);
+    } else {
+      run = 0; frozenNow = [];
+    }
+    out.best = Math.max(out.best, run);
+  }
+  out.streak = run;
+  out.frozen = run ? frozenNow.slice(-7) : [];
+  return out;
+}
+
 /**
  * Daily goal progress and the streak.
  * Streak = days in a row on which you studied at least `streakMin` minutes (showing up counts).
@@ -128,20 +166,13 @@ export function goalInfo(sums, goalMin, now, streakMin = 10) {
   }
   const today = dayKey(now);
   const reached = (k) => (studyDay[k] || 0) >= streakMin;
-  let streak = 0, back = reached(today) ? 0 : 1;          // today isn't over yet: the streak can continue
-  while (reached(dayKey(now - back * DAY))) { streak += 1; back += 1; }
-
-  let best = 0, run = 0;
-  const keys = Object.keys(perDay);
-  if (keys.length) {
-    const first = Math.min(...keys.map((k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).getTime() / 1000; }));
-    for (let d = first; d <= now; d += DAY) { run = reached(dayKey(d)) ? run + 1 : 0; best = Math.max(best, run); }
-  }
+  const run = streakRun(Object.keys(studyDay).filter(reached), now);
   const done = perDay[today] || 0;
   return {
     streak_min: streakMin, today_study: Math.trunc(studyDay[today] || 0), streak_today: reached(today),
     goal_min: goalMin, today: done, pct: goalMin ? Math.min(100, Math.trunc(pyRound(100 * done / goalMin))) : 0,
-    reached: done >= goalMin, streak, best_streak: Math.max(best, streak),
+    reached: done >= goalMin, streak: run.streak, best_streak: run.best,
+    freezes: run.freezes, frozen: run.frozen, saved_yesterday: run.frozen.includes(dayKey(now - DAY)),
   };
 }
 

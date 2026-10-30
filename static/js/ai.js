@@ -96,6 +96,12 @@ function md(text) {
   return out.join('')
     .replace(/\u0000(\d+)\u0000/g, (_, n) => {
       const c = code[Number(n)];
+      if (/^svg$/i.test(c.lang) || (/^(xml|html)?$/i.test(c.lang) && /^\s*<svg[\s>]/i.test(c.body))) {
+        if (!/<\/svg>\s*$/i.test(c.body)) return `<div class="ai-pic drawing">🖼️ ${esc(t('Drawing a picture…'))}</div>`;
+        let svg = c.body.trim();
+        if (!/xmlns=/.test(svg)) svg = svg.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+        return `<figure class="ai-pic"><img alt="${esc(t('A picture that explains it'))}" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}"></figure>`;
+      }
       return `<div class="codeblock"><div class="codebar"><span>${esc(c.lang || 'code')}</span><button type="button" class="copybtn" data-copy-code>Copy</button></div><pre><code>${esc(c.body)}</code></pre></div>`;
     })
     .replace(/\u0001(\d+)\u0001/g, (_, n) => texHTML(math[Number(n)].tex, math[Number(n)].block));
@@ -131,6 +137,9 @@ function subjectHue(name) {
   return h;
 }
 
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const MIC_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+
 // suggestion cards: [emoji, text]
 function suggestionsFor(opts) {
   if (opts.lesson) {
@@ -141,7 +150,7 @@ function suggestionsFor(opts) {
     return [['💡', `Explain a key idea of ${opts.cls} simply`], ['🎯', `Quiz me with 3 questions on ${opts.cls}`],
       ['✅', 'Check my solution step by step'], ['🗓️', `Make a 1-week study plan for ${opts.cls}`]];
   }
-  return [['🧮', 'Explain fractions with a pizza example'], ['🧠', 'How do I remember new words faster?'],
+  return [['🧮', 'Explain fractions with a picture'], ['✍️', 'Help me write my essay'],
     ['✅', 'Check my solution step by step'], ['🚀', 'Tell me a fun science fact and explain it']];
 }
 
@@ -157,6 +166,7 @@ function chatBox(container, opts = {}) {
         <div class="composer-bar">
           <button type="button" class="pillbtn on" data-hint aria-pressed="true" title="The tutor asks guiding questions and gives small hints, so you solve it yourself">🧭 Help me think</button>
           <span class="muted small composer-tip">Enter to send · Shift+Enter new line</span>
+          ${SpeechRec ? `<button type="button" class="micbtn" data-mic aria-pressed="false" aria-label="${esc(t('Ask with your voice'))}" title="${esc(t('Ask with your voice'))}">${MIC_ICON}</button>` : ''}
           <button type="submit" class="sendbtn" aria-label="Send" disabled>${SEND_ICON}</button>
         </div>
       </div>
@@ -172,6 +182,27 @@ function chatBox(container, opts = {}) {
     if (hintBtn.dataset.locked) { toast(t('A parent chose: hints only, no full answers')); return; }
     const on = hintBtn.getAttribute('aria-pressed') !== 'true'; hintBtn.setAttribute('aria-pressed', String(on)); hintBtn.classList.toggle('on', on);
   };
+  // 🎤 ask with your voice: the browser turns speech into text (Chrome, Edge, Safari), the child checks it and sends
+  const micBtn = form.querySelector('[data-mic]');
+  let rec = null;
+  if (micBtn) {
+    micBtn.onclick = () => {
+      if (rec) { rec.stop(); return; }
+      rec = new SpeechRec();
+      rec.lang = { ru: 'ru-RU', hy: 'hy-AM' }[LANG] || 'en-US';
+      rec.interimResults = true;
+      rec.continuous = false;
+      const before = ta.value ? `${ta.value.replace(/\s+$/, '')} ` : '';
+      rec.onresult = (e) => {
+        let txt = '';
+        for (let i = 0; i < e.results.length; i += 1) txt += e.results[i][0].transcript;
+        ta.value = before + txt; grow();
+      };
+      rec.onerror = (e) => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast(t('Allow the microphone to ask with your voice')); };
+      rec.onend = () => { rec = null; micBtn.classList.remove('on'); micBtn.setAttribute('aria-pressed', 'false'); ta.focus(); };
+      try { rec.start(); micBtn.classList.add('on'); micBtn.setAttribute('aria-pressed', 'true'); } catch (err) { rec = null; }
+    };
+  }
   // in Parent mode without "full answers", coaching is always on
   api('/api/parent').then((p) => { if (p.enabled && !p.ai_answers) { hintBtn.dataset.locked = '1'; hintBtn.title = t('A parent chose: hints only, no full answers'); hintBtn.textContent = '🧭 ' + t('Help me think') + ' 🔒'; } }).catch(() => {});
 
@@ -194,8 +225,12 @@ function chatBox(container, opts = {}) {
         <div class="sugs">${suggestionsFor(opts).map(([e, x], i) => `<button type="button" class="sug c${i}" data-sug="${esc(x)}"><span class="sug-e">${e}</span><span>${esc(x)}</span></button>`).join('')}</div></div>`;
     }
     html += msgs.map(msgHTML).join('');
-    if (!streaming && msgs.length && msgs[msgs.length - 1].role === 'assistant' && hintBtn.getAttribute('aria-pressed') === 'true') {
-      html += `<div class="coach-replies">${[['💡', 'Give me another hint'], ['✅', 'Check my answer: '], ['🤔', "I don't understand, explain it another way"]]
+    if (!streaming && msgs.length && msgs[msgs.length - 1].role === 'assistant') {
+      const coach = hintBtn.getAttribute('aria-pressed') === 'true';
+      const last = msgs[msgs.length - 1].content || '';
+      const replies = [...(coach ? [['💡', 'Give me another hint'], ['✅', 'Check my answer: ']] : []),
+        ['🤔', "I don't understand, explain it another way"], ...(/```svg/i.test(last) ? [] : [['🖼️', 'Explain it with a picture']])];
+      html += `<div class="coach-replies">${replies
         .map(([e, x]) => `<button type="button" class="coach-btn" data-reply="${esc(x)}">${e} ${esc(t(x.replace(/: $/, '')))}</button>`).join('')}</div>`;
     }
     if (streaming) {

@@ -33,6 +33,7 @@ function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, siz
   <circle class="glow" cx="60" cy="80" r="${glowR}" fill="url(#${id}g)"/>
   ${dl >= 3 ? `<circle class="dreamglow" cx="60" cy="66" r="50" fill="none" stroke="#FFD84A" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>` : ''}
   <g class="spks" fill="#FFE98A">${sparkles}</g>
+  <g class="zzz" fill="#CFC6FF" font-weight="700" font-family="system-ui, sans-serif"><text x="84" y="34" font-size="11">z</text><text x="92" y="24" font-size="14">z</text><text x="101" y="12" font-size="17">Z</text></g>
   <g class="lumi-body" style="transform:scale(${sc})">
     <g class="float">
       <ellipse class="wing wl" cx="40" cy="58" rx="17" ry="11"/>
@@ -53,6 +54,8 @@ function lumiSVG({ mood = 'happy', stage = 0, outfit = 'none', extra = null, siz
       <path class="mouth smile" d="M54 59q6 5 12 0" fill="none" stroke="#241A4A" stroke-width="2.4" stroke-linecap="round"/>
       <path class="mouth grin" d="M52 57q8 11 16 0z" fill="#241A4A"/>
       <ellipse class="mouth yawn" cx="60" cy="60" rx="3.6" ry="4.4" fill="#241A4A"/>
+      <path class="mouth sad" d="M55 62q5-3.5 10 0" fill="none" stroke="#241A4A" stroke-width="2.4" stroke-linecap="round"/>
+      <g class="eyes-closed" fill="none" stroke="#241A4A" stroke-width="2.6" stroke-linecap="round"><path d="M46 49q5 4 10 0M64 49q5 4 10 0"/></g>
       ${outfit === 'glasses' ? '<g fill="none" stroke="#241A4A" stroke-width="2"><circle cx="51" cy="48" r="8"/><circle cx="69" cy="48" r="8"/><path d="M59 48h2"/></g>' : ''}
       ${outfit === 'bow' ? '<g transform="translate(74 30) rotate(20)"><path d="M0 0l-9-6v12zM0 0l9-6v12z" fill="#F06BA8"/><circle r="2.6" fill="#D9468A"/></g>' : ''}
       ${outfit === 'cap' ? '<g><path d="M38 30l22-9 22 9-22 9z" fill="#2B2440"/><path d="M47 33v7q13 6 26 0v-7l-13 6z" fill="#3A3157"/><path d="M80 30v10" stroke="#F2C14E" stroke-width="2"/><circle cx="80" cy="41" r="2" fill="#F2C14E"/></g>' : ''}
@@ -154,8 +157,25 @@ function lumiHolidayEn(f, d) {
   return null;
 }
 /** Lumi's mood outside lessons: sleepy at night, waving otherwise. */
-const restingMood = () => (lumiTime() === 'night' ? 'sleepy' : 'hello');
+// After days without lessons Lumi misses you (2-3 days) and then falls asleep waiting (4+), see core/friend.js awayOf.
+const restingMood = (f) => {
+  const a = f && f.away;
+  if (a && a.back) return 'party';
+  if (a && a.mood === 'asleep') return 'asleep';
+  if (a && a.mood === 'missing') return 'miss';
+  return lumiTime() === 'night' ? 'sleepy' : 'hello';
+};
+function awayLine(f) {
+  const a = f && f.away;
+  if (!a) return null;
+  if (a.back) return t("You're back! I missed you so much 💛");
+  if (a.mood === 'asleep') return t('💤 I fell asleep waiting for you… A short lesson will wake me up!');
+  if (a.mood === 'missing') return t('I missed you! Shall we study a little today? 💛');
+  return null;
+}
 function greetLine(f) {
+  const away = awayLine(f);
+  if (away) return away;
   const hol = lumiHoliday(f);
   if (hol) return hol.line;
   return pick(timeLines(lumiTime()));
@@ -304,16 +324,18 @@ window.addEventListener('hashchange', () => { lumiLive.info = null; });
 function lumiHomeCard(f, g = null) {
   const hol = lumiHoliday(f);
   const line = f.first_time ? t("Hi! I'm Lumi, your study firefly. Focus to give me light and I will grow!")
+    : g && g.saved_yesterday && g.streak ? t('🧊 You missed yesterday, so I used a freeze. Your streak is safe!')
+    : awayLine(f) ? awayLine(f)
     : hol ? hol.line
     : lumiTime() === 'night' ? pick(timeLines('night'))
     : f.stage.next ? t('{n} more light and I become a {name}!', { n: f.stage.next.need - f.light, name: `<b>${esc(t(f.stage.next.name))}</b>` }) : t('I am a Star firefly! Thank you for all the light ✨');
   return `<a class="card lumicard" href="#/lumi">
-    <div class="lumicard-pic">${lumiSVG({ mood: restingMood(), stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 92, dream: f.dream })}</div>
+    <div class="lumicard-pic">${lumiSVG({ mood: restingMood(f), stage: f.stage.index, outfit: f.outfit, extra: hol && hol.extra, size: 92, dream: f.dream })}</div>
     <div class="lumicard-txt"><div class="eyebrow">${t('Lumi · {name}', { name: esc(t(f.stage.name)) })}</div>
       <div class="lumicard-line">${line}</div>
       <div class="lightbar" aria-label="Light ${f.light}"><i style="width:${f.stage.pct}%"></i></div>
       <div class="muted small">🔆 ${t('{n} light', { n: f.light })}</div>
-      ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${g.streak === 1 ? t('1 day in a row') : t('{n} days in a row', { n: g.streak })}</span></div>
+      ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${g.streak === 1 ? t('1 day in a row') : t('{n} days in a row', { n: g.streak })}${g.freezes ? ` <span class="freeze" title="${esc(t('Streak freezes: a missed day uses one, so the streak does not burn. You get one for every 5 days in a row.'))}">🧊 ${g.freezes}</span>` : ''}</span></div>
         <div class="lightbar goalbar"><i style="width:${g.pct}%"></i></div>` : ''}
       ${f.dream ? dreamLine(f.dream) : ''}</div>
     <span class="chev">›</span></a>`;
@@ -330,7 +352,8 @@ function drawLumiHome() {
   const el = $('#lumiBig'), f = lumiLive.info;
   if (!el || !f || !f.stage) return;
   const tod = lumiTime(), hol = lumiHoliday(f);
-  const lumi = lumiSVG({ mood: tod === 'night' ? 'sleepy' : 'happy', stage: Math.max(2, f.stage.index), outfit: f.outfit, extra: hol && hol.extra, size: PLACE_LUMI, dream: f.dream });
+  const rest = restingMood(f);
+  const lumi = lumiSVG({ mood: ['asleep', 'miss', 'party'].includes(rest) ? rest : tod === 'night' ? 'sleepy' : 'happy', stage: Math.max(2, f.stage.index), outfit: f.outfit, extra: hol && hol.extra, size: PLACE_LUMI, dream: f.dream });
   // draw as much land as the box is wide (160 units high), so nothing is stretched or cut
   const w = Math.max(320, Math.round(160 * (el.clientWidth || 800) / (el.clientHeight || 270)));
   el.innerHTML = placeScene({ place: LOOK.theme, tod, stage: f.stage.index, season: placeSeason(), lumi, id: 'home', w, h: 160, label: t("Lumi's home") });

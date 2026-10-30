@@ -516,7 +516,7 @@ export class LocalServer {
       mood_today: stats.moodMix(todaySums), mood_week: stats.moodMix(sums.filter((s) => s.started_at >= today0 - 6 * 86400)),
       dream: this.dream().current,
       last_lesson_at: reps.reduce((a, r) => Math.max(a, (r.started_at || 0) + (r.duration_sec || 0)), 0) || null,
-      lumi: { stage: f.stage, light: f.light, outfit: f.outfit, birthday: f.birthday },
+      lumi: { stage: f.stage, light: f.light, outfit: f.outfit, birthday: f.birthday, away: f.away },
       stars: (() => { const d = this.dream(); return { total: d.stars_total, today: d.stars_today }; })(),
       active: snap && snap.mode === 'session' ? { title: snap.title, class: snap.class, attention: snap.attention, state: snap.state, reason: snap.reason, elapsed: snap.elapsed } : null,
     };

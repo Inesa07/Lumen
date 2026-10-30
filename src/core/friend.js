@@ -5,6 +5,8 @@
 // Everything is a pure function of the saved lessons, so nothing extra needs storing except which stage
 // was already celebrated and which outfit Lumi wears (kv 'friend').
 
+import { streakRun } from './stats.js';
+
 const DAY = 86400;
 
 /** Lumi's growth stages. `need` = light needed to reach the stage. */
@@ -53,12 +55,7 @@ export function metrics(sessions, reviews = [], streakMin = 10) {
     weekFocus[w] = (weekFocus[w] || 0) + (r.focused_min || 0);
   }
   // best run of days in a row with at least streakMin minutes
-  const days = Object.keys(studyDay).filter((k) => studyDay[k] >= streakMin).map(dayStart).sort((a, b) => a - b);
-  let best = 0, run = 0, prev = null;
-  for (const d of days) {
-    run = prev !== null && Math.round((d - prev) / DAY) === 1 ? run + 1 : 1;
-    best = Math.max(best, run); prev = d;
-  }
+  const best = streakRun(Object.keys(studyDay).filter((k) => studyDay[k] >= streakMin)).best;
   // coming back after a pause of 3+ days (any study day counts)
   const all = Object.keys(studyDay).map(dayStart).sort((a, b) => a - b);
   let comebacks = 0;
@@ -148,6 +145,26 @@ export function diaryOf(sessions, maxDays = 120) {
   return [...days.values()].sort((x, y) => y.ts - x.ts).slice(0, maxDays);
 }
 
+/**
+ * How long Lumi has been waiting (calendar days since the last lesson day):
+ * 0 = studied today (happy), 1 = yesterday (waiting), 2-3 = misses you, 4+ (3 whole days missed) = fell asleep.
+ * back = studied today after missing at least one whole day, so Lumi can say "You're back!".
+ */
+export function awayOf(sessions, now = Date.now() / 1000) {
+  const days = [...new Set(sessions.filter((r) => r && r.started_at).map((r) => dayKey(r.started_at)))].sort();
+  if (!days.length) return { days: null, mood: 'waiting', back: false };
+  const today = dayKey(now);
+  const diff = (a, b) => Math.round((dayStart(a) - dayStart(b)) / DAY);
+  const last = days[days.length - 1];
+  const daysAway = Math.max(0, diff(today, last));
+  const before = days.filter((k) => k < today).pop();
+  return {
+    days: daysAway,
+    mood: daysAway === 0 ? 'happy' : daysAway === 1 ? 'waiting' : daysAway <= 3 ? 'missing' : 'asleep',
+    back: daysAway === 0 && !!before && diff(today, before) >= 2,
+  };
+}
+
 export function friendState(sessions, reviews, saved = {}, streakMin = 10) {
   const m = metrics(sessions, reviews, streakMin);
   const light = lightOf(m);
@@ -156,5 +173,5 @@ export function friendState(sessions, reviews, saved = {}, streakMin = 10) {
   const outfit = outfits.find((o) => o.id === saved.outfit && o.unlocked) ? saved.outfit : 'none';
   return { metrics: m, light, stage, stages: STAGES, outfits, outfit, news: newsSince(saved, stage.index),
     diary: diaryOf(sessions, 7), first_time: saved.stage == null, show_in_lessons: saved.show_in_lessons !== false,
-    sound: saved.sound !== false, birthday: saved.birthday || null };
+    sound: saved.sound !== false, birthday: saved.birthday || null, away: awayOf(sessions) };
 }

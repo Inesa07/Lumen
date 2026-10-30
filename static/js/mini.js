@@ -35,9 +35,9 @@ async function viewMini() {
       ${m.active ? `<a class="mini-live" href="#/session"><span class="dot-live"></span>
         <span><b>${t('Studying now')}</b> · ${esc(m.active.class || '')}<br><small>${t('attention')} ${m.active.attention}% · ${t(m.active.state)}</small></span></a>` : ''}
       <section class="mini-lumi">
-        ${lumiSVG({ mood: m.active ? (m.active.state === 'Focused' ? 'happy' : 'wait') : restingMood(), stage: L.stage.index, outfit: L.outfit, extra: hol && hol.extra, size: 96, dream: m.dream })}
+        ${lumiSVG({ mood: m.active ? (m.active.state === 'Focused' ? 'happy' : 'wait') : restingMood({ away: L.away }), stage: L.stage.index, outfit: L.outfit, extra: hol && hol.extra, size: 96, dream: m.dream })}
         <div><div class="eyebrow">${t('Lumi · {name}', { name: esc(t(L.stage.name)) })}</div>
-          <div class="mini-say">${esc(hol ? hol.line : greetLine({ birthday: L.birthday }))}</div>
+          <div class="mini-say">${esc(hol && !L.away?.back && !['missing', 'asleep'].includes(L.away?.mood) ? hol.line : greetLine({ birthday: L.birthday, away: L.away }))}</div>
           <div class="lightbar"><i style="width:${L.stage.pct}%"></i></div>
           <div class="muted small">🔆 ${t('{n} light', { n: L.light })}</div></div>
       </section>
@@ -46,7 +46,7 @@ async function viewMini() {
         <div><div class="eyebrow">${t("Today's goal")}</div>
           <div class="mini-big">${fmtMin(g.today)} <span class="muted">/ ${fmtMin(g.goal_min)}</span></div>
           <div class="muted small">${t('focused')} · ${fmtMin(m.today.study_min)} ${t('studied')}</div></div>
-        <div class="mini-streak" title="${t('Day streak 🔥')}">🔥<b>${g.streak}</b></div>
+        <div class="mini-streak" title="${t('Day streak 🔥')}">🔥<b>${g.streak}</b>${g.freezes ? `<span class="muted small">🧊${g.freezes}</span>` : ''}</div>
       </section>
       <section class="mini-card"><div class="eyebrow">${moodLabel}</div>${moodRow(mood)}</section>
       ${m.dream ? `<section class="mini-card">${dreamLine(m.dream)}</section>` : ''}

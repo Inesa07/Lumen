@@ -82,9 +82,10 @@ const HATS = {
   scarf: '<path d="M41 68q19 9 38 0l1 6q-20 10-40 0z" fill="#F06BA8"/><path d="M70 72l4 12 5-2-3-11z" fill="#D9468A"/>',
 };
 
-/** state: wake | fly | cosy | sleep; mood: happy | missing | waiting */
+/** state: wake | fly | cosy | sleep; mood: happy | missing | asleep | waiting */
 function lumiSVG({ state, mood, hat, extra, dreamEmoji, gold, cold }) {
-  const asleep = state === "sleep";
+  const asleep = state === "sleep" || mood === "asleep";
+  const zzz = mood === "asleep" ? '<g fill="#CFC6FF" font-weight="700" font-family="system-ui"><text class="w-z" x="84" y="34" font-size="11">z</text><text class="w-z" x="92" y="24" font-size="14" style="animation-delay:.6s">z</text><text class="w-z" x="101" y="12" font-size="17" style="animation-delay:1.2s">Z</text></g>' : "";
   const eyes = asleep
     ? '<path d="M46 50q5 4 10 0M64 50q5 4 10 0" fill="none" stroke="#241A4A" stroke-width="2.6" stroke-linecap="round"/>'
     : mood === "happy"
@@ -103,7 +104,8 @@ function lumiSVG({ state, mood, hat, extra, dreamEmoji, gold, cold }) {
   <defs><radialGradient id="wg"><stop offset="0" stop-color="#FFF4A8" stop-opacity=".95"/><stop offset=".5" stop-color="#E9F56A" stop-opacity=".35"/><stop offset="1" stop-color="#E9F56A" stop-opacity="0"/></radialGradient>
   <radialGradient id="wt" cx=".5" cy=".4"><stop offset="0" stop-color="#FFFBD0"/><stop offset=".6" stop-color="#F4E84E"/><stop offset="1" stop-color="#A9DB3A"/></radialGradient>
   <linearGradient id="wb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B68C8"/><stop offset="1" stop-color="#5A4AA6"/></linearGradient></defs>
-  <circle class="w-glow" cx="60" cy="80" r="${asleep ? 30 : 44}" fill="url(#wg)"/>
+  <circle class="w-glow" cx="60" cy="80" r="${asleep ? 30 : 44}" fill="url(#wg)" opacity="${mood === "asleep" ? 0.25 : mood === "missing" ? 0.55 : 1}"/>
+  ${zzz}
   ${gold ? '<circle cx="60" cy="66" r="50" fill="none" stroke="#FFD84A" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" class="w-spin"/>' : ""}
   <g class="w-body">
     <ellipse class="w-wing l" cx="40" cy="58" rx="17" ry="11" fill="#DDEBFF" fill-opacity=".8"/><ellipse class="w-wing r" cx="80" cy="58" rx="17" ry="11" fill="#DDEBFF" fill-opacity=".8"/>
@@ -1243,6 +1245,7 @@ const ANIM = `<style>
 .w-lumi .w-blink{animation:wbl 5s infinite;transform-box:fill-box;transform-origin:center}@keyframes wbl{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
 .w-lumi .w-yawn{animation:wyw 3s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes wyw{50%{transform:scaleY(1.5)}}
 .w-lumi .w-float{animation:wfo 2.6s ease-in-out infinite}@keyframes wfo{50%{transform:translateY(-4px)}}
+.w-lumi .w-z{animation:wz 3s ease-in-out infinite;opacity:0}@keyframes wz{0%{opacity:0;transform:translateY(4px)}30%,70%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
 .w-lumi .w-spin{animation:wsp 14s linear infinite;transform-box:fill-box;transform-origin:center}@keyframes wsp{to{transform:rotate(360deg)}}
 </style>`;
 
@@ -1250,6 +1253,7 @@ const ANIM = `<style>
 const DEFAULT_LABELS = {
   studying: "Studying now", morning: "Lumi is waking up", day: "Lumi is flying around", evening: "Lumi is getting cosy", night: "Lumi is sleeping",
   happy: "Happy: you studied today! ✨", missing: "Lumi misses you. A short lesson? 🌙", waiting: "Waiting for today's lesson",
+  asleep: "💤 Lumi fell asleep waiting for you. A short lesson will wake it up!", back: "You're back! Lumi missed you so much 💛",
   night_missing: "Lumi misses you. See you tomorrow! 🌙", night_waiting: "Sleep well! See you tomorrow 🌙",
   dream: "My dream", dream_ready: "All stars collected! 🎉", no_dream: "Write your dream on the Lumi page 🎁",
   sunny: "Sunny", clear: "Clear", cloudy: "Cloudy", rain: "Rain", snow: "Snow", fog: "Fog", storm: "Storm",
@@ -1278,11 +1282,13 @@ export const render = ({ output, error }) => {
   const holiday = holidayOf(now, s.birthday);
   const studiedToday = fresh && (s.lessons > 0 || (s.study_min || 0) > 0);
   const last = s.last_lesson_at ? s.last_lesson_at * 1000 : null;
-  const mood = studiedToday ? "happy" : last && now - last > 2 * 86400000 ? "missing" : "waiting";
+  // calendar days since the last lesson: 2-3 = Lumi misses you, 4+ (3 whole days missed) = fell asleep waiting
+  const away = last ? Math.round((new Date(now).setHours(12, 0, 0, 0) - new Date(last).setHours(12, 0, 0, 0)) / 86400000) : null;
+  const mood = studiedToday ? (s.back_day === today() ? "back" : "happy") : away == null ? "waiting" : away >= 4 ? "asleep" : away >= 2 ? "missing" : "waiting";
   const state = { morning: "wake", day: "fly", evening: "cosy", night: "sleep" }[tod];
   const d = s.dream;
   const lumi = lumiSVG({
-    state, mood, extra: holiday && holiday.extra,
+    state, mood: mood === "back" ? "happy" : mood, extra: holiday && holiday.extra,
     hat: d && d.level >= 2 ? d.look : null, dreamEmoji: d && d.level >= 1 ? d.emoji : null, gold: d && d.level >= 3,
     cold: season === "winter" || (w && w.kind === "snow"),
   });
@@ -1301,7 +1307,7 @@ export const render = ({ output, error }) => {
         {w && <div className="temp">{icon} {w.temp} {weatherWord}</div>}
       </div>
       <div className="info">
-        <div className="status">{L[tod]}</div>
+        <div className="status">{mood === "asleep" ? L.night : L[tod]}</div>
         <div className="muted">{(tod === "night" && mood !== "happy" && L[`night_${mood}`]) || L[mood]}</div>
         {holidayLine && <div className="muted" style={{ marginTop: 2 }}>{holidayLine}</div>}
         {d ? (<div className="glass dream">

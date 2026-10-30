@@ -8,7 +8,7 @@ const INFO = {
   focused: ['Focused time', 'Minutes in which you were really with the lesson (attention 70% or more). <br><b>Why:</b> studying 2 hours while drifting teaches less than 1 focused hour, so this is the number to grow.'],
   studied: ['Studied time', 'All the time a lesson was running, focused or not.'],
   attention: ['Average attention', 'How much of the time your eyes and head were on the lesson, 0–100%. Looking away, the phone and closed eyes lower it. <br><b>Why:</b> one number to compare lessons and weeks.'],
-  streak: ['Day streak 🔥', 'Days in a row on which you studied at least the minimum from Settings (10 min by default). <br><b>Why:</b> studying a little every day beats a lot once a week.'],
+  streak: ['Day streak 🔥', 'Days in a row on which you studied at least the minimum from Settings (10 min by default). <br><b>Why:</b> studying a little every day beats a lot once a week.<br><b>🧊 Freezes:</b> if you miss a day, a freeze is used automatically and the streak stays. You start with one and get one more for every 5 days in a row (at most 2).'],
   week: ['This week', 'The last 7 days compared with the 7 days before: is your focused time growing? <br><b>Why:</b> one week is noisy, but the trend shows whether your habits work.'],
   days: ['Last 14 days', 'Each bar is one day. Grey = time studied, green part = time focused. <br><b>Why:</b> you see which days you studied and how well, at a glance.'],
   time: ['Best time of day', 'Your average attention in the morning, afternoon, evening and night. ★ = your best. <br><b>Why:</b> plan hard subjects for the time your brain works best.'],
@@ -141,7 +141,7 @@ async function viewProgress(sub = '') {
       </div>
       <div class="hero-kpis">
         <div><b>${t.week_avg ?? '–'}${t.week_avg != null ? '%' : ''}</b><span>attention ${info('attention', 'attention')}</span></div>
-        <div><b>${d.goal.streak} 🔥</b><span>day streak ${info('streak', 'streak')}</span></div>
+        <div><b>${d.goal.streak} 🔥${d.goal.freezes ? ` <small title="streak freezes">🧊${d.goal.freezes}</small>` : ''}</b><span>day streak ${info('streak', 'streak')}</span></div>
         <div><b>${it.tasks_total ? `${Math.round(100 * it.tasks_done / it.tasks_total)}%` : '–'}</b><span>tasks done ${info('tasks', 'tasks')}</span></div>
       </div>
     </section>

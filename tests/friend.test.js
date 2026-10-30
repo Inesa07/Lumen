@@ -69,3 +69,17 @@ test('diary: a page per day, kind sentences from the lesson', async () => {
   assert.deepEqual(keys(0), ['open', 'focus_hard', 'phone', 'fell']);
   assert.equal(d[0].lessons[0].lines[2].n, 2);
 });
+
+test('Lumi misses you after a missed day, falls asleep after 3, and is happy when you are back', async () => {
+  const { awayOf } = await import('../src/core/friend.js');
+  const now = new Date(2026, 9, 22, 18).getTime() / 1000;
+  const at = (back) => ({ started_at: new Date(2026, 9, 22 - back, 15).getTime() / 1000 });
+  assert.equal(awayOf([], now).mood, 'waiting');
+  assert.equal(awayOf([at(0)], now).mood, 'happy');
+  assert.equal(awayOf([at(1)], now).mood, 'waiting');
+  assert.equal(awayOf([at(2)], now).mood, 'missing');
+  assert.equal(awayOf([at(3)], now).mood, 'missing');
+  assert.equal(awayOf([at(4)], now).mood, 'asleep');
+  assert.equal(awayOf([at(5), at(0)], now).back, true);
+  assert.equal(awayOf([at(1), at(0)], now).back, false);
+});
