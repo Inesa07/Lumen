@@ -1715,5 +1715,3 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 .ai-pic img { display: block; width: 100%; height: auto; }
 .ai-pic.drawing { background: var(--surface-2); color: var(--text-2, var(--text)); font-size: 14px; }
 
-.focussteps { margin: 12px 0 0; padding-left: 20px; line-height: 1.8; color: var(--text-2, var(--text)); }
-.focuscard .pill.ok { padding: 6px 12px; border-radius: 99px; background: rgba(110,220,150,.15); color: #8fe3a9; font-size: 13px; white-space: nowrap; }

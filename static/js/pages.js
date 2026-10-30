@@ -635,7 +635,6 @@ async function viewSettings() {
       ${langButtons()}
     </section>
     ${widgetCard()}
-    ${focusCard()}
     <a class="card setrow" href="#/mini" style="text-decoration:none;color:var(--text)">
       <div><h2 style="margin:0 0 4px;font-size:17px">🪟 Lumen mini</h2><p class="muted small" style="margin:0">A small window with Lumi, today's focus and mood. On a Mac: open it in Safari, then File → Add to Dock.</p></div><span class="chev">›</span></a>
     <a class="card setrow parentrow" href="#/parent" style="text-decoration:none;color:var(--text)">
