@@ -8,6 +8,7 @@
     "start": "python3 -m http.server 5173",
     "test": "node --test",
     "bump": "V=$(date +%Y%m%d%H%M) && sed -i.bak -E \"s#(style.css|main.js)\\?v=[0-9]+#\\1?v=$V#g\" index.html && rm -f index.html.bak",
+    "extension": "rm -rf /tmp/lumen-focus && cp -r browser-extension /tmp/lumen-focus && rm -f static/lumen-focus.zip && (cd /tmp && zip -qr - lumen-focus) > static/lumen-focus.zip",
     "widget": "node scripts/build-widget.mjs"
   },
   "author": "Inesa Sargsyan"

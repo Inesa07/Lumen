@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Lumen Focus</title>
+<style>
+  body { width: 300px; margin: 0; padding: 16px; font: 14px system-ui, -apple-system, sans-serif; background: #0f1b3d; color: #fff; }
+  h1 { font-size: 16px; margin: 0 0 10px; display: flex; gap: 8px; align-items: center; }
+  .st { padding: 10px 12px; border-radius: 12px; background: #1b2a5c; margin-bottom: 12px; line-height: 1.4; }
+  .st.on { background: #4a2a26; }
+  label { display: block; color: #c9d2ee; font-size: 12px; margin: 0 0 6px; }
+  textarea { width: 100%; box-sizing: border-box; height: 170px; border-radius: 10px; border: 1px solid #33447a; background: #0b1633; color: #fff; padding: 8px; font: 13px ui-monospace, monospace; resize: vertical; }
+  textarea:disabled { opacity: .6; }
+  .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  button, a.btn { border: 0; border-radius: 99px; padding: 8px 14px; font: 600 13px system-ui, sans-serif; cursor: pointer; text-decoration: none; }
+  #save { background: #F4B942; color: #1b1300; } #reset { background: #24346a; color: #fff; } a.btn { background: transparent; color: #c9d2ee; margin-left: auto; padding: 8px 0; }
+  .muted { color: #9aa6cf; font-size: 12px; }
+</style></head>
+<body>
+  <h1>🚫 Lumen Focus</h1>
+  <div class="st" id="st"></div>
+  <label for="list" id="lbl"></label>
+  <textarea id="list" spellcheck="false"></textarea>
+  <div class="muted" id="hint"></div>
+  <div class="row"><button id="save"></button><button id="reset"></button><a class="btn" id="open" target="_blank"></a></div>
+  <script src="sites.js"></script>
+  <script src="popup.js"></script>
+</body></html>
