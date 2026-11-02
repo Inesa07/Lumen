@@ -9,7 +9,7 @@ browser ──question + login token──▶ Edge Function "tutor" ──secret
 * Only signed-in students can ask (the function checks the login token).
 * Each student has a **daily limit** (default 40 questions), counted in the table `ai_usage`
   by the database function `use_ai_quota()` (see `supabase/migrations/002_ai_usage.sql`).
-* Students may still connect their own Gemini / Claude key in Settings; then their key is used instead.
+* Students may still connect their own AI key in Settings; then their key is used instead.
 
 ## Set up (one time)
 
