@@ -3,7 +3,7 @@
 //
 // Script (minutes): 12-14.6 turns head away, 19-20 glances aside with the EYES only,
 // 22 leaves the frame, 31-33.8 phone, after 38 gets tired (more blinks, slow eye closures, yawns),
-// 46-48 looks away again. Expressions: short smiles, frowning at 8-11 and 34-36, sad at 28-29.5.
+// 46-48 looks away again. Sits too close at 15-16.5, tilts the head at 43-44.5. Expressions: short smiles, frowning at 8-11 and 34-36, sad at 28-29.5.
 
 /** Small seeded random generator (mulberry32), so every test run behaves the same. */
 export function rng(seed = 7) {
@@ -78,8 +78,12 @@ export class FakeVision {
       brow_up: (sad ? 0.35 : 0.05) + Math.abs(r.normal(0, 0.02)),
       eye_wide: 0.05, jaw: 0.02, cheek: smiling ? 0.3 : 0.05,
     };
+    // distance to the screen (no random numbers here, so the rest of the script stays the same):
+    // about 55 cm, leans in to 34 cm at 15-16.5 min; head tilted towards a shoulder at 43-44.5 min
+    const dist_cm = m >= 15 && m < 16.5 ? 34 : 11 / size;
+    const roll = m >= 43 && m < 44.5 ? 24 : 0;
     const s = { t, face, phone, bs: face ? bs : null };
-    const vals = { ear, mar, yaw, pitch, gx, gy, size, fy, smile, lift, brow, gap };
+    const vals = { ear, mar, yaw, pitch, gx, gy, size, fy, dist_cm, roll, smile, lift, brow, gap };
     for (const [k, v] of Object.entries(vals)) s[k] = face ? v : null;
     return s;
   }

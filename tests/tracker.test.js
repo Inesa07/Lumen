@@ -1,5 +1,7 @@
 // The JavaScript tracker must give EXACTLY the same results as the original Python tracker.
 // tests/fixtures/tracker_golden.json was produced by tracker.py on the same simulated lesson.
+// The newer camera logic (improved: true, the app default) is switched off here, so this test keeps
+// checking the port itself; tests/camera.test.js checks the improvements.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,7 +11,7 @@ import { runScenario } from './scenario.js';
 const golden = JSON.parse(readFileSync(new URL('./fixtures/tracker_golden.json', import.meta.url)));
 
 function run() {
-  const tr = new SessionTracker('Test', null, { plan_min: 25 });
+  const tr = new SessionTracker('Test', null, { plan_min: 25, improved: false });
   const snaps = [];
   let i = 0;
   runScenario((s) => {

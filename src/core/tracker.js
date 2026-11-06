@@ -25,6 +25,17 @@ export const BREAK_OPTIONS = [5, 10, 15, 20];
 const EYE_EVERY = 20 * 60;        // 20-20-20 rule: every 20 minutes...
 const EYE_REST_SEC = 20;          // ...look at something far away for 20 seconds
 const POSTURE_ALERT_SEC = 60;
+// Eyes and screen: children should sit at least an arm's length away (~50 cm). The distance comes from the
+// size of the iris (see features.js distanceCm), which is an estimate, so we warn below 40 cm.
+const TOO_CLOSE_CM = 40;
+const CLOSE_ALERT_SEC = 30;         // too close for this long -> Lumi reminds
+const POSTURE_REPEAT_SEC = 5 * 60;  // at most one posture reminder every 5 minutes
+const TILT_DEG = 18;                // head tilted towards a shoulder by more than this (vs your normal)
+const EAR_MAX_YAW = 25;             // head turned more than this: the eye is seen from the side, EAR is unreliable
+// Your position changes slowly during a long lesson (you shift in the chair, move the laptop).
+// While you clearly look at the screen, the "normal" head and eye position follows you slowly.
+const ADAPT_TAU = 120;              // seconds
+const ADAPT_KEYS = ['yaw', 'pitch', 'gx', 'gy'];
 const BLINK_LOW_SEC = 120;
 // Smart timing: a suggestion waits for a natural pause, but never longer than this (seconds)
 const MAX_WAIT = { tired: 60, sliding: 180, long: 180, eyes: 240, rhythm: 30 };
@@ -56,6 +67,12 @@ export class SessionTracker {
     this.rhythm = r ? { study: Math.trunc(r.study), break: Math.trunc(r.break) } : null;
     if (this.rhythm) this.plan_min = this.rhythm.study;
     this.mood_k = { low: 1.35, normal: 1.0, high: 0.7 }[options.mood_sens || 'normal'] ?? 1.0;
+    // improved = the newer camera logic (baseline that follows slow movement, no blinks counted with the head
+    // turned, distance to the screen). false = exactly the original Python tracker (used by the golden test).
+    this.improved = options.improved ?? true;
+    this.dist_recent = [];          // [t, cm] for a steady distance
+    this.dist_cm = null; this.dist_sum = 0; this.dist_n = 0; this.close_time = 0;
+    this.base_roll = []; this.roll0 = null;
     profile = profile || {};
     if (profile.version !== PROFILE_VERSION) profile = {};
     const side = profile.side ?? 1.0, vert = profile.vert ?? 1.0;
@@ -148,9 +165,11 @@ export class SessionTracker {
       return;
     }
 
+    this.last_dark = !!s.dark;
     this._calibrate(s);
     this._eyes_mouth_phone(s);
     let [reason, instant] = this._reason(s);
+    if (this.improved) this._adapt(s, reason);
     if (this.eye_rest !== null) {
       [reason, instant] = this._eye_rest_step(reason);
     } else {
@@ -247,13 +266,48 @@ export class SessionTracker {
     if (this.pending && this.pending.kind === 'eyes') this.pending = null;
   }
 
+  /** The normal head and eye position follows slow changes while you clearly look at the screen. */
+  _adapt(s, reason) {
+    if (!this.calibrated || reason !== 'on' || this.notes_mode || this.debug.side > 0.5 || this.debug.vert > 0.5) return;
+    const k = 1 - Math.exp(-this.dt / ADAPT_TAU);
+    for (const key of ADAPT_KEYS) {
+      if (!has(s[key])) continue;
+      let diff = s[key] - this.base[key];
+      if (ANGLES.has(key)) diff = pyMod(diff + 180, 360) - 180;
+      this.base[key] += k * diff;
+    }
+  }
+
+  /** Distance to the screen, steadied over the last 3 seconds (median). */
+  _distance(s) {
+    if (!has(s.dist_cm) || !s.face) return this.dist_cm;
+    const t = this.t;
+    this.dist_recent.push([t, s.dist_cm]);
+    while (this.dist_recent.length && t - this.dist_recent[0][0] > 3) this.dist_recent.shift();
+    this.dist_cm = median(this.dist_recent.map(([, d]) => d));
+    return this.dist_cm;
+  }
+
   // ------------------------------------------------------------------ posture
   _posture_step(s, reason) {
     if (!this.posture_on || !this.calibrated || !s.face || s.phone || reason === 'away' || reason === 'notes'
         || !has(s.size) || !this.base.size) return;
     const ratio = s.size / this.base.size;
     const drop = s.fy - this.base.fy;
-    const state = ratio > 1.25 ? 'Leaning in' : drop > 0.08 ? 'Slouching' : 'Good';
+    let state = ratio > 1.25 ? 'Leaning in' : drop > 0.08 ? 'Slouching' : 'Good';
+    if (this.improved) {
+      const cm = this._distance(s);
+      if (cm !== null) { this.dist_sum += cm * this.dt; this.dist_n += this.dt; }
+      if (has(s.roll)) {
+        if (this.base_roll.length < 150) this.base_roll.push(s.roll);
+        else if (this.roll0 === null) this.roll0 = median(this.base_roll);
+      }
+      const tilt = this.roll0 !== null && has(s.roll) ? Math.abs(pyMod(s.roll - this.roll0 + 180, 360) - 180) : 0;
+      // too close is about the eyes, so it wins over the others; your own "normal" can be too close as well
+      if (cm !== null && cm < TOO_CLOSE_CM) state = 'Too close';
+      else if (state === 'Good' && tilt > TILT_DEG) state = 'Tilted';
+      if (state === 'Too close') this.close_time += this.dt;
+    }
     if (state === 'Good') {
       this.posture_good += this.dt;
       this.good_since = this.good_since ?? this.t;
@@ -264,8 +318,10 @@ export class SessionTracker {
     this.good_since = null;
     this.posture = state;
     if (this.bad_since === null) this.bad_since = this.t;
-    const recent = this.posture_alerts.length && this.t - this.posture_alerts.at(-1) < 10 * 60;
-    if (this.t - this.bad_since >= POSTURE_ALERT_SEC && !recent) {
+    const repeat = this.improved ? POSTURE_REPEAT_SEC : 10 * 60;
+    const recent = this.posture_alerts.length && this.t - this.posture_alerts.at(-1) < repeat;
+    const wait = state === 'Too close' ? CLOSE_ALERT_SEC : POSTURE_ALERT_SEC;
+    if (this.t - this.bad_since >= wait && !recent) {
       this.posture_alerts.push(this.t); this.posture_alert = state; this.bad_since = null;
     }
   }
@@ -361,7 +417,10 @@ export class SessionTracker {
 
   _eyes_mouth_phone(s) {
     const t = s.t;
-    if (s.face && has(s.ear)) {
+    // seen from the side, an open eye looks narrow: that is not a blink and not tiredness
+    const sideways = this.improved && this.calibrated && has(s.yaw) && Math.abs(pyMod(s.yaw - this.base.yaw + 180, 360) - 180) > EAR_MAX_YAW;
+    if (sideways && this.closed_since !== null) this.closed_since = null;
+    if (s.face && has(s.ear) && !sideways) {
       const ratio = s.ear / this.base.ear;
       this.debug.ear_ratio = ratio;
       const closed = ratio < this.closed_ratio;
@@ -647,6 +706,7 @@ export class SessionTracker {
       eyes_in: this.eye_rest_on ? Math.max(0, Math.trunc(pyRound((EYE_EVERY - this.study_since_eyes) / 60))) : null,
       posture: this.posture_on && this.calibrated && this.base.size ? this.posture : null,
       posture_alert: postureAlert,
+      ...(this.improved ? { distance_cm: this.dist_cm === null ? null : Math.round(this.dist_cm), dark: !!this.last_dark } : {}),
       blink_nudge: blinkNudge,
       waiting: this.pending ? this.pending.kind : null,
       mood: this.on_break ? null : this.mood,
@@ -695,6 +755,10 @@ export class SessionTracker {
       blink_reminders: this.blink_nudges.length,
       posture_alerts: this.posture_alerts.length,
       posture_good_pct: pg > 0 ? Math.trunc(pyRound(100 * this.posture_good / pg)) : null,
+      ...(this.improved ? {
+        distance_cm: this.dist_n > 30 ? Math.round(this.dist_sum / this.dist_n) : null,
+        too_close_pct: this.dist_n > 30 ? Math.trunc(pyRound(100 * this.close_time / this.dist_n)) : null,
+      } : {}),
       plan_min: this.plan_min,
       rhythm: this.rhythm,
       away_count: this.away_count,
@@ -782,6 +846,9 @@ export class SessionTracker {
       out.push(`You blinked much less than usual <strong>${this.blink_nudges.length} time${plural(this.blink_nudges.length)}</strong>. Screen staring dries the eyes: blink, and use the eye rests.`);
     }
     if (this.eye_rests) out.push(`You rested your eyes <strong>${this.eye_rests} time${plural(this.eye_rests)}</strong> (20-20-20).`);
+    if (this.improved && this.dist_n > 60 && this.close_time / this.dist_n > 0.2) {
+      out.push(`You sat <strong>closer than 40 cm</strong> to the screen ${Math.trunc(pyRound(100 * this.close_time / this.dist_n))}% of the time. An arm's length (about 50 cm) is kinder to your eyes.`);
+    }
     if (this.posture_alerts.length) {
       out.push(`Lumen reminded you about your <strong>posture ${this.posture_alerts.length} time${plural(this.posture_alerts.length)}</strong>. Check your chair and screen height.`);
     }

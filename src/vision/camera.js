@@ -9,13 +9,17 @@
 // Every processed frame becomes one sample: { t, face, ear, mar, yaw, pitch, gx, gy, size, fy,
 // smile, lift, brow, gap, bs, phone } — exactly the format the Python SessionTracker expects.
 
-import { faceFeatures, blendshapeFeatures, headAngles, greyStd, edgeEnergy, iou } from './features.js';
+import { faceFeatures, blendshapeFeatures, headAngles, greyStd, greyMean, edgeEnergy, iou } from './features.js';
 
 const MP_VERSION = '0.10.14';
 const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
 const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-// EfficientDet-Lite0 was trained on COCO, the same 80 classes as YOLOv8 -> it knows "cell phone"
+// EfficientDet was trained on COCO, the same 80 classes as YOLOv8 -> it knows "cell phone".
+// Lite2 is the more accurate one (sees smaller and tilted phones, fewer false alarms) but ~3x slower,
+// so it is used when the GPU runs the models; on the CPU, or if it can't load, the light Lite0.
 const OBJECT_MODEL = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite';
+const OBJECT_MODEL_BIG = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite2/float16/1/efficientdet_lite2.tflite';
+const DARK = 45;              // average brightness (0..255) below which the room is too dark
 
 const PHONE_EVERY = 5;        // the object detector is slower: every 5th frame (3x a second at 15 fps)
 // A "phone" box covering more than this share of the picture is a hand in front of the lens:
@@ -72,14 +76,16 @@ function loadModels(withPhone, status) {
       let objects = null;
       if (withPhone) {
         status('Loading the phone detector…');
-        try {
-          objects = await ObjectDetector.createFromOptions(fileset, {
-            baseOptions: { modelAssetPath: OBJECT_MODEL, delegate },
-            runningMode: 'VIDEO', scoreThreshold: PHONE_SCORE, maxResults: 3, categoryAllowlist: ['cell phone'],
-          });
-        } catch (e) {
-          console.warn('Phone detector not available, phone detection is off', e);
+        const objOpts = (path) => ({
+          baseOptions: { modelAssetPath: path, delegate },
+          runningMode: 'VIDEO', scoreThreshold: PHONE_SCORE, maxResults: 3, categoryAllowlist: ['cell phone'],
+        });
+        for (const path of delegate === 'GPU' ? [OBJECT_MODEL_BIG, OBJECT_MODEL] : [OBJECT_MODEL]) {
+          try { objects = await ObjectDetector.createFromOptions(fileset, objOpts(path)); break; } catch (e) {
+            console.warn('Phone detector could not load', path, e);
+          }
         }
+        if (!objects) console.warn('Phone detector not available, phone detection is off');
       }
       return { face, objects, delegate };
     })();
@@ -135,6 +141,7 @@ export class CameraVision {
     this.phoneStreak = 0;         // detector checks in a row that saw a phone
     this.phoneAnchor = null;      // {box, since}: where the "phone" has been standing still
     this.covered = false;
+    this.dark = false;
     this.edges = 99;              // picture detail (see edgeEnergy); high until first measured
     this.fpsWindow = [];
     this.stopTicker = workerTicker(this.fps, () => this.step());
@@ -180,11 +187,15 @@ export class CameraVision {
         } else { this.phoneStreak = 0; this.lastPhoneBox = null; }
       } catch (e) { console.warn('phone detector error', e); }
     }
+    const lm = res.faceLandmarks && res.faceLandmarks[0];
     if (this.frame % COVER_EVERY === 0) {
       this.smallCtx.drawImage(v, 0, 0, 64, 48);
       const px = this.smallCtx.getImageData(0, 0, 64, 48).data;
-      this.covered = greyStd(px) < 12;
+      // An almost uniform picture is a covered lens, but only if no face is found in it:
+      // a dim room is uniform too, and then the child must not be counted as "not here".
+      this.covered = greyStd(px) < 12 && !lm;
       this.edges = edgeEnergy(px, 64, 48);
+      this.dark = greyMean(px) < DARK;
     }
     // A covered or blurry-smooth picture (a hand right at the lens) shows no phone, whatever the
     // detector guessed from the hand. The smooth test only cancels a phone: it never hides your
@@ -193,8 +204,8 @@ export class CameraVision {
     const phone = t - this.phoneSeen < PHONE_MEMORY;
 
     const sample = { t, face: false, ear: null, mar: null, yaw: null, pitch: null, gx: null, gy: null,
-      size: null, fy: null, smile: null, lift: null, brow: null, gap: null, bs: null, phone, edges: this.edges };
-    const lm = res.faceLandmarks && res.faceLandmarks[0];
+      size: null, fy: null, dist_cm: null, roll: null, smile: null, lift: null, brow: null, gap: null, bs: null,
+      phone, edges: this.edges, dark: !!this.dark };
     this.lastLandmarks = lm && !this.covered ? lm : null;
     if (lm && !this.covered) {
       Object.assign(sample, { face: true }, faceFeatures(lm, w, h));

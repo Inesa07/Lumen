@@ -2,6 +2,7 @@
 // ---------------------------------------------------------------- Session
 // Sound + system notification, so a suggestion reaches you even while the lesson is in another tab.
 let audioCtx = null;
+let camDarkSaid = false;          // told the child about a dark room in this lesson
 function chime() {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -267,22 +268,34 @@ function render(d) {
   $('#sMood').textContent = mood ? mood[0] : '–';
   $('#nMood').textContent = mood ? mood[1] : d.on_break ? 'on a break' : d.calibrating ? 'learning your face…' : 'face not readable';
 
-  // posture
+  // posture and distance to the screen
   $('#postureSig').hidden = !d.posture;
   if (d.posture) {
-    $('#sPost').textContent = d.posture;
+    const POST = { Good: ['Good', 'sitting well'], 'Too close': ['Too close', 'move back a little'], 'Leaning in': ['Leaning in', 'too close to the screen'],
+      Slouching: ['Slouching', 'head lower than usual'], Tilted: ['Head tilted', 'head leaning to one side'] };
+    const [name, note] = POST[d.posture] || [d.posture, ''];
+    $('#sPost').textContent = name;
     $('#sPost').style.color = d.posture === 'Good' ? '' : 'var(--accent)';
-    $('#nPost').textContent = d.posture === 'Good' ? 'sitting well' : d.posture === 'Leaning in' ? 'too close to the screen' : 'head lower than usual';
+    $('#nPost').textContent = d.distance_cm ? `${note} · ≈ ${d.distance_cm} cm` : note;
   }
+  // a dark room: the face model sees much less, so tell the child once in a while
+  if (d.dark && !camDarkSaid) { camDarkSaid = true; toast('💡 The room is dark. Turn on a light so Lumen can see you well.'); }
+  if (!d.dark && camDarkSaid === true) camDarkSaid = 'ok';
   if (d.blink_nudge) {
     notify('Remember to blink', 'You have been blinking much less than usual. Blink slowly a few times.');
     toast('👀 Remember to blink: a few slow blinks keep your eyes moist.');
   }
   if (d.posture_alert) {
-    const tip = d.posture_alert === 'Leaning in' ? 'You have been leaning towards the screen for a minute. Sit back a little.'
-      : 'You have been slouching for a minute. Straighten your back and lift your head.';
+    const TIPS = {
+      'Too close': 'Move back a little, your eyes will thank you 👀 About an arm\'s length from the screen is best.',
+      'Leaning in': 'You have been leaning towards the screen for a minute. Sit back a little.',
+      Tilted: 'Your head has been leaning to one side for a minute. Sit straight and relax your shoulders.',
+      Slouching: 'You have been slouching for a minute. Straighten your back and lift your head.',
+    };
+    const tip = TIPS[d.posture_alert] || TIPS.Slouching;
     notify('Posture check', tip);
     toast(tip);
+    if (typeof lumiPosture === 'function') lumiPosture(d.posture_alert);
   }
 
   const ringColor = d.attention >= 70 ? 'var(--accent)' : d.attention >= 40 ? 'var(--drift)' : 'var(--coral)';

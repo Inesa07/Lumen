@@ -687,7 +687,7 @@ async function viewSettings() {
       <button class="switch${st.eye_rest ? ' on' : ''}" data-set="eye_rest" role="switch" aria-checked="${st.eye_rest}" aria-label="Eye rest"><span></span></button>
     </section>
     <section class="card setrow">
-      <div><h2>Posture reminders</h2><p class="muted small">A gentle reminder after a minute of leaning towards the screen or slouching.</p></div>
+      <div><h2>Posture reminders</h2><p class="muted small">Lumi reminds you when you sit closer than 40 cm to the screen (after 30 seconds), or lean in, slouch or tilt your head for a minute.</p></div>
       <button class="switch${st.posture ? ' on' : ''}" data-set="posture" role="switch" aria-checked="${st.posture}" aria-label="Posture reminders"><span></span></button>
     </section>
     <section class="card setrow">

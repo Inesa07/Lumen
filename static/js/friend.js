@@ -271,12 +271,28 @@ async function lumiLesson(d) {
     lumiLive.said = now; lumiLive.key = key;
     return;
   }
-  if (key !== lumiLive.key || now - lumiLive.said > 90000) {
+  if ((key !== lumiLive.key || now - lumiLive.said > 90000) && now > (lumiLive.holdUntil || 0)) {
     lumiSay();
     $('#lumiBubble').textContent = key === 'happy' && hol && Math.random() < 0.3 ? hol.line : pick(lines(key));
     lumiLive.said = now;
   }
   lumiLive.key = key;
+}
+
+/** Lumi says the posture reminder itself (the toast says it too). */
+function lumiPosture(kind) {
+  const b = $('#lumiBubble');
+  if (!b) return;
+  const L = {
+    'Too close': ['Move back a little, your eyes will thank you 👀', "You're very close to the screen. Let's sit back a bit 👀"],
+    'Leaning in': ["Let's sit back a little 🪑"],
+    Tilted: ['Head straight, shoulders relaxed 🙂'],
+    Slouching: ['Back straight, like a tall tree 🌲'],
+  }[kind] || ['Back straight, like a tall tree 🌲'];
+  b.textContent = t(pick(L));
+  lumiSay();
+  lumiLive.said = Date.now();
+  lumiLive.holdUntil = Date.now() + 8000;      // keep these words for the whole 8 seconds
 }
 
 /** Show the speech bubble for 8 seconds (unless the child hid Lumi's words). */

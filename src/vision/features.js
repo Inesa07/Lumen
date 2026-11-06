@@ -19,6 +19,13 @@ const BROW_INNER = [107, 336];
 const LID_TOP = [159, 386];
 // iris centre, eye corner A, eye corner B, upper lid, lower lid
 const IRIS = [[468, 33, 133, 159, 145], [473, 362, 263, 386, 374]];
+// the 4 points on each iris edge: [side, top, other side, bottom]
+const IRIS_EDGE = [[469, 470, 471, 472], [474, 475, 476, 477]];
+// The iris is almost exactly the same size in every person from about 2 years old: ~11.7 mm across.
+// That makes it a ruler: the smaller it looks, the farther away the face is.
+export const IRIS_MM = 11.7;
+// Typical horizontal field of view of a laptop / USB webcam (most are 55-78°, a MacBook's ~65°).
+export const CAMERA_HFOV = 63;
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
@@ -38,12 +45,38 @@ export function eyeAspectRatio([p1, p2, p3, p4, p5, p6]) {
  * Only CHANGES against your own calm position matter later, so small offsets don't hurt.
  */
 export function headAngles(matrixData) {
-  if (!matrixData || matrixData.length < 16) return { yaw: null, pitch: null };
+  if (!matrixData || matrixData.length < 16) return { yaw: null, pitch: null, roll: null };
   const R = (r, c) => matrixData[c * 4 + r];
   const deg = 180 / Math.PI;
   const pitch = Math.atan2(R(2, 1), R(2, 2)) * deg;
   const yaw = Math.atan2(-R(2, 0), Math.hypot(R(2, 1), R(2, 2))) * deg;
-  return { yaw, pitch };
+  const roll = Math.atan2(R(1, 0), R(0, 0)) * deg;      // head tilted towards a shoulder
+  return { yaw, pitch, roll };
+}
+
+/**
+ * Iris diameter in pixels (the larger eye, the larger of its two diameters).
+ * Turning the head makes the iris look narrower, looking up or down makes it look shorter,
+ * so the larger diameter of the nearer eye is the most honest one.
+ */
+export function irisPixels(lm, w, h) {
+  if (!lm || lm.length < 478) return null;
+  const P = (i) => [lm[i].x * w, lm[i].y * h];
+  let best = 0;
+  for (const [a, b, c, d] of IRIS_EDGE) best = Math.max(best, dist(P(a), P(c)), dist(P(b), P(d)));
+  return best > 0 ? best : null;
+}
+
+/**
+ * Distance from the camera to the eyes in centimetres, with a pinhole camera model:
+ *   focal length in pixels f = (w / 2) / tan(HFOV / 2)
+ *   distance = f * real size / size in pixels
+ * Webcams differ, so this is an estimate (about ±15 %), good enough to tell 30 cm from 60 cm.
+ */
+export function distanceCm(irisPx, w, hfov = CAMERA_HFOV) {
+  if (!irisPx || !w) return null;
+  const f = (w / 2) / Math.tan((hfov / 2) * Math.PI / 180);
+  return (f * IRIS_MM) / irisPx / 10;
 }
 
 /** 478 landmarks -> interpretable numbers (eyes, mouth, gaze, posture, expression geometry). */
@@ -69,6 +102,7 @@ export function faceFeatures(lm, w, h) {
   const eyeD = dist(P(EYE_OUTER_L), P(EYE_OUTER_R)) + 1e-6;
   const size = eyeD / w;
   const fy = P(NOSE_TIP)[1] / h;
+  const dist_cm = distanceCm(irisPixels(lm, w, h), w);
 
   // geometric expression measures (backup when blendshapes are missing), divided by eye distance
   const cl = P(MOUTH_CORNERS[0]), cr = P(MOUTH_CORNERS[1]);
@@ -78,7 +112,7 @@ export function faceFeatures(lm, w, h) {
   const bl = P(BROW_INNER[0]), br = P(BROW_INNER[1]);
   const brow = ((P(LID_TOP[0])[1] - bl[1]) + (P(LID_TOP[1])[1] - br[1])) / 2 / eyeD;
   const gap = dist(bl, br) / eyeD;
-  return { ear, mar, gx, gy, size, fy, smile, lift, brow, gap };
+  return { ear, mar, gx, gy, size, fy, dist_cm, smile, lift, brow, gap };
 }
 
 /** 52 blendshape scores (0..1) -> the few that tell the expression. */
@@ -95,6 +129,13 @@ export function blendshapeFeatures(categories) {
     jaw: b.jawOpen || 0,
     cheek: avg('cheekSquintLeft', 'cheekSquintRight'),
   };
+}
+
+/** Average brightness 0..255 of a picture: below ~45 the room is too dark for a good face model. */
+export function greyMean(rgba) {
+  let sum = 0;
+  for (let i = 0; i < rgba.length; i += 4) sum += 0.299 * rgba[i] + 0.587 * rgba[i + 1] + 0.114 * rgba[i + 2];
+  return rgba.length ? sum / (rgba.length / 4) : 0;
 }
 
 /** Standard deviation of a grey image: a covered camera gives an almost uniform picture. */
