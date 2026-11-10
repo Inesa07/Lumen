@@ -4,6 +4,7 @@
 let audioCtx = null;
 let camDarkSaid = false;          // told the child about a dark room in this lesson
 function chime() {
+  if (COMFORT.quiet) return;                      // quiet mode: no sounds
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     [660, 880].forEach((f, i) => {
@@ -19,12 +20,15 @@ function chime() {
   } catch { /* sound is optional */ }
 }
 function notify(title, body) {
+  if (COMFORT.quiet) return;
   chime();
   if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
     const n = new Notification(title, { body, tag: 'lumen', silent: true });
     n.onclick = () => { window.focus(); n.close(); };
   }
 }
+/** Pop-up messages in a lesson: none in quiet mode. */
+function lessonToast(msg) { if (!COMFORT.quiet) toast(msg); }
 function askNotificationPermission() {
   try {
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
@@ -49,7 +53,7 @@ async function viewSession() {
       <div><div class="eyebrow">${esc(s.class || 'Study session')}${s.part > 1 ? ` · part ${s.part}` : ''}${s.fake ? ' · simulation' : ''}</div><div class="h-title" data-noi18n>${esc(s.title)}</div>
         </div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="lesson-actions" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <div class="plan" id="planInfo"></div>
       <div class="timer"><span class="dot"></span><span id="clock">0:00</span></div>
       <button class="btn ghost" id="breakBtn">Take a break</button>
@@ -57,7 +61,7 @@ async function viewSession() {
       <button class="btn primary" id="endBtn">Finish lesson</button>
     </div>
   </header>
-  <main class="wrap row">
+  <main class="wrap row lesson-main">
     <div class="grow">
       <section class="card hero-card" id="heroCard">
         <div id="ringBox">${ring(0, 'var(--accent)', 'attention')}</div>
@@ -72,6 +76,7 @@ async function viewSession() {
         <div class="count" id="breakLeft">5:00</div>
         <p class="muted" style="margin:0">Stand up, look far away, drink water. Lumen is paused and will ring when the break is over.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <button class="btn ghost" id="eyeGym" type="button">👀 Eye exercise with Lumi</button>
           <button class="btn ghost" id="breakMore">+5 min</button>
           <button class="btn primary" id="breakEnd">Back to lesson</button>
         </div>
@@ -120,6 +125,7 @@ async function viewSession() {
         <div id="sugChooser">
           <div class="eyebrow" style="color:var(--accent-text);margin-bottom:8px">How long?</div>
           <div class="durations" id="durations" role="radiogroup" aria-label="Break length"></div>
+          <p class="muted small" id="sugWhy" style="margin:8px 0 0" hidden></p>
         </div>
         <div class="btns"><button class="btn primary" id="sugYes">Start break</button><button class="btn ghost" id="sugNo">Not now</button></div>
       </section>
@@ -154,8 +160,9 @@ async function viewSession() {
   $('#aiFab').onclick = () => openAIPopup({ cls: s.class, lesson: s.title, lesson_id: s.lesson_id });
 
   const send = (type, extra = {}) => api('/api/action', { type, ...extra }).catch(() => {});
-  $('#breakEnd').onclick = () => { send('break_end'); toast('Welcome back'); };
-  $('#breakMore').onclick = () => { send('break_extend', { minutes: 5 }); toast('+5 minutes'); };
+  $('#breakEnd').onclick = () => { send('break_end'); lessonToast('Welcome back'); };
+  $('#eyeGym').onclick = eyeGym;
+  $('#breakMore').onclick = () => { send('break_extend', { minutes: 5 }); lessonToast('+5 minutes'); };
   $('#breakBtn').onclick = () => { ui.manual = true; ui.chosen = ui.last.recommended || 5; render(ui.last); };
   $('#sugNo').onclick = () => {
     if (ui.manual) { ui.manual = false; render(ui.last); } else send('dismiss');
@@ -182,7 +189,7 @@ async function viewSession() {
     const d = JSON.parse(ev.data);
     if (d.ended) {
       closeStream();
-      if (d.status === 'paused') { toast('Lesson paused. Continue it any time from Home.'); location.hash = '#/'; }
+      if (d.status === 'paused') { lessonToast('Lesson paused. Continue it any time from Home.'); location.hash = '#/'; }
       else if (d.report) location.hash = `#/report/${d.report}`;
       return;
     }
@@ -208,7 +215,67 @@ function updateYes() {
 }
 
 function speakSoft(text) {
-  try { const u = new SpeechSynthesisUtterance(text); u.rate = 1; window.speechSynthesis.speak(u); } catch { /* optional */ }
+  if (COMFORT.quiet) return;
+  try {
+    const lang = { ru: 'ru', hy: 'hy' }[LANG] || 'en';
+    const voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang));
+    if (!voice && lang !== 'en') return;                     // no voice for this language: stay silent
+    const u = new SpeechSynthesisUtterance(t(text)); u.rate = 1;
+    if (voice) { u.voice = voice; u.lang = voice.lang; }
+    window.speechSynthesis.speak(u);
+  } catch { /* optional */ }
+}
+
+/**
+ * Eye exercise: Lumi flies slowly in a circle, then in a figure eight, and the child follows it with the eyes only.
+ * Lumi first says what it is for, so the child knows it's for the eyes, not a game.
+ */
+function eyeGym() {
+  if ($('#eyeGymBox')) return;
+  const f = lumiLive.info || { stage: { index: 0 }, outfit: 'none' };
+  const box = document.createElement('div');
+  box.id = 'eyeGymBox';
+  box.className = 'eyegym';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.innerHTML = `<div class="eg-intro card">
+      ${lumiSVG({ mood: 'happy', stage: f.stage.index, outfit: f.outfit, size: 110 })}
+      <h2 class="display">${t('👀 Exercise for your eyes')}</h2>
+      <p>${t('Your eyes work hard when you look at a screen. Let\'s give them a little workout.')}</p>
+      <p><b>${t('Follow me only with your eyes. Keep your head still.')}</b></p>
+      <div class="btnrow" style="justify-content:center"><button class="btn primary big" id="egGo">${t('Start · 40 seconds')}</button><button class="btn ghost" id="egNo">${t('Not now')}</button></div>
+    </div>
+    <div class="eg-fly" hidden><div class="eg-lumi">${lumiSVG({ mood: 'happy', stage: f.stage.index, outfit: f.outfit, size: 90 })}</div>
+      <p class="eg-say" id="egSay"></p><button class="btn ghost eg-stop" id="egStop">${t('Stop')}</button></div>`;
+  document.body.appendChild(box);
+  const close = () => { cancelAnimationFrame(eyeGym.raf); box.remove(); };
+  $('#egNo').onclick = close;
+  $('#egStop').onclick = close;
+  speakSoft('This is exercise for your eyes. Follow me only with your eyes, and keep your head still.');
+  $('#egGo').onclick = () => {
+    box.querySelector('.eg-intro').hidden = true;
+    box.querySelector('.eg-fly').hidden = false;
+    const lumi = box.querySelector('.eg-lumi');
+    const T = 40, t0 = performance.now();
+    let said = '';
+    const step = (now) => {
+      const s = (now - t0) / 1000;
+      const w = window.innerWidth, h = window.innerHeight, rx = w * 0.34, ry = h * 0.3;
+      let x, y, say;
+      if (s < 14) { const a = (s / 7) * 2 * Math.PI; x = Math.cos(a) * rx; y = Math.sin(a) * ry; say = 'Follow me in a circle 🔄'; }
+      else if (s < 28) { const a = ((s - 14) / 7) * 2 * Math.PI; x = Math.sin(a) * rx; y = Math.sin(2 * a) * ry * 0.7; say = 'Now a figure eight ∞'; }
+      else if (s < 34) { x = (Math.floor((s - 28) / 1.5) % 2 ? 1 : -1) * rx; y = 0; say = 'Left… right…'; }
+      else { x = 0; y = 0; say = 'Now close your eyes for a moment 😌'; }
+      lumi.style.transform = `translate(${x}px, ${y}px)`;
+      if (say !== said) { said = say; $('#egSay').textContent = t(say); speakSoft(say); }
+      if (s < T) { eyeGym.raf = requestAnimationFrame(step); return; }
+      box.querySelector('.eg-fly').innerHTML = `<div class="eg-done card">${lumiSVG({ mood: 'party', stage: f.stage.index, outfit: f.outfit, size: 110 })}
+        <h2 class="display">${t('Great, your eyes rested! ✨')}</h2><button class="btn primary" id="egOk">${t('Done')}</button></div>`;
+      speakSoft('Great, your eyes rested!');
+      $('#egOk').onclick = close;
+    };
+    eyeGym.raf = requestAnimationFrame(step);
+  };
 }
 
 function render(d) {
@@ -221,7 +288,7 @@ function render(d) {
   $('#breakCard').hidden = !d.on_break;
   $('#breakBtn').hidden = d.on_break;
   $('#breakLeft').textContent = mmss(d.break_left);
-  if (d.break_ended) { notify('Break is over', 'Time to get back to your lesson.'); toast('Break is over. Welcome back!'); }
+  if (d.break_ended) { notify('Break is over', 'Time to get back to your lesson.'); lessonToast('Break is over. Welcome back!'); }
   if (d.on_break) ui.manual = false;
 
   // personal plan: next break and next eye rest
@@ -259,9 +326,9 @@ function render(d) {
     $('#eyeDone').textContent = d.eye_rest.done;
     $('#eyeProg').style.width = `${Math.min(100, 100 * d.eye_rest.done / d.eye_rest.needed)}%`;
   }
-  if (d.eye_rest_result === 'done') { chime(); toast('Eyes rested. Back to the lesson!'); speakSoft('Done. Back to the lesson.'); }
+  if (d.eye_rest_result === 'done') { chime(); lessonToast('Eyes rested. Back to the lesson!'); speakSoft('Done. Back to the lesson.'); }
   lumiLesson(d);                        // Lumi in the corner reacts to this moment
-  if (d.eye_rest_result === 'timeout') toast('Eye rest skipped. Lumen will ask again in 5 minutes.');
+  if (d.eye_rest_result === 'timeout') lessonToast('Eye rest skipped. Lumen will ask again in 5 minutes.');
 
   // mood (facial expression)
   const mood = MOOD[d.mood];
@@ -279,11 +346,11 @@ function render(d) {
     $('#nPost').textContent = d.distance_cm ? `${note} · ≈ ${d.distance_cm} cm` : note;
   }
   // a dark room: the face model sees much less, so tell the child once in a while
-  if (d.dark && !camDarkSaid) { camDarkSaid = true; toast('💡 The room is dark. Turn on a light so Lumen can see you well.'); }
+  if (d.dark && !camDarkSaid) { camDarkSaid = true; lessonToast('💡 The room is dark. Turn on a light so Lumen can see you well.'); }
   if (!d.dark && camDarkSaid === true) camDarkSaid = 'ok';
   if (d.blink_nudge) {
     notify('Remember to blink', 'You have been blinking much less than usual. Blink slowly a few times.');
-    toast('👀 Remember to blink: a few slow blinks keep your eyes moist.');
+    lessonToast('👀 Remember to blink: a few slow blinks keep your eyes moist.');
   }
   if (d.posture_alert) {
     const TIPS = {
@@ -294,7 +361,7 @@ function render(d) {
     };
     const tip = TIPS[d.posture_alert] || TIPS.Slouching;
     notify('Posture check', tip);
-    toast(tip);
+    lessonToast(tip);
     if (typeof lumiPosture === 'function') lumiPosture(d.posture_alert);
   }
 
@@ -350,6 +417,7 @@ function render(d) {
       : 'Lumen will pause and ring when the break is over.';
     $('#sugChooser').hidden = false;
     $('#sugNo').textContent = 'Cancel';
+    $('#sugWhy').hidden = true;
     renderDurations(d.options, d.recommended);
   } else {
     const key = `${sug.kind}|${sug.text}`;
@@ -363,6 +431,9 @@ function render(d) {
     $('#sugChooser').hidden = sug.action !== 'break';
     $('#sugNo').textContent = sug.action === 'end' ? 'Keep going' : 'Not now';
     if (sug.action === 'break') renderDurations(sug.options || d.options, sug.minutes);
+    // why this length (tired = longer, a little distracted = short)
+    $('#sugWhy').hidden = !sug.why;
+    if (sug.why) $('#sugWhy').textContent = `⏱ ${sug.minutes} ${t('min')}: ${t(sug.why)}`;
   }
   updateYes();
   setTitle(d);
@@ -386,7 +457,7 @@ function drawTasks(tasks) {
       tasksState[i].done = cb.checked;
       api('/api/task', { index: i, done: cb.checked }).catch(() => {});
       countTasks();
-      if (cb.checked && tasksState.every((t) => t.done)) { chime(); toast('🎯 Whole plan done! Great work.'); }
+      if (cb.checked && tasksState.every((t) => t.done)) { chime(); lessonToast('🎯 Whole plan done! Great work.'); }
     };
   });
   countTasks();
@@ -430,8 +501,8 @@ async function endLesson(pause) {
   closeStream();
   try {
     const rep = await api('/api/end', { pause, done });
-    if (rep.discarded) { toast('Too short to save (under 20 seconds).'); location.hash = '#/'; return; }
-    if (pause) { toast('Paused. Continue this lesson any time from Home.'); location.hash = '#/'; return; }
+    if (rep.discarded) { lessonToast('Too short to save (under 20 seconds).'); location.hash = '#/'; return; }
+    if (pause) { lessonToast('Paused. Continue this lesson any time from Home.'); location.hash = '#/'; return; }
     location.hash = `#/report/${rep.id}`;
   } catch {
     location.hash = '#/';

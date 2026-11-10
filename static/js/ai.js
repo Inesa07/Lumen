@@ -158,6 +158,11 @@ function suggestionsFor(opts) {
 // opts: { chatId, cls, lesson, lesson_id, prefill, compact, onChange(chat), classes:[...] }
 function chatBox(container, opts = {}) {
   let chat = null, aiState = null, setup = false, streaming = null, ctrl = null;
+  let hardCount = 0;                // things that were hard lately in this class: offer a warm-up (core: hardTopics)
+  const loadHard = () => api(`/api/hard-topics?class=${encodeURIComponent(opts.cls || '')}`).then((h) => {
+    const n = (h && h.count) || 0;
+    if (n !== hardCount) { hardCount = n; if (!streaming && !(chat && chat.messages.length)) draw(); }
+  }).catch(() => {});
   container.innerHTML = `
     <div class="ai-scroll"><div class="thread"></div></div>
     <form class="composer-wrap">
@@ -222,7 +227,7 @@ function chatBox(container, opts = {}) {
         <h2>${opts.lesson ? `Questions about “${esc(opts.lesson)}”?` : opts.cls ? `What do you want to understand in ${esc(opts.cls)}?` : 'Hi! What do you want to learn today? 👋'}</h2>
         <p class="muted small">${opts.lesson ? 'I know your lesson, your plan and your sticky notes.'
           : 'Ask me anything. There are no silly questions! With 🧭 Help me think I won\'t just tell you the answer: I\'ll help you find it yourself.'}</p>
-        <div class="sugs">${suggestionsFor(opts).map(([e, x], i) => `<button type="button" class="sug c${i}" data-sug="${esc(x)}"><span class="sug-e">${e}</span><span>${esc(x)}</span></button>`).join('')}</div></div>`;
+        <div class="sugs">${(hardCount ? [['🧠', 'Warm up on something that was hard for me lately'], ...suggestionsFor(opts).slice(0, 3)] : suggestionsFor(opts)).map(([e, x], i) => `<button type="button" class="sug c${i}" data-sug="${esc(x)}"><span class="sug-e">${e}</span><span>${esc(x)}</span></button>`).join('')}</div></div>`;
     }
     html += msgs.map(msgHTML).join('');
     if (!streaming && msgs.length && msgs[msgs.length - 1].role === 'assistant') {
@@ -266,7 +271,7 @@ function chatBox(container, opts = {}) {
       };
     });
     thread.querySelectorAll('[data-ctx]').forEach((b) => {
-      b.onclick = () => { opts.cls = b.dataset.ctx || null; ta.placeholder = opts.cls ? `Ask anything about ${opts.cls}…` : 'Ask anything…'; draw(); ta.focus(); };
+      b.onclick = () => { opts.cls = b.dataset.ctx || null; ta.placeholder = opts.cls ? `Ask anything about ${opts.cls}…` : 'Ask anything…'; draw(); loadHard(); ta.focus(); };
     });
     thread.querySelectorAll('[data-copy-msg]').forEach((b) => { b.onclick = () => copyText(chat.messages[Number(b.dataset.copyMsg)].content, b); });
     const f = thread.querySelector('[data-connect]');
@@ -363,6 +368,7 @@ function chatBox(container, opts = {}) {
     if (opts.chatId) { try { chat = await api(`/api/chats/${opts.chatId}`); } catch { chat = null; } }
     draw();
     toBottom();
+    loadHard();
   })();
   return { focus: () => ta.focus() };
 }

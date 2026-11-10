@@ -11,6 +11,10 @@ import { SessionTracker, PROFILE_VERSION } from '../core/tracker.js';
 import { mmss } from '../core/util.js';
 import * as stats from '../core/stats.js';
 import { friendState } from '../core/friend.js';
+import { recordsOf, lessonWords } from '../core/coach.js';
+import { weekAdvice } from '../core/advice.js';
+import { concernOf } from '../core/safety.js';
+import { lessonPlan, rulesFrom, isHoliday, examUntil, suggestShortSteps, MIN_AGE, MAX_AGE } from '../core/plan.js';
 import { dreamState, lessonStars, guessSize, guessEmoji, priceOf, sizePrompt, readSize, readEmoji, SIZE_DAYS, MAX_TEXT } from '../core/dream.js';
 import { ValidationRun, FakeFollower, CSV_HEADER } from '../core/validate.js';
 import { Tutor, AIError, lessonContext } from '../core/ai.js';
@@ -19,7 +23,11 @@ import { CameraVision } from '../vision/camera.js';
 import { FakeVision } from '../vision/fake.js';
 
 export const DEFAULT_SETTINGS = { daily_goal_min: 60, streak_min: 10, rhythm: null, mood_sens: 'normal', eye_rest: true, posture: true, blink: true,
-  theme: 'fireflies', accent: '#F2B544', motion: true };
+  theme: 'fireflies', accent: '#F2B544', motion: true,
+  // the child's age (chosen in the welcome), "short steps", holidays [[from, to|null]], an exam week (until YYYY-MM-DD)
+  age: null, short_steps: false, short_steps_asked: false, holidays: [], exam_until: null,
+  // comfort: quiet mode (no sounds, no pop-up messages), bigger text, a font that is easier to read, Lumi speaks aloud
+  quiet: false, big_text: false, easy_font: false, speak: false, welcomed: false };
 // background scenes (older theme names are mapped to the closest scene in the browser)
 const THEMES = ['fireflies', 'space', 'ocean', 'forest', 'clouds', 'blossom', 'city'];
 const ACCENTS = ['#F2B544', '#4CC9B0', '#FF8A70', '#9B8CFF', '#5AA9FF', '#F06BA8'];
@@ -106,6 +114,17 @@ export class LocalServer {
     if ('streak_min' in nw) cur.streak_min = Math.min(120, Math.max(1, intOr(nw.streak_min, 10)));
     for (const k of ['eye_rest', 'posture', 'blink']) if (k in nw) cur[k] = !!nw[k];
     if ('rhythm' in nw) cur.rhythm = cleanRhythm(nw.rhythm);
+    if ('age' in nw) { const a = intOr(nw.age, 0); cur.age = a >= MIN_AGE && a <= MAX_AGE ? a : null; }
+    for (const k of ['short_steps', 'short_steps_asked', 'quiet', 'big_text', 'easy_font', 'speak', 'welcomed']) if (k in nw) cur[k] = !!nw[k];
+    if ('holiday' in nw) {                          // the holiday switch: on starts holidays today, off ends them yesterday
+      const today = stats.dayKey(Date.now() / 1000), yesterday = stats.dayKey(Date.now() / 1000 - 86400);
+      const hs = (cur.holidays || []).filter(([f, t]) => t || f <= today).slice(-20);
+      const open = hs.find(([, t]) => !t);
+      if (nw.holiday && !open) hs.push([today, null]);
+      if (!nw.holiday && open) { if (open[0] >= today) hs.splice(hs.indexOf(open), 1); else open[1] = yesterday; }
+      cur.holidays = hs;
+    }
+    if ('exam_week' in nw) cur.exam_until = nw.exam_week ? examUntil() : null;
     if (['low', 'normal', 'high'].includes(nw.mood_sens)) cur.mood_sens = nw.mood_sens;
     if (THEMES.includes(nw.theme)) cur.theme = nw.theme;
     if (typeof nw.motion === 'boolean') cur.motion = nw.motion;
@@ -177,9 +196,12 @@ export class LocalServer {
       const r = cleanRhythm(rhythm);
       if (JSON.stringify(r) !== JSON.stringify(st.rhythm)) st = this.saveSettings({ rhythm: r });
     }
-    const [plan] = stats.planMinutes(this.reports());
+    // lesson length: chosen rhythm > short steps > your own history, kept within what fits your age
+    const [hist, personal] = stats.planMinutes(this.reports());
+    const lp = lessonPlan(st, hist, personal);
     const tr = new SessionTracker(meta.title, this.profile(), {
-      plan_min: plan, eye_rest: st.eye_rest, posture: st.posture, blink: st.blink, rhythm: st.rhythm, mood_sens: st.mood_sens });
+      plan_min: lp.plan_min, eye_rest: st.eye_rest, posture: st.posture, blink: st.blink, rhythm: lp.rhythm, mood_sens: st.mood_sens,
+      short_steps: !!st.short_steps && !st.rhythm });
     this.tracker = tr;
     const err = await this.startWorker((s) => { if (this.tracker === tr) tr.feed(s); }, FakeVision);
     return err || { ok: true, id: this.sessionId };
@@ -266,6 +288,7 @@ export class LocalServer {
       this.tracker = null;
       return { id: null, discarded: true };
     }
+    try { rep.records = recordsOf(rep, this.reports()); } catch (e) { rep.records = []; }   // Lumi celebrates new records
     this.db.put('sessions', rep);
     this.tracker = null;
     this.lastReportId = this.sessionId;
@@ -338,7 +361,15 @@ export class LocalServer {
 
   overview() {
     const st = this.settings();
-    const data = stats.overview(this.reports(), Date.now() / 1000, st.daily_goal_min, st.streak_min);
+    const data = stats.overview(this.reports(), Date.now() / 1000, st.daily_goal_min, st.streak_min, rulesFrom(st));
+    data.suggest_short_steps = suggestShortSteps(this.reports(), st);
+    if (!st.rhythm) {                                // the lesson length the next lesson will really use
+      const lp = lessonPlan(st, data.plan_min, data.plan_personal);
+      data.plan_by = st.short_steps ? 'short' : st.age && !data.plan_personal ? 'age' : null;
+      data.plan_min = lp.plan_min;
+      data.plan_break = lp.rhythm ? lp.rhythm.break : null;
+    }
+    data.holiday_now = isHoliday(stats.dayKey(Date.now() / 1000), st.holidays);
     data.todo_open = this.todos.counts();
     const rv = this.reviews.overview();
     Object.assign(data, { settings: st, reviews_due: rv.due.length, reviews_total: rv.total - rv.done });
@@ -382,7 +413,41 @@ export class LocalServer {
     const notes = chat.lesson_id ? this.notes.list({ lessonId: chat.lesson_id }) : [];
     const questions = chat.lesson_id
       ? this.reports().filter((r) => r.lesson_id === chat.lesson_id).flatMap((r) => (r.questions || []).map((q) => q.text)) : [];
-    return lessonContext(chat.class, chat.lesson, tasks, notes, questions);
+    let ctx = lessonContext(chat.class, chat.lesson, tasks, notes, questions);
+    const hard = this.hardTopics(chat.class, chat.id);
+    if (hard.length) {
+      ctx += `${ctx ? '\n' : 'Context about the student:\n'}Recently hard for the student${chat.class ? ` in ${chat.class}` : ''}: ${hard.join(' | ')}.`
+        + ' If it fits and this is the start of the conversation, you may offer ONE short warm-up on one of these, but always answer what the student asks now.';
+    }
+    return ctx;
+  }
+
+  /**
+   * What was hard lately (last 14 days), without the child typing anything: earlier questions to the AI in this class,
+   * lessons the child marked as "hard", and moments marked as confusing. Newest first, at most 5.
+   */
+  hardTopics(cls, exceptChat = null) {
+    const since = Date.now() / 1000 - 14 * 86400;
+    const same = (c) => (cls ? (c || '').toLowerCase() === cls.toLowerCase() : true);
+    const out = [];
+    for (const c of this.db.list('chats').filter((c) => c.id !== exceptChat && same(c.class) && c.updated >= since).sort((a, b) => b.updated - a.updated)) {
+      const q = (c.messages.find((m) => m.role === 'user') || {}).content;
+      if (q) out.push(`asked: "${q.replace(/\s+/g, ' ').slice(0, 90)}"`);
+    }
+    for (const r of this.reports().filter((r) => same(r.class) && r.started_at >= since).sort((a, b) => b.started_at - a.started_at)) {
+      if (r.feel === 'hard') out.push(`the lesson "${(r.title || '').slice(0, 60)}" felt hard`);
+      for (const q of (r.questions || []).slice(0, 2)) if (q.text) out.push(`confusing: "${q.text.slice(0, 80)}"`);
+    }
+    return [...new Set(out)].slice(0, 5);
+  }
+
+  /** A worrying message: keep a gentle note for the parent (the topic and the time, never the words). */
+  noteConcern(text) {
+    const kind = concernOf(text);
+    if (!kind) return;
+    const list = (this.db.getValue('safety') || []).slice(-19);
+    list.push({ at: Date.now() / 1000, kind });
+    this.db.setValue('safety', list);
   }
 
   openChat(body) {
@@ -400,6 +465,7 @@ export class LocalServer {
     if (!text) { onEvent({ error: 'empty question' }); return; }
     let chat = this.openChat(body);
     chat = this.chats.append(chat.id, 'user', text);
+    this.noteConcern(text);
     const ctx = this.chatContext(chat);
     const parts = [];
     try {
@@ -431,6 +497,7 @@ export class LocalServer {
     if (!text) return [{ error: 'empty question' }, 400];
     let chat = this.openChat(body);
     chat = this.chats.append(chat.id, 'user', text);
+    this.noteConcern(text);
     try {
       const answer = await this.tutor.ask(chat.messages, this.chatContext(chat), this.coachMode(body));
       return [{ chat: this.chats.append(chat.id, 'assistant', answer) }, 200];
@@ -466,6 +533,11 @@ export class LocalServer {
     }
     if (p === '/api/overview' || p === '/api/sessions') return this.overview();
     if (p.startsWith('/api/sessions/')) { const r = this.db.get('sessions', p.split('/').at(-1)); return r ? [r] : [{ error: 'not found' }, 404]; }
+    if (p === '/api/hard-topics') return { count: this.hardTopics(q.class || null).length };
+    if (p === '/api/lumi-words') {                   // what Lumi says on a lesson report (core/coach.js)
+      const r = this.db.get('sessions', String(q.id || ''));
+      return r ? lessonWords(r, this.reports()) : [{ error: 'not found' }, 404];
+    }
     if (p === '/api/checks') {
       // every saved accuracy check, newest first (small summaries, for the list and comparisons)
       const list = this.db.list('checks').sort((x, y) => y.started_at - x.started_at).map((c) => ({
@@ -478,6 +550,7 @@ export class LocalServer {
     if (p === '/api/reviews') return this.reviews.overview();
     if (p === '/api/week') {
       const w = stats.weekly(this.reports(), this.reviews.load());
+      w.advice = weekAdvice(this.reports());          // one useful step for the parent (core/advice.js)
       // easier numbers for the page: lessons (paused parts of one lesson count once) and phone pickups as a count
       const now = Date.now() / 1000, d0 = new Date(); d0.setHours(0, 0, 0, 0);
       const from = d0.getTime() / 1000 - 6 * 86400, prevFrom = from - 7 * 86400;
@@ -510,7 +583,7 @@ export class LocalServer {
     const f = this.friend();
     const snap = this.snapshot();
     return {
-      goal: stats.goalInfo(sums, st.daily_goal_min, now, st.streak_min),
+      goal: stats.goalInfo(sums, st.daily_goal_min, now, st.streak_min, rulesFrom(st)),
       today: { study_min: Math.round(todaySums.reduce((a, s) => a + s.duration_sec, 0) / 60),
         focused_min: todaySums.reduce((a, s) => a + (s.focused_min || 0), 0), lessons: new Set(todaySums.map((s) => s.lesson_id)).size },
       mood_today: stats.moodMix(todaySums), mood_week: stats.moodMix(sums.filter((s) => s.started_at >= today0 - 6 * 86400)),
@@ -563,7 +636,8 @@ export class LocalServer {
       return this.parentInfo();
     }
     if (!(await this.pinOk(body.pin))) return [{ ok: false, error: 'Wrong PIN' }, 403];
-    if (body.verify) return { ok: true, email: p.email || '' };
+    if (body.verify) return { ok: true, email: p.email || '', alerts: this.db.getValue('safety') || [] };
+    if (body.clear_alerts) { this.db.setValue('safety', []); return { ok: true }; }
     if (typeof body.email === 'string') {
       const e = body.email.trim().slice(0, 120);
       if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return [{ error: 'Not an email address' }, 400];
@@ -578,7 +652,8 @@ export class LocalServer {
 
   // ------------------------------------------------------------------ Lumi the firefly (see core/friend.js)
   friend() {
-    const f = friendState(this.reports(), this.reviews.load(), this.db.getValue('friend') || {}, this.settings().streak_min);
+    const st = this.settings();
+    const f = friendState(this.reports(), this.reviews.load(), this.db.getValue('friend') || {}, st.streak_min, (k) => isHoliday(k, st.holidays));
     f.dream = this.dream().current;                  // Lumi dresses up on the way to a dream
     return f;
   }
@@ -730,6 +805,12 @@ export class LocalServer {
     if (p === '/api/chats/delete') { this.chats.delete(String(body.id)); return { ok: true }; }
     if (p === '/api/review') return this.reviewAction(body);
     if (p === '/api/settings') return this.saveSettings(body);
+    if (p === '/api/feel') {                         // "How was the lesson?" one tap: easy / ok / hard
+      const r = this.db.get('sessions', String(body.id || ''));
+      if (!r || !['easy', 'ok', 'hard'].includes(body.feel)) return [{ error: 'bad request' }, 400];
+      this.db.put('sessions', { ...r, feel: body.feel });
+      return { ok: true };
+    }
     if (p === '/api/friend') return this.saveFriend(body);
     if (p === '/api/parent') return this.parentPost(body);
     if (p === '/api/dream') return this.dreamPost(body);

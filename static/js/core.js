@@ -145,9 +145,45 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-la
 function accentSwatches() {
   return `<div class="accents">${ACCENTS.map(([hex, name]) => `<button type="button" class="acc${LOOK.accent === hex ? ' on' : ''}" data-look-accent="${hex}" style="--c:${hex}" aria-pressed="${LOOK.accent === hex}" title="${name}" aria-label="${name}"><span></span></button>`).join('')}</div>`;
 }
+// ---- comfort: quiet mode, bigger text, an easier font, Lumi speaks aloud (Settings → Comfort)
+let COMFORT = { quiet: false, big_text: false, easy_font: false, speak: false };
+function applyComfort(st) {
+  COMFORT = { quiet: !!st.quiet, big_text: !!st.big_text, easy_font: !!st.easy_font, speak: !!st.speak };
+  const root = document.documentElement;
+  root.classList.toggle('big-text', COMFORT.big_text);
+  root.classList.toggle('easy-font', COMFORT.easy_font);
+  // Lexend: a font made to be easier to read (wider letters, more space); loaded only when it's chosen
+  if (COMFORT.easy_font && !document.getElementById('easyFont')) {
+    const l = document.createElement('link');
+    l.id = 'easyFont'; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap';
+    document.head.appendChild(l);
+  }
+  try { localStorage.setItem('lumen.comfort', JSON.stringify(COMFORT)); } catch { /* fine */ }
+}
+try { applyComfort(JSON.parse(localStorage.getItem('lumen.comfort') || '{}')); } catch { /* fine */ }
+
+/** Lumi says a line aloud (Settings → Lumi speaks). Only with a voice for the chosen language. */
+function speak(text) {
+  if (!COMFORT.speak || COMFORT.quiet || !('speechSynthesis' in window) || !text) return;
+  const lang = { ru: 'ru', hy: 'hy' }[LANG] || 'en';
+  const voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang));
+  if (!voice) return;                              // no voice for this language: better silent than wrong
+  const u = new SpeechSynthesisUtterance(String(text).replace(/\p{Extended_Pictographic}|\uFE0F/gu, '').trim());
+  u.voice = voice; u.lang = voice.lang; u.rate = 0.95; u.pitch = 1.25;   // a little higher: Lumi is small
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function hasVoice(lang = LANG) {
+  if (!('speechSynthesis' in window)) return false;
+  const l = { ru: 'ru', hy: 'hy' }[lang] || 'en';
+  return speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith(l));
+}
+if ('speechSynthesis' in window) speechSynthesis.getVoices();   // voices load in the background
+
 // apply the remembered look immediately (no flash of the default colours), then sync with the server
 try { const look = JSON.parse(localStorage.getItem('lumen.look') || 'null'); applyTheme(look ? look.theme : 'fireflies', look ? look.accent : null, look ? look.motion : true); } catch { applyTheme('fireflies'); }
-api('/api/settings').then((st) => applyTheme(st.theme, st.accent, st.motion)).catch(() => {});
+api('/api/settings').then((st) => { applyTheme(st.theme, st.accent, st.motion); applyComfort(st); }).catch(() => {});
 
 // ---- mood (facial expression)
 const MOOD = {

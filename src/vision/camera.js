@@ -19,6 +19,9 @@ const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmar
 // so it is used when the GPU runs the models; on the CPU, or if it can't load, the light Lite0.
 const OBJECT_MODEL = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite';
 const OBJECT_MODEL_BIG = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite2/float16/1/efficientdet_lite2.tflite';
+// What the service worker saves in the background on the first visit, so the first lesson starts fast too.
+export const CAMERA_FILES = [`${MP_URL}/vision_bundle.mjs`, `${MP_URL}/wasm/vision_wasm_internal.js`,
+  `${MP_URL}/wasm/vision_wasm_internal.wasm`, FACE_MODEL, OBJECT_MODEL];
 const DARK = 45;              // average brightness (0..255) below which the room is too dark
 
 const PHONE_EVERY = 5;        // the object detector is slower: every 5th frame (3x a second at 15 fps)

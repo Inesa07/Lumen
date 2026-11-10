@@ -1715,3 +1715,64 @@ html.mini-mode .menu-btn, html.mini-mode #sidebar { display: none !important; }
 .ai-pic img { display: block; width: 100%; height: auto; }
 .ai-pic.drawing { background: var(--surface-2); color: var(--text-2, var(--text)); font-size: 14px; }
 
+
+/* comfort: bigger text and an easier font (Settings → Comfort) */
+html.big-text .page, html.big-text .sidebar { zoom: 1.15; }
+html.easy-font body, html.easy-font button, html.easy-font input, html.easy-font textarea, html.easy-font select,
+html.easy-font h1, html.easy-font h2, html.easy-font h3 { font-family: 'Lexend', 'Inter', system-ui, sans-serif !important; }
+html.easy-font body { letter-spacing: .02em; word-spacing: .08em; line-height: 1.6; }
+
+.setline { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line, rgba(255,255,255,.08)); }
+.setline:first-of-type { border-top: 0; }
+.setline b { font-size: 15px; }
+
+/* the first-time welcome with Lumi */
+.welcome-card p { max-width: 380px; margin-left: auto; margin-right: auto; }
+.ages { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; max-width: 360px; margin: 6px auto 10px; }
+.agebtn { height: 46px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); font: 600 18px var(--font-display, inherit); cursor: pointer; }
+.agebtn:hover, .agebtn:focus-visible { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.lumi-party .dots { display: flex; gap: 6px; justify-content: center; margin-top: 16px; }
+.lumi-party .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); }
+.lumi-party .dots i.on { background: var(--accent); width: 18px; border-radius: 4px; }
+.daytag { font-size: 13px; padding: 7px 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 14%, transparent); margin: 10px 0 0; }
+.shortsteps { margin-top: 16px; }
+
+/* Lumi on the lesson report */
+.lumiwords { display: flex; gap: 18px; align-items: center; }
+.lumiwords .lw-body p { margin: 0 0 6px; line-height: 1.5; }
+.feel { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.feelbtn { width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 22px; cursor: pointer; }
+.feelbtn:hover { border-color: var(--accent); transform: translateY(-1px); }
+@media (max-width: 560px) { .lumiwords { flex-direction: column; text-align: center; } .feel { justify-content: center; } }
+
+/* eye exercise with Lumi */
+.eyegym { position: fixed; inset: 0; z-index: 90; background: rgba(6, 10, 24, .92); display: grid; place-items: center; }
+.eyegym .eg-intro, .eyegym .eg-done { max-width: 420px; text-align: center; padding: 28px; }
+.eyegym .eg-fly { position: absolute; inset: 0; display: grid; place-items: center; }
+.eyegym .eg-lumi { position: absolute; left: 50%; top: 50%; margin: -45px 0 0 -45px; will-change: transform; }
+.eyegym .eg-say { position: absolute; bottom: 9%; left: 0; right: 0; text-align: center; font-size: 20px; color: #fff; margin: 0; }
+.eyegym .eg-stop { position: absolute; top: 20px; right: 20px; }
+.eyegym .eg-done { position: relative; z-index: 2; }
+
+/* tablets (iPad) and narrow windows: the lesson in one column, big touch targets, nothing hidden under Lumi */
+@media (max-width: 1024px) {
+  .lesson-actions .btn { min-height: 44px; }
+  .lesson-main { padding-bottom: 140px; }
+}
+@media (max-width: 900px) {
+  .lesson-actions { width: 100%; padding-left: 60px; }
+  .lesson-actions .plan { width: 100%; order: 9; }
+  .lesson-actions .timer { margin-right: auto; }
+}
+@media (max-width: 560px) {
+  .lesson-actions { padding-left: 0; }
+  .lesson-actions .btn { flex: 1 1 auto; }
+}
+/* touch screens: no hover-only hints, bigger switches and chips */
+@media (hover: none) and (pointer: coarse) {
+  .switch { transform: scale(1.12); }
+  .pillbtn, .tagbtn, .coach-btn, .sug { min-height: 40px; }
+}
+/* the account chip: long translations wrap instead of running out of the sidebar */
+.who { min-width: 0; }
+.who em { white-space: normal; overflow-wrap: anywhere; }

@@ -123,23 +123,22 @@ function parentLock() {
 
 // ---------------------------------------------------------------- the weekly report (text)
 function weeklyReportText(w, f, d) {
+  // short on purpose: 4-5 lines and one concrete tip are read; a page of numbers is not
   const tw = w.this;
   const L = [];
   L.push(`${t('Lumen weekly report')} · ${w.from} – ${w.to}`, '');
-  L.push(`📚 ${t('Studied')}: ${hm(tw.study_min)} (${tw.lessons ?? tw.sessions} ${tUnit('lesson', tw.lessons ?? tw.sessions)})`);
-  L.push(`🎯 ${t('Really focused')}: ${hm(tw.focused_min)}${w.change_pct == null ? '' : ` (${w.change_pct >= 0 ? '+' : ''}${w.change_pct}% ${t('vs last week')})`}`);
-  L.push(`👀 ${t('Average attention')}: ${tw.avg == null ? '–' : `${tw.avg}%`}`);
-  L.push(`📱 ${t('Phone came out')}: ${tw.pickups ?? 0} ${tUnit('time', tw.pickups ?? 0)}`);
-  L.push(`🔥 ${t('Best streak')}: ${f.metrics.best_streak} · Lumi: ${t(f.stage.name)} (🔆 ${f.light})`);
+  L.push(`📚 ${t('Studied')}: ${hm(tw.study_min)}, ${t('really focused')}: ${hm(tw.focused_min)}${w.change_pct == null ? '' : ` (${w.change_pct >= 0 ? '+' : ''}${w.change_pct}% ${t('vs last week')})`}`);
+  if (w.best_day) L.push(`⭐ ${t('Best day')}: ${w.best_day.label}, ${hm(w.best_day.focused_min)} ${t('focused')}`);
   if (f.dream) L.push(`🎁 ${t('Dream')}: ${f.dream.emoji} ${f.dream.text} · ⭐ ${f.dream.earned}/${f.dream.need}`);
-  if (w.best_day) L.push(`⭐ ${t('Best day')}: ${w.best_day.label} ${w.best_day.date}, ${hm(w.best_day.focused_min)}`);
-  if (w.classes.length) { L.push('', `${t('By class')}:`); w.classes.slice(0, 6).forEach((c) => L.push(`  • ${c.name}: ${hm(c.study_min)}, ${hm(c.focused_min)} ${t('focused')}`)); }
-  // one or two simple sentences about the last lesson
   const last = f.diary[0] && f.diary[0].lessons.at(-1);
-  if (last) L.push('', `📔 ${t('Last lesson')}: ${last.lines.slice(0, 2).map((x) => diarySentence(x, false)).filter(Boolean).join(' ')}`);
+  if (last) L.push(`📔 ${last.lines.slice(0, 2).map((x) => diarySentence(x, false)).filter(Boolean).join(' ')}`);
+  if (w.advice) L.push('', `💡 ${t('One tip for this week')}: ${t(w.advice.text, w.advice.vars)}`);
   L.push('', t('Sent from Lumen, a study coach. The camera is analysed on the device; no video leaves it.'));
   return L.join('\n');
 }
+
+const SAFETY_TOPIC = { sad: 'feeling very sad or wanting to hurt themselves', hurt: 'someone hurting them',
+  bullying: 'being bullied', danger: 'a possibly dangerous situation (e.g. a stranger online)' };
 
 // ---------------------------------------------------------------- unlocked: the parent page
 async function parentDashboard(p) {
@@ -164,6 +163,12 @@ async function parentDashboard(p) {
         <form class="mailrow" id="mailForm"><input class="field" id="pEmail" type="email" placeholder="parent@example.com" value="${esc(priv.email || '')}" aria-label="Parent email">
           <button class="btn primary" type="submit">Send report</button></form></div>
     </section>
+    ${(priv.alerts || []).length ? `<section class="card safetycard" id="safetyCard">
+      <h2 class="display" style="font-size:18px;margin:0 0 6px">💛 ${t('Something to talk about')}</h2>
+      <p class="muted small" style="margin:0 0 10px">${t('While asking the AI tutor, your child wrote something that may mean they are not okay. Lumen does not show the words, to keep your child\'s trust. A calm, kind talk helps most.')}</p>
+      <ul class="small" style="margin:0 0 12px;padding-left:18px">${priv.alerts.slice(-5).reverse().map((a) => `<li>${esc(when(a.at))}: ${esc(t(SAFETY_TOPIC[a.kind] || 'something worrying'))}</li>`).join('')}</ul>
+      <button class="btn ghost" id="alertsDone" type="button">${t('We talked about it')}</button></section>` : ''}
+    ${w.advice ? `<section class="card advicecard"><span class="eyebrow">💡 ${t('One tip for this week')}</span><p style="margin:6px 0 0;font-size:16px;line-height:1.5">${esc(t(w.advice.text, w.advice.vars))}</p></section>` : ''}
     <section class="stats parent-kpis">
       ${kpi('Studied this week', 'studied', hm(tw.study_min), `${tw.lessons ?? tw.sessions} ${tUnit('lesson', tw.lessons ?? tw.sessions)}`)}
       ${kpi('Focused this week', 'focused', hm(tw.focused_min), w.change_pct == null ? t('minutes with 70%+ attention') : `${w.change_pct >= 0 ? '▲' : '▼'} ${Math.abs(w.change_pct)}% ${t('vs last week')}`)}
@@ -227,6 +232,7 @@ async function parentDashboard(p) {
     $('#ansSw').classList.toggle('on', res.ai_answers);
     toast(t(res.ai_answers ? 'Full answers are allowed' : 'Hints only: your child solves it alone'));
   };
+  if ($('#alertsDone')) $('#alertsDone').onclick = async () => { await withPin({ clear_alerts: true }); $('#safetyCard').remove(); };
   $('#mailForm').onsubmit = async (e) => {
     e.preventDefault();
     const to = $('#pEmail').value.trim();

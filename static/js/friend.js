@@ -184,7 +184,7 @@ function greetLine(f) {
 // ---------------------------------------------------------------- sounds (soft, can be turned off)
 let lumiAudio = null;
 function lumiSound(kind, f = lumiLive.info) {
-  if (!f || f.sound === false) return;
+  if (!f || f.sound === false || COMFORT.quiet) return;
   try {
     lumiAudio = lumiAudio || new (window.AudioContext || window.webkitAudioContext)();
     const notes = { medal: [523, 659, 784, 1047], grow: [392, 523, 659, 784, 1047, 1319], quest: [659, 988], light: [1568] }[kind] || [880];
@@ -299,7 +299,10 @@ function lumiPosture(kind) {
 function lumiSay() {
   const b = $('#lumiBubble');
   if (!b) return;
+  // quiet mode: no words during the lesson, Lumi only shows it with its face
+  if (COMFORT.quiet) { b.hidden = true; return; }
   b.hidden = lumiLive.hidden;
+  if (!lumiLive.hidden) speak(b.textContent);
   b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
   clearTimeout(lumiLive.bubbleTimer);
   lumiLive.bubbleTimer = setTimeout(() => { b.hidden = true; }, 8000);
@@ -342,6 +345,8 @@ function lumiHomeCard(f, g = null) {
   const line = f.first_time ? t("Hi! I'm Lumi, your study firefly. Focus to give me light and I will grow!")
     : g && g.saved_yesterday && g.streak ? t('🧊 You missed yesterday, so I used a freeze. Your streak is safe!')
     : awayLine(f) ? awayLine(f)
+    : g && g.holiday ? t('🏖️ Happy holidays! Rest, play, and come back whenever you like.')
+    : g && g.exam ? t('💪 Exam week! A little more each day, and you will be ready. I believe in you!')
     : hol ? hol.line
     : lumiTime() === 'night' ? pick(timeLines('night'))
     : f.stage.next ? t('{n} more light and I become a {name}!', { n: f.stage.next.need - f.light, name: `<b>${esc(t(f.stage.next.name))}</b>` }) : t('I am a Star firefly! Thank you for all the light ✨');
@@ -351,7 +356,8 @@ function lumiHomeCard(f, g = null) {
       <div class="lumicard-line">${line}</div>
       <div class="lightbar" aria-label="Light ${f.light}"><i style="width:${f.stage.pct}%"></i></div>
       <div class="muted small">🔆 ${t('{n} light', { n: f.light })}</div>
-      ${g ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${g.streak === 1 ? t('1 day in a row') : t('{n} days in a row', { n: g.streak })}${g.freezes ? ` <span class="freeze" title="${esc(t('Streak freezes: a missed day uses one, so the streak does not burn. You get one for every 5 days in a row.'))}">🧊 ${g.freezes}</span>` : ''}</span></div>
+      ${g && g.holiday ? `<div class="daytag">🏖️ ${t('Holidays! Nothing to do today, rest well.')}</div>` : g && g.exam ? `<div class="daytag">💪 ${t('Exam week: a slightly bigger goal. You can do it!')}</div>` : g && g.weekend ? `<div class="daytag">🗓️ ${t('Weekend: a lighter goal today.')}</div>` : ''}
+      ${g && !g.holiday ? `<div class="todayline"><span>🎯 ${t('Today')}: <b>${hm(g.today)}</b> / ${hm(g.goal_min)}</span><span>🔥 ${g.streak === 1 ? t('1 day in a row') : t('{n} days in a row', { n: g.streak })}${g.freezes ? ` <span class="freeze" title="${esc(t('Streak freezes: a missed day uses one, so the streak does not burn. You get one for every 5 days in a row.'))}">🧊 ${g.freezes}</span>` : ''}</span></div>
         <div class="lightbar goalbar"><i style="width:${g.pct}%"></i></div>` : ''}
       ${f.dream ? dreamLine(f.dream) : ''}</div>
     <span class="chev">›</span></a>`;
@@ -456,6 +462,49 @@ async function viewLumi() {
 
 // ---------------------------------------------------------------- celebrations
 // The first visit and a new stage (with its new outfits) are celebrated once.
+/**
+ * The first time: Lumi introduces itself in 4 short steps and asks the child's age
+ * (only the age, never a birthday), so lessons fit them from the very first one.
+ */
+function lumiWelcome(f) {
+  if (document.getElementById('lumiParty')) return;
+  const steps = [
+    { mood: 'party', title: "Hi! I'm Lumi 👋", text: "I'm a little firefly, and I'll study with you. When you focus, I glow." },
+    { mood: 'happy', title: '🔆 Light makes me grow', text: 'Every minute you really focus gives me light. With enough light I grow, and I get new things to wear.' },
+    { mood: 'happy', title: '⭐ Stars lead to your dream', text: 'Talk to your mom or dad about a dream, then write it on my page. Lessons give stars, and the stars take you there.' },
+    { mood: 'hello', title: '🎂 How old are you?', text: 'Then your lessons and breaks will be just the right length for you.', age: true },
+  ];
+  let i = 0;
+  const box = document.createElement('div');
+  box.id = 'lumiParty';
+  box.className = 'lumi-party';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  document.body.appendChild(box);
+  const finish = async (age) => {
+    box.remove();
+    await api('/api/settings', { welcomed: true, ...(age ? { age } : {}) }).catch(() => {});
+    await api('/api/friend', { seen: true }).catch(() => {});
+    dreamNews();
+  };
+  const draw = () => {
+    const st = steps[i];
+    box.innerHTML = `<div class="card lumi-party-card welcome-card">
+      ${lumiSVG({ mood: st.mood, stage: f.stage.index, outfit: f.outfit, size: 140, dream: f.dream })}
+      <h2 class="display">${esc(t(st.title))}</h2><p>${esc(t(st.text))}</p>
+      ${st.age ? `<div class="ages" role="group" aria-label="${esc(t('My age'))}">${Array.from({ length: 11 }, (_, k) => k + 6).map((a) => `<button type="button" class="agebtn" data-age="${a}">${a}</button>`).join('')}</div>
+        <button class="linkbtn" id="welSkip">${esc(t('Skip'))}</button>`
+        : `<button class="btn primary big" id="welNext">${esc(t(i === 0 ? "Hi, Lumi! ✨" : 'Next'))}</button>`}
+      <div class="dots" aria-hidden="true">${steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div></div>`;
+    speak(`${t(st.title)} ${t(st.text)}`);
+    if ($('#welNext')) { $('#welNext').onclick = () => { i += 1; draw(); }; $('#welNext').focus(); }
+    box.querySelectorAll('[data-age]').forEach((b) => { b.onclick = () => finish(Number(b.dataset.age)); });
+    if ($('#welSkip')) $('#welSkip').onclick = () => finish(null);
+  };
+  draw();
+  if (i === 0) lumiSound('quest', f);
+}
+
 async function lumiNews(given = null) {
   const f = given || await api('/api/friend').catch(() => null);
   if (!f || $('#lumiParty') || location.hash === '#/mini') return;   // not in the small window

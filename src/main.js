@@ -144,6 +144,21 @@ async function boot() {
 
   for (const name of PAGE_SCRIPTS) await loadScript(`static/js/${name}.js?v=${new URL(import.meta.url).searchParams.get('v') || ''}`);
   document.getElementById('boot').remove();
+  startServiceWorker();
+}
+
+/** Fast start and offline: sw.js keeps Lumen's files and the camera models on this computer. */
+async function startServiceWorker() {
+  if (!('serviceWorker' in navigator) || (fake && !params.has('sw'))) return;   // test mode: only with ?sw=1
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js');
+    const conn = navigator.connection;
+    if (conn && (conn.saveData || /2g/.test(conn.effectiveType || ''))) return;   // don't download 10 MB on a slow or paid connection
+    const { CAMERA_FILES } = await import('./vision/camera.js');
+    const warm = () => (reg.active || navigator.serviceWorker.controller)?.postMessage({ type: 'warm', urls: CAMERA_FILES });
+    const later = window.requestIdleCallback || ((f) => setTimeout(f, 3000));
+    setTimeout(() => later(warm), 5000);
+  } catch (e) { console.warn('No offline mode in this browser', e); }
 }
 
 boot().catch((e) => {

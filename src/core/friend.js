@@ -150,22 +150,28 @@ export function diaryOf(sessions, maxDays = 120) {
  * 0 = studied today (happy), 1 = yesterday (waiting), 2-3 = misses you, 4+ (3 whole days missed) = fell asleep.
  * back = studied today after missing at least one whole day, so Lumi can say "You're back!".
  */
-export function awayOf(sessions, now = Date.now() / 1000) {
+export function awayOf(sessions, now = Date.now() / 1000, excused = null) {
   const days = [...new Set(sessions.filter((r) => r && r.started_at).map((r) => dayKey(r.started_at)))].sort();
-  if (!days.length) return { days: null, mood: 'waiting', back: false };
   const today = dayKey(now);
-  const diff = (a, b) => Math.round((dayStart(a) - dayStart(b)) / DAY);
+  if (excused && excused(today)) return { days: 0, mood: 'holiday', back: false };
+  if (!days.length) return { days: null, mood: 'waiting', back: false };
+  // days between two day keys, not counting holidays (Lumi doesn't miss you on holiday)
+  const between = (a, b) => {
+    let n = 0;
+    for (let t = dayStart(b) + DAY / 2; dayKey(t) < a; t += DAY) if (!(excused && excused(dayKey(t)))) n += 1;
+    return n;
+  };
   const last = days[days.length - 1];
-  const daysAway = Math.max(0, diff(today, last));
+  const daysAway = last >= today ? 0 : between(today, last);
   const before = days.filter((k) => k < today).pop();
   return {
     days: daysAway,
     mood: daysAway === 0 ? 'happy' : daysAway === 1 ? 'waiting' : daysAway <= 3 ? 'missing' : 'asleep',
-    back: daysAway === 0 && !!before && diff(today, before) >= 2,
+    back: daysAway === 0 && !!before && between(today, before) >= 2,
   };
 }
 
-export function friendState(sessions, reviews, saved = {}, streakMin = 10) {
+export function friendState(sessions, reviews, saved = {}, streakMin = 10, excused = null) {
   const m = metrics(sessions, reviews, streakMin);
   const light = lightOf(m);
   const stage = stageOf(light);
@@ -173,5 +179,5 @@ export function friendState(sessions, reviews, saved = {}, streakMin = 10) {
   const outfit = outfits.find((o) => o.id === saved.outfit && o.unlocked) ? saved.outfit : 'none';
   return { metrics: m, light, stage, stages: STAGES, outfits, outfit, news: newsSince(saved, stage.index),
     diary: diaryOf(sessions, 7), first_time: saved.stage == null, show_in_lessons: saved.show_in_lessons !== false,
-    sound: saved.sound !== false, birthday: saved.birthday || null, away: awayOf(sessions) };
+    sound: saved.sound !== false, birthday: saved.birthday || null, away: awayOf(sessions, Date.now() / 1000, excused) };
 }

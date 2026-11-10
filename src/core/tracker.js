@@ -70,6 +70,7 @@ export class SessionTracker {
     // improved = the newer camera logic (baseline that follows slow movement, no blinks counted with the head
     // turned, distance to the screen). false = exactly the original Python tracker (used by the golden test).
     this.improved = options.improved ?? true;
+    this.short_steps = !!options.short_steps;      // short study steps with short breaks (plan.js)
     this.dist_recent = [];          // [t, cm] for a steady distance
     this.dist_cm = null; this.dist_sum = 0; this.dist_n = 0; this.close_time = 0;
     this.base_roll = []; this.roll0 = null;
@@ -473,11 +474,26 @@ export class SessionTracker {
   }
 
   recommended_minutes() {
-    if (this.rhythm) return this.rhythm.break;
     const f = this.fatigue.score;
+    if (this.rhythm) {
+      // your rhythm, but a very tired brain needs a few more minutes
+      if (this.improved && f >= 1.3) return this.rhythm.break + 5;
+      return this.rhythm.break;
+    }
     let rec = f >= 1.3 ? 15 : f >= 1.0 ? 10 : 5;
     if (this.elapsed > 90 * 60) rec = Math.max(rec, 15);
     return rec;
+  }
+
+  /** Why this break length: shown under the minutes, so the child understands the choice. */
+  break_why() {
+    if (!this.improved) return null;
+    const f = this.fatigue.score;
+    if (f >= 1.3) return 'longer, because you look very tired';
+    if (f >= 1.0) return 'a bit longer, because you look tired';
+    if (this.rhythm) return this.short_steps ? 'a short rest between short steps' : 'your usual break';
+    if (this.elapsed > 90 * 60) return 'longer, because you have studied for a long time';
+    return 'short: you only need to refresh a little';
   }
 
   // ------------------------------------------------------------------ actions
@@ -556,6 +572,10 @@ export class SessionTracker {
     const why = () => this.fatigue.why.slice(0, 2).join(', ') || 'several signs of tiredness';
 
     if (this.rhythm) {
+      if (since >= this.rhythm.study * 60 && this.short_steps) {
+        return ['rhythm', 'Step done! ⚡',
+          `Great, you finished a ${this.rhythm.study}-minute step. Rest ${this.rhythm.break} minutes, then take the next step.`];
+      }
       if (since >= this.rhythm.study * 60) {
         return ['rhythm', 'Time for your break',
           `You planned ${this.rhythm.study} minutes of study and a ${this.rhythm.break}-minute break. `
@@ -575,7 +595,8 @@ export class SessionTracker {
   }
 
   breakOptions() {
-    return [...new Set([...BREAK_OPTIONS, ...(this.rhythm ? [this.rhythm.break] : [])])].sort((a, b) => a - b);
+    const extra = [...(this.rhythm ? [this.rhythm.break] : []), ...(this.improved ? [this.recommended_minutes()] : [])];
+    return [...new Set([...BREAK_OPTIONS, ...extra])].sort((a, b) => a - b);
   }
 
   _check_suggestion() {
@@ -588,7 +609,8 @@ export class SessionTracker {
       const [kind, title, text] = cand;
       // one suggestion at a time; but a break beats an eye rest, and tiredness beats the rest
       if (cur === null || cur.kind === 'eyes' || (kind === 'tired' && ['sliding', 'long'].includes(cur.kind))) {
-        this._offer({ kind, action: 'break', title, text, minutes: this.recommended_minutes(), options: this.breakOptions() });
+        this._offer({ kind, action: 'break', title, text, minutes: this.recommended_minutes(), options: this.breakOptions(),
+          ...(this.improved ? { why: this.break_why() } : {}) });
       }
       return;
     }
@@ -692,6 +714,7 @@ export class SessionTracker {
       options: this.breakOptions(),
       suggestion: this.suggestion,
       recommended: this.recommended_minutes(),
+      ...(this.improved ? { short_steps: this.short_steps } : {}),
       marks: this.marks.length,
       breaks: this.breaks.length,
       on_break: this.on_break,

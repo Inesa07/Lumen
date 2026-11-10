@@ -102,7 +102,8 @@ export function faceFeatures(lm, w, h) {
   const eyeD = dist(P(EYE_OUTER_L), P(EYE_OUTER_R)) + 1e-6;
   const size = eyeD / w;
   const fy = P(NOSE_TIP)[1] / h;
-  const dist_cm = distanceCm(irisPixels(lm, w, h), w);
+  // the field of view belongs to the long side of the picture (a tablet held upright gives a tall picture)
+  const dist_cm = distanceCm(irisPixels(lm, w, h), Math.max(w, h));
 
   // geometric expression measures (backup when blendshapes are missing), divided by eye distance
   const cl = P(MOUTH_CORNERS[0]), cr = P(MOUTH_CORNERS[1]);

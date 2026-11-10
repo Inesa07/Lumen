@@ -10,6 +10,7 @@
 // Streaming: the model writes one token at a time, and the API sends every piece immediately as
 // Server-Sent Events ("data: {...}" lines). We read the HTTP response body piece by piece with a
 // ReadableStream reader, which is why the answer appears word by word.
+import { SAFETY } from './safety.js';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_CLAUDE_MODEL = 'claude-haiku-5-5';
@@ -142,7 +143,7 @@ export class Tutor {
     const st = this.status();
     if (st.parent_off) throw new AIError('A parent switched the AI tutor off. Ask them to turn it on in Parent mode.');
     if (!st.ready) throw new AIError('Sign in to use the free AI tutor (menu → Guest → Create account), or add your own key in Settings → AI tutor.');
-    const system = SYSTEM + (context ? `\n\n${context}` : '') + (isHint ? `\n\n${HINT}` : '');
+    const system = `${SYSTEM}\n${SAFETY}` + (context ? `\n\n${context}` : '') + (isHint ? `\n\n${HINT}` : '');
     const msgs = messages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content }));
     if (st.provider === 'test') {
       const text = `(test answer) You asked: **${msgs.at(-1).content}**\n\n## Idea\nThe integral $\\int_a^b f(x)\\,dx$ is the area.\n\n`

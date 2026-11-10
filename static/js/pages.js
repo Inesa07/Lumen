@@ -102,8 +102,12 @@ async function viewHome(prefillClass = '') {
               <div class="rhythms" role="radiogroup" aria-label="Study rhythm">${RHYTHMS.map(([v, l, sub]) => `<button type="button" class="rhy" role="radio" data-rhythm="${v}"><b>${l}</b><small>${sub}</small></button>`).join('')}</div>
               <div class="rhycustom" id="rhyCustom" hidden><input class="field" type="number" id="rhyStudy" min="5" max="240" value="45" aria-label="Study minutes"><span>min study, then</span>
                 <input class="field" type="number" id="rhyBreak" min="1" max="60" value="10" aria-label="Break minutes"><span>min break</span></div>
-              <p class="planline" id="planLine">${icon('history', 'var(--teal)', 16)} ${d.plan_personal
+              <p class="planline" id="planLine">${icon('history', 'var(--teal)', 16)} ${d.plan_by === 'short'
+                ? `⚡ Short steps: study <strong>${d.plan_min} minutes</strong>, then a ${d.plan_break}-minute break.`
+                : d.plan_personal
                 ? `Auto: a break every <strong>${d.plan_min} minutes</strong>, a little before your attention usually drops.`
+                : d.plan_by === 'age'
+                ? `Auto: a break every <strong>${d.plan_min} minutes</strong>, a good length for your age.`
                 : `Auto: a break every <strong>${d.plan_min} minutes</strong>, earlier if you look tired.`}${d.settings.eye_rest ? ' Eye rest every 20 minutes.' : ''}</p>
             </div>
           </div>
@@ -112,13 +116,24 @@ async function viewHome(prefillClass = '') {
 
       <aside class="todaycol">
         ${lumi ? lumiHomeCard(lumi, g) : ''}
+        ${d.suggest_short_steps ? `<section class="card shortsteps" id="shortSteps">
+          <h3 style="margin:0 0 6px">⚡ Want to try short steps?</h3>
+          <p class="muted small" style="margin:0 0 12px">Short study steps with short breaks in between. Many people find it easier to focus this way. You can switch back any time.</p>
+          <div class="btnrow"><button class="btn primary" id="ssYes" type="button">Let's try</button><button class="btn ghost" id="ssNo" type="button">No, thanks</button></div>
+        </section>` : ''}
       </aside>
     </div>
   </main>`);
 
   wireLessonButtons();
   drawDraft();
-  if (lumi) lumiNews(lumi);
+  if (lumi) (d.settings.welcomed ? lumiNews(lumi) : lumiWelcome(lumi));
+  // Lumen noticed that a long focus is often hard: offer short steps once, kindly
+  const ss = $('#shortSteps');
+  if (ss) {
+    $('#ssYes').onclick = async () => { await api('/api/settings', { short_steps: true, short_steps_asked: true }); ss.remove(); toast(window.t('⚡ Short steps are on. You can change this in Settings.')); };
+    $('#ssNo').onclick = async () => { await api('/api/settings', { short_steps_asked: true }); ss.remove(); };
+  }
   pushWidget();
   document.querySelectorAll('[data-cls]').forEach((b) => { b.onclick = () => { $('#cls').value = b.dataset.cls; showClassTodos(); $('#title').focus(); }; });
   classCombo($('#cls'), $('#clsList'), classNames, () => { showClassTodos(); $('#title').focus(); });
@@ -294,6 +309,7 @@ async function viewReport(id) {
     r.class ? `#/class/${encodeURIComponent(r.class)}` : '#/history')}
   <main class="wrap" style="display:flex;flex-direction:column;gap:24px">
     ${parts}
+    <section class="card lumiwords" id="repLumi" hidden></section>
     <section class="card starscard" id="repStars" hidden></section>
     ${(r.tasks || []).length ? `<section class="card plancard">
       <div class="block-head" style="margin-bottom:10px"><h2 class="display" style="font-size:18px;margin:0">🎯 Session plan</h2>
@@ -340,11 +356,47 @@ async function viewReport(id) {
     notesWidget($('#repNoteGrid'), notes, {});
   }).catch(() => {});
   repStars(r);
+  repLumi(r);
   lumiNews();                           // a new stage of Lumi after this lesson
   pushWidget(true);                     // the Mac widget shows the new numbers
 }
 
 /** "This lesson gave you 3 ⭐": where the stars came from, so a child learns how to get them. */
+/** Lumi on the lesson report: records, a habit, kind words after a hard lesson, and "How was it?". */
+async function repLumi(r) {
+  const box = $('#repLumi');
+  const w = await api(`/api/lumi-words?id=${encodeURIComponent(r.id)}`).catch(() => null);
+  const f = await api('/api/friend').catch(() => null);
+  if (!box || !w || !f) return;
+  const REC = {
+    focus: ['🏆 New record: {n} minutes in a row of real focus! (before: {b})', 'party'],
+    focused: ['🏆 New record: {n} focused minutes in one lesson! (before: {b})', 'party'],
+    nophone: ['📵 New record: {n} minutes without the phone! (before: {b})', 'party'],
+  };
+  const lines = [];
+  let mood = 'happy';
+  for (const rec of w.records || []) { lines.push(t(REC[rec.kind][0], { n: rec.value, b: rec.before })); mood = 'party'; }
+  if (w.hard) {
+    lines.push(t("Some lessons are hard, and that's okay. Tomorrow we'll try again together 💛"));
+    lines.push(t(w.good[0], w.good[1]));
+  }
+  if (w.habit) lines.push(t('🌟 You have studied at about {time} for {n} days in a row. That is a great habit!', { time: w.habit.time, n: w.habit.days }));
+  const asked = !r.feel && r.status !== 'paused' && Date.now() / 1000 - r.started_at - r.duration_sec < 6 * 3600;
+  if (!lines.length && !asked) return;
+  box.hidden = false;
+  box.innerHTML = `<div class="lw-lumi">${lumiSVG({ mood, stage: f.stage.index, outfit: f.outfit, size: 92, dream: f.dream })}</div>
+    <div class="lw-body">${lines.map((l) => `<p>${esc(l)}</p>`).join('')}
+      ${asked ? `<div class="feel" id="feel"><span class="muted small">${t('How was the lesson?')}</span>
+        ${[['easy', '😊', 'Easy'], ['ok', '😐', 'Okay'], ['hard', '😣', 'Hard']].map(([k, e, l]) => `<button type="button" class="feelbtn" data-feel="${k}" title="${t(l)}" aria-label="${t(l)}">${e}</button>`).join('')}</div>` : ''}</div>`;
+  if (lines.length) speak(lines.join(' '));
+  box.querySelectorAll('[data-feel]').forEach((b) => {
+    b.onclick = async () => {
+      await api('/api/feel', { id: r.id, feel: b.dataset.feel }).catch(() => {});
+      $('#feel').innerHTML = `<span class="small">${t(b.dataset.feel === 'hard' ? 'Thank you for telling me. Next time we can try short steps or ask the AI 🧭' : 'Thank you! 💛')}</span>`;
+    };
+  });
+}
+
 async function repStars(r) {
   const [x, dr] = await Promise.all([api(`/api/stars?lesson=${encodeURIComponent(r.lesson_id || r.id)}`), api('/api/dream')]).catch(() => [null, null]);
   const box = $('#repStars');
@@ -617,6 +669,7 @@ function practise(deck, n) {
 }
 
 // ---------------------------------------------------------------- Settings
+const examOn = (st) => { const d = new Date(); const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return !!st.exam_until && st.exam_until >= k; };
 async function viewSettings() {
   closeStream();
   const [d, prof, ai] = await Promise.all([loadOverview(), cachedGet('/api/profile'), api('/api/ai/status')]);
@@ -633,6 +686,30 @@ async function viewSettings() {
     <section class="card setrow">
       <div><h2 style="margin:0 0 4px;font-size:17px">Language</h2><p class="muted small" style="margin:0">Menu, Home, lessons and Lumi. Other pages are being translated step by step.</p></div>
       ${langButtons()}
+    </section>
+    <section class="card" id="studySet">
+      <h2 style="margin:0 0 4px;font-size:17px">📚 How I study</h2>
+      <p class="muted small" style="margin:0 0 14px">Lumen makes lessons and breaks fit you.</p>
+      <div class="setline"><div><b>🎂 My age</b><div class="muted small">Younger children get shorter lessons: about 15 minutes at 7, 25 at 11, 40 at 15.</div></div>
+        <select class="field" id="ageSel" style="width:110px" aria-label="My age"><option value="">–</option>${Array.from({ length: 11 }, (_, i) => i + 6).map((a) => `<option value="${a}" ${st.age === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+      <div class="setline"><div><b>⚡ Short steps</b><div class="muted small">Short study steps with short breaks. Many people focus better this way.</div></div>
+        <button class="switch${st.short_steps ? ' on' : ''}" data-set="short_steps" role="switch" aria-checked="${st.short_steps}" aria-label="Short steps"><span></span></button></div>
+      <div class="setline"><div><b>🏖️ Holidays</b><div class="muted small">While it's on, the streak waits and Lumi doesn't miss you. Turn it off when school starts again.</div></div>
+        <button class="switch${d.holiday_now ? ' on' : ''}" data-set="holiday" role="switch" aria-checked="${!!d.holiday_now}" aria-label="Holidays"><span></span></button></div>
+      <div class="setline"><div><b>💪 Exam week</b><div class="muted small">For 7 days the daily goal is a little bigger and Lumi cheers you on. Weekends are always lighter.</div></div>
+        <button class="switch${examOn(st) ? ' on' : ''}" data-set="exam_week" role="switch" aria-checked="${examOn(st)}" aria-label="Exam week"><span></span></button></div>
+    </section>
+    <section class="card" id="comfortSet">
+      <h2 style="margin:0 0 4px;font-size:17px">🧸 Comfort</h2>
+      <p class="muted small" style="margin:0 0 14px">Make Lumen easier to read and calmer.</p>
+      <div class="setline"><div><b>🔕 Quiet mode</b><div class="muted small">No sounds and no pop-up messages during lessons. Lumi shows how it's going only with its face.</div></div>
+        <button class="switch${st.quiet ? ' on' : ''}" data-comfort="quiet" role="switch" aria-checked="${st.quiet}" aria-label="Quiet mode"><span></span></button></div>
+      <div class="setline"><div><b>🔠 Bigger text</b><div class="muted small">Everything a little bigger.</div></div>
+        <button class="switch${st.big_text ? ' on' : ''}" data-comfort="big_text" role="switch" aria-checked="${st.big_text}" aria-label="Bigger text"><span></span></button></div>
+      <div class="setline"><div><b>🔤 Easy-to-read font</b><div class="muted small">Wider letters and more space between them. Helps with dyslexia and tired eyes.</div></div>
+        <button class="switch${st.easy_font ? ' on' : ''}" data-comfort="easy_font" role="switch" aria-checked="${st.easy_font}" aria-label="Easy-to-read font"><span></span></button></div>
+      <div class="setline"><div><b>🔊 Lumi speaks</b><div class="muted small" id="speakNote">Lumi says its words aloud, nice for younger children.</div></div>
+        <button class="switch${st.speak ? ' on' : ''}" data-comfort="speak" role="switch" aria-checked="${st.speak}" aria-label="Lumi speaks"><span></span></button></div>
     </section>
     ${widgetCard()}
     <a class="card setrow" href="#/mini" style="text-decoration:none;color:var(--text)">
@@ -794,13 +871,32 @@ async function viewSettings() {
     await api('/api/settings', { daily_goal_min: Number($('#goal').value) });
     toast('Daily goal saved');
   };
+  $('#ageSel').onchange = async () => {
+    await api('/api/settings', { age: $('#ageSel').value ? Number($('#ageSel').value) : null });
+    toast(t('Saved: lessons will fit your age'));
+  };
+  document.querySelectorAll('[data-comfort]').forEach((b) => {
+    b.onclick = async () => {
+      const on = !b.classList.contains('on');
+      const st2 = await api('/api/settings', { [b.dataset.comfort]: on });
+      applyComfort(st2);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+      if (b.dataset.comfort === 'speak' && on) {
+        if (hasVoice()) speak(t("Hi! I'm Lumi."));
+        else toast(t('This device has no voice for this language yet, so Lumi stays silent.'));
+      }
+    };
+  });
+  setTimeout(() => { if ($('#speakNote') && !hasVoice()) $('#speakNote').textContent += ` ${t('(This device has no voice for this language.)')}`; }, 600);
   document.querySelectorAll('[data-set]').forEach((b) => {
     b.onclick = async () => {
       const on = !b.classList.contains('on');
       await api('/api/settings', { [b.dataset.set]: on });
       b.classList.toggle('on', on);
       b.setAttribute('aria-checked', String(on));
-      toast(`${b.getAttribute('aria-label')} ${on ? 'on' : 'off'} (from the next session)`);
+      toast(['holiday', 'exam_week'].includes(b.dataset.set) ? `${t(b.getAttribute('aria-label'))}: ${t(on ? 'on' : 'off')}`
+        : `${b.getAttribute('aria-label')} ${on ? 'on' : 'off'} (from the next session)`);
     };
   });
   const rp = $('#resetProf');

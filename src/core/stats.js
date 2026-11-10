@@ -125,7 +125,7 @@ export const FREEZE_MAX = 2;
  * doesn't add to it. Today never breaks it: the day isn't over yet.
  * @param {string[]} dayKeys days (YYYY-MM-DD) that reached the streak minimum
  */
-export function streakRun(dayKeys, now = Date.now() / 1000) {
+export function streakRun(dayKeys, now = Date.now() / 1000, excused = null) {
   const set = new Set(dayKeys);
   const today = dayKey(now);
   const out = { streak: 0, best: 0, freezes: 1, frozen: [] };
@@ -141,6 +141,8 @@ export function streakRun(dayKeys, now = Date.now() / 1000) {
       if (run % FREEZE_EVERY === 0) out.freezes = Math.min(FREEZE_MAX, out.freezes + 1);
     } else if (k === today) {
       break;
+    } else if (excused && excused(k)) {
+      // holidays: the streak waits, no freeze is used
     } else if (run > 0 && out.freezes > 0) {
       out.freezes -= 1; frozenNow.push(k);
     } else {
@@ -157,7 +159,11 @@ export function streakRun(dayKeys, now = Date.now() / 1000) {
  * Daily goal progress and the streak.
  * Streak = days in a row on which you studied at least `streakMin` minutes (showing up counts).
  */
-export function goalInfo(sums, goalMin, now, streakMin = 10) {
+/**
+ * @param {Function} [rules] optional day rules (plan.js dayRules): (dayKey) => {goal, streak_min, holiday, weekend, exam}
+ *   for lighter weekends, an exam week and holidays. Without it every day has the same goal.
+ */
+export function goalInfo(sums, goalMin, now, streakMin = 10, rules = null) {
   const perDay = {}, studyDay = {};
   for (const s of sums) {
     const k = dayKey(s.started_at);
@@ -165,14 +171,18 @@ export function goalInfo(sums, goalMin, now, streakMin = 10) {
     studyDay[k] = (studyDay[k] || 0) + s.duration_sec / 60;
   }
   const today = dayKey(now);
-  const reached = (k) => (studyDay[k] || 0) >= streakMin;
-  const run = streakRun(Object.keys(studyDay).filter(reached), now);
+  const rule = (k) => (rules ? rules(k) : { goal: goalMin, streak_min: streakMin, holiday: false, weekend: false, exam: false });
+  const reached = (k) => { const r = rule(k); return !r.holiday && (studyDay[k] || 0) >= r.streak_min; };
+  const run = streakRun(Object.keys(studyDay).filter(reached), now, rules ? (k) => rule(k).holiday : null);
   const done = perDay[today] || 0;
+  const r = rule(today);
+  const goal = r.goal;
   return {
-    streak_min: streakMin, today_study: Math.trunc(studyDay[today] || 0), streak_today: reached(today),
-    goal_min: goalMin, today: done, pct: goalMin ? Math.min(100, Math.trunc(pyRound(100 * done / goalMin))) : 0,
-    reached: done >= goalMin, streak: run.streak, best_streak: run.best,
+    streak_min: r.streak_min, today_study: Math.trunc(studyDay[today] || 0), streak_today: reached(today),
+    goal_min: goal, today: done, pct: goal ? Math.min(100, Math.trunc(pyRound(100 * done / goal))) : 0,
+    reached: goal ? done >= goal : false, streak: run.streak, best_streak: run.best,
     freezes: run.freezes, frozen: run.frozen, saved_yesterday: run.frozen.includes(dayKey(now - DAY)),
+    ...(rules ? { holiday: r.holiday, weekend: r.weekend, exam: r.exam } : {}),
   };
 }
 
@@ -183,7 +193,7 @@ export function planMinutes(reports) {
   return [Math.max(15, Math.trunc(median(drops)) - 2), true];
 }
 
-export function overview(reports, now = Date.now() / 1000, goalMin = 60, streakMin = 10) {
+export function overview(reports, now = Date.now() / 1000, goalMin = 60, streakMin = 10, rules = null) {
   const sums = reports.map(summary).sort((a, b) => b.started_at - a.started_at);
   const ls = lessons(sums);
   const cls = classes(sums, ls);
@@ -252,7 +262,7 @@ export function overview(reports, now = Date.now() / 1000, goalMin = 60, streakM
   const [plan, personal] = planMinutes(reports);
   return {
     mood: moodMix(sums), intentions,
-    goal: goalInfo(sums, goalMin, now, streakMin),
+    goal: goalInfo(sums, goalMin, now, streakMin, rules),
     plan_min: plan, plan_personal: personal,
     sessions: sums, lessons: ls, paused: ls.filter((l) => l.status === 'paused'), classes: cls,
     totals: {
