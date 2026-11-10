@@ -1776,3 +1776,19 @@ html.easy-font body { letter-spacing: .02em; word-spacing: .08em; line-height: 1
 /* the account chip: long translations wrap instead of running out of the sidebar */
 .who { min-width: 0; }
 .who em { white-space: normal; overflow-wrap: anywhere; }
+
+/* age: type it or use − / + */
+.agestep { display: inline-flex; align-items: center; gap: 6px; }
+.agestep-b { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); font-size: 20px; cursor: pointer; }
+.agestep-b:hover { border-color: var(--accent); }
+.agestep-in { width: 72px !important; text-align: center; font-size: 18px; font-weight: 600; -moz-appearance: textfield; }
+.agestep-in::-webkit-outer-spin-button, .agestep-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.welage { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 8px 0 6px; }
+/* a short drop-down list you scroll, instead of the native list that fills the screen */
+.smallsel { min-width: 110px; text-align: left; cursor: pointer; display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; }
+.smallsel::after { content: '▾'; opacity: .6; }
+.smallsel-pop { position: fixed; z-index: 120; max-height: 220px; overflow-y: auto; padding: 6px; border-radius: 14px; background: var(--surface, #141a33);
+  border: 1px solid var(--line-2); box-shadow: 0 12px 30px rgba(0,0,0,.35); display: flex; flex-direction: column; overscroll-behavior: contain; }
+.smallsel-pop button { text-align: left; padding: 8px 12px; border: 0; border-radius: 9px; background: none; color: var(--text); font: inherit; cursor: pointer; white-space: nowrap; }
+.smallsel-pop button:hover, .smallsel-pop button:focus-visible { background: var(--surface-2); outline: none; }
+.smallsel-pop button.on { background: color-mix(in srgb, var(--accent) 22%, transparent); font-weight: 600; }

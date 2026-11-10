@@ -454,6 +454,7 @@ async function viewLumi() {
     toast(m && d ? 'Lumi wrote it down 🎂' : 'Birthday removed');
   };
   $('#bdM').onchange = saveBday; $('#bdD').onchange = saveBday;
+  smallSelect($('#bdM')); smallSelect($('#bdD'));
   drawLumiHome();
   drawDream();
   lumiNews(f);
@@ -492,13 +493,17 @@ function lumiWelcome(f) {
     box.innerHTML = `<div class="card lumi-party-card welcome-card">
       ${lumiSVG({ mood: st.mood, stage: f.stage.index, outfit: f.outfit, size: 140, dream: f.dream })}
       <h2 class="display">${esc(t(st.title))}</h2><p>${esc(t(st.text))}</p>
-      ${st.age ? `<div class="ages" role="group" aria-label="${esc(t('My age'))}">${Array.from({ length: 11 }, (_, k) => k + 6).map((a) => `<button type="button" class="agebtn" data-age="${a}">${a}</button>`).join('')}</div>
+      ${st.age ? `<div class="welage">${ageStepper('welAge', '', t('My age'))}<button class="btn primary big" id="welAgeOk" type="button">${esc(t('Done'))}</button></div>
         <button class="linkbtn" id="welSkip">${esc(t('Skip'))}</button>`
         : `<button class="btn primary big" id="welNext">${esc(t(i === 0 ? "Hi, Lumi! ✨" : 'Next'))}</button>`}
       <div class="dots" aria-hidden="true">${steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div></div>`;
     speak(`${t(st.title)} ${t(st.text)}`);
     if ($('#welNext')) { $('#welNext').onclick = () => { i += 1; draw(); }; $('#welNext').focus(); }
-    box.querySelectorAll('[data-age]').forEach((b) => { b.onclick = () => finish(Number(b.dataset.age)); });
+    if ($('#welAge')) {
+      const read = wireAgeStepper('welAge', () => {});
+      $('#welAgeOk').onclick = () => finish(read());
+      $('#welAge').onkeydown = (e) => { if (e.key === 'Enter') finish(read()); };
+    }
     if ($('#welSkip')) $('#welSkip').onclick = () => finish(null);
   };
   draw();

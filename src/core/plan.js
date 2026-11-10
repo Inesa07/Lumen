@@ -9,8 +9,8 @@
 
 import { dayKey } from './stats.js';
 
-export const MIN_AGE = 6;
-export const MAX_AGE = 16;
+export const MIN_AGE = 5;
+export const MAX_AGE = 99;
 
 /** Study / break minutes that fit an age (null when the age is unknown). */
 export function agePlan(age) {
@@ -20,7 +20,8 @@ export function agePlan(age) {
   if (a <= 9) return { study: 20, break: 5 };
   if (a <= 11) return { study: 25, break: 5 };
   if (a <= 13) return { study: 30, break: 5 };
-  return { study: 40, break: 10 };
+  if (a <= 17) return { study: 40, break: 10 };
+  return { study: 45, break: 10 };                // adults: a classic 45-minute block
 }
 
 /** "Short steps": about half the usual step, never shorter than 8 minutes, with 3-minute breaks. */

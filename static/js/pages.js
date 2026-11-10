@@ -690,8 +690,8 @@ async function viewSettings() {
     <section class="card" id="studySet">
       <h2 style="margin:0 0 4px;font-size:17px">📚 How I study</h2>
       <p class="muted small" style="margin:0 0 14px">Lumen makes lessons and breaks fit you.</p>
-      <div class="setline"><div><b>🎂 My age</b><div class="muted small">Younger children get shorter lessons: about 15 minutes at 7, 25 at 11, 40 at 15.</div></div>
-        <select class="field" id="ageSel" style="width:110px" aria-label="My age"><option value="">–</option>${Array.from({ length: 11 }, (_, i) => i + 6).map((a) => `<option value="${a}" ${st.age === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+      <div class="setline"><div><b>🎂 My age</b><div class="muted small">Younger children get shorter lessons: about 15 minutes at 7, 25 at 11, 40 at 15, 45 for adults.</div></div>
+        ${ageStepper('ageSel', st.age, 'My age')}</div>
       <div class="setline"><div><b>⚡ Short steps</b><div class="muted small">Short study steps with short breaks. Many people focus better this way.</div></div>
         <button class="switch${st.short_steps ? ' on' : ''}" data-set="short_steps" role="switch" aria-checked="${st.short_steps}" aria-label="Short steps"><span></span></button></div>
       <div class="setline"><div><b>🏖️ Holidays</b><div class="muted small">While it's on, the streak waits and Lumi doesn't miss you. Turn it off when school starts again.</div></div>
@@ -871,10 +871,10 @@ async function viewSettings() {
     await api('/api/settings', { daily_goal_min: Number($('#goal').value) });
     toast('Daily goal saved');
   };
-  $('#ageSel').onchange = async () => {
-    await api('/api/settings', { age: $('#ageSel').value ? Number($('#ageSel').value) : null });
-    toast(t('Saved: lessons will fit your age'));
-  };
+  wireAgeStepper('ageSel', async (age) => {
+    await api('/api/settings', { age });
+    if (age) toast(t('Saved: lessons will fit your age'));
+  });
   document.querySelectorAll('[data-comfort]').forEach((b) => {
     b.onclick = async () => {
       const on = !b.classList.contains('on');

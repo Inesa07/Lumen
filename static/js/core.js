@@ -489,3 +489,71 @@ function info(key, label = '') {
   window.addEventListener('hashchange', close);
   window.addEventListener('resize', close);
 })();
+
+
+/**
+ * A small drop-down for long lists (month, day): the native list of a <select> fills the whole screen on a Mac,
+ * this one is a short box you scroll. The real <select> stays (hidden) and keeps its value and "change" event.
+ */
+function smallSelect(sel) {
+  if (!sel || sel.dataset.small) return;
+  sel.dataset.small = '1';
+  sel.hidden = true;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'field smallsel';
+  btn.setAttribute('aria-haspopup', 'listbox');
+  btn.setAttribute('aria-label', sel.getAttribute('aria-label') || '');
+  const label = () => { btn.textContent = sel.options[sel.selectedIndex]?.text || ''; };
+  label();
+  sel.after(btn);
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    document.querySelector('.smallsel-pop')?.remove();
+    const pop = document.createElement('div');
+    pop.className = 'smallsel-pop';
+    pop.setAttribute('role', 'listbox');
+    pop.innerHTML = [...sel.options].map((o, i) => `<button type="button" role="option" data-i="${i}" aria-selected="${i === sel.selectedIndex}" class="${i === sel.selectedIndex ? 'on' : ''}">${esc(o.text)}</button>`).join('');
+    document.body.appendChild(pop);
+    const r = btn.getBoundingClientRect();
+    const below = window.innerHeight - r.bottom > 240;
+    pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 160) - 8))}px`;
+    pop.style.minWidth = `${Math.max(r.width, 120)}px`;
+    pop.style.top = below ? `${r.bottom + 6}px` : '';
+    pop.style.bottom = below ? '' : `${window.innerHeight - r.top + 6}px`;
+    pop.querySelector('.on')?.scrollIntoView({ block: 'center' });
+    pop.onclick = (ev) => {
+      const o = ev.target.closest('[data-i]');
+      if (!o) return;
+      sel.selectedIndex = Number(o.dataset.i);
+      label();
+      pop.remove();
+      sel.dispatchEvent(new Event('change'));
+      btn.focus();
+    };
+    const close = (ev) => { if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', close); } };
+    setTimeout(() => document.addEventListener('click', close), 0);
+    pop.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { pop.remove(); btn.focus(); } });
+    (pop.querySelector('.on') || pop.querySelector('button')).focus({ preventScroll: true });
+  };
+}
+
+/** Age: type it or use − and +. Any age from 5 to 99. */
+function ageStepper(id, value, label) {
+  return `<div class="agestep" role="group" aria-label="${esc(label)}">
+    <button type="button" class="agestep-b" data-step="-1" aria-label="−1">−</button>
+    <input class="field agestep-in" id="${id}" type="number" inputmode="numeric" min="5" max="99" value="${value ?? ''}" placeholder="–" aria-label="${esc(label)}">
+    <button type="button" class="agestep-b" data-step="1" aria-label="+1">+</button></div>`;
+}
+function wireAgeStepper(id, onChange) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  const clamp = () => { const v = Math.round(Number(inp.value)); return Number.isFinite(v) && v >= 5 && v <= 99 ? v : null; };
+  let tmr = null;
+  const changed = () => { clearTimeout(tmr); tmr = setTimeout(() => onChange(clamp()), 500); };
+  inp.closest('.agestep').querySelectorAll('[data-step]').forEach((b) => {
+    b.onclick = () => { inp.value = Math.min(99, Math.max(5, (clamp() ?? 9) + Number(b.dataset.step))); changed(); };
+  });
+  inp.oninput = changed;
+  return clamp;
+}
