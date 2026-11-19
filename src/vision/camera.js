@@ -97,6 +97,18 @@ function loadModels(withPhone, status) {
   return modelsPromise;
 }
 
+/**
+ * Somebody who used the camera before will probably start a lesson again: get the models ready
+ * in a quiet moment, so the lesson starts at once (the files come from this computer's cache).
+ */
+export function warmModels() {
+  let used = false;
+  try { used = localStorage.getItem('lumen.cam') === '1'; } catch { /* private window */ }
+  if (!used || modelsPromise) return;
+  const later = window.requestIdleCallback || ((f) => setTimeout(f, 2000));
+  setTimeout(() => later(() => loadModels(true, () => {}).catch(() => {})), 4000);
+}
+
 export class CameraVision {
   /**
    * @param {object} o
@@ -120,6 +132,9 @@ export class CameraVision {
   async start(video) {
     this.video = video;
     this.onStatus({ stage: 'camera', text: 'Asking for the camera…' });
+    // download the models WHILE the browser asks for the camera, not after (a faster start)
+    const models = loadModels(this.usePhone, (text) => this.onStatus({ stage: 'models', text }));
+    models.catch(() => {});
     this.stream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false,
     });
@@ -129,7 +144,8 @@ export class CameraVision {
     await video.play();
 
     this.onStatus({ stage: 'models', text: 'Loading the face model (~4 MB, once)…' });
-    const m = await loadModels(this.usePhone, (text) => this.onStatus({ stage: 'models', text }));
+    const m = await models;
+    try { localStorage.setItem('lumen.cam', '1'); } catch { /* private window */ }
     Object.assign(this, { face: m.face, objects: m.objects, delegate: m.delegate });
 
     this.small = document.createElement('canvas');      // 64x48 copy for "is the camera covered?"

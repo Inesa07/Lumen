@@ -5,8 +5,8 @@
 //     cache first. They never change, so after the first time they load instantly from this computer.
 //   - Fonts and the Supabase library: the saved copy at once, refreshed in the background.
 //   - Data (Supabase API), the AI and anything that isn't a GET request are never cached.
-const CACHE = 'lumen-v1';
-const IMMUTABLE = [/^https:\/\/cdn\.jsdelivr\.net\/npm\/@mediapipe\//, /^https:\/\/storage\.googleapis\.com\/mediapipe-models\//];
+const CACHE = 'lumen-v2';
+const IMMUTABLE = [/^https:\/\/cdn\.jsdelivr\.net\/npm\/(@mediapipe\/|katex@)/, /^https:\/\/storage\.googleapis\.com\/mediapipe-models\//];
 const REFRESH = [/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, /^https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\//];
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -62,7 +62,12 @@ self.addEventListener('fetch', (e) => {
   const url = req.url;
   if (IMMUTABLE.some((r) => r.test(url))) { e.respondWith(cacheFirst(req)); return; }
   if (REFRESH.some((r) => r.test(url))) { e.respondWith(staleWhileRevalidate(req, (p) => e.waitUntil(p))); return; }
-  if (new URL(url).origin === self.location.origin) e.respondWith(networkFirst(req));
+  const u = new URL(url);
+  if (u.origin !== self.location.origin) return;
+  // style.css?v=… and static/js/*.js?v=…: a new version gets a new address, so the saved copy is
+  // always right and the second visit opens without waiting for the network
+  if (u.searchParams.get('v')) { e.respondWith(cacheFirst(req)); return; }
+  e.respondWith(networkFirst(req));
 });
 
 // The page asks to save the camera models in the background on the first visit,

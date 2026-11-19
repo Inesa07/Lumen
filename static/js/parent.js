@@ -82,7 +82,7 @@ function parentSetup() {
   </main>`);
   wirePin('pin1', () => $('#pin2 .pin-cell').focus());
   wirePin('pin2');
-  $('#pin1 .pin-cell').focus();
+  autoFocus($('#pin1 .pin-cell'));
   $('#setForm').onsubmit = async (e) => {
     e.preventDefault();
     const a = pinValue('pin1'), b = pinValue('pin2');
@@ -117,7 +117,7 @@ function parentLock() {
     viewParent();
   };
   wirePin('pin', tryPin);                    // opens as soon as the 4th digit is typed
-  $('#pin .pin-cell').focus();
+  $('#pin .pin-cell').focus({ preventScroll: true });
   $('#lockForm').onsubmit = (e) => { e.preventDefault(); tryPin(); };
 }
 

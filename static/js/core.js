@@ -211,6 +211,13 @@ let stream = null;              // EventSource for the live session / check
 // Small cache for GET requests: going back to a page you just saw is instant.
 // Anything you change (every POST) clears it, so you never see old numbers after an action.
 const cache = new Map();
+/** Focus a field when a page opens, but not on a phone or tablet: there it would pop up the keyboard
+ *  over the page and jump the page down before the child has even looked at it. */
+function autoFocus(el) {
+  if (!el || matchMedia('(pointer: coarse)').matches) return;
+  el.focus({ preventScroll: true });
+}
+
 function cachedGet(path, maxAgeMs = 15000) {
   const hit = cache.get(path);
   if (hit && Date.now() - hit.at < maxAgeMs) return hit.promise;

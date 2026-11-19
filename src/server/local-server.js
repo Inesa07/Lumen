@@ -19,7 +19,7 @@ import { dreamState, lessonStars, guessSize, guessEmoji, priceOf, sizePrompt, re
 import { ValidationRun, FakeFollower, CSV_HEADER } from '../core/validate.js';
 import { Tutor, AIError, lessonContext } from '../core/ai.js';
 import { TodoStore, NoteStore, ChatStore, ReviewStore } from '../data/stores.js';
-import { CameraVision } from '../vision/camera.js';
+import { CameraVision, warmModels } from '../vision/camera.js';
 import { FakeVision } from '../vision/fake.js';
 
 export const DEFAULT_SETTINGS = { daily_goal_min: 60, streak_min: 10, rhythm: null, mood_sens: 'normal', eye_rest: true, posture: true, blink: true,
@@ -98,6 +98,7 @@ export class LocalServer {
     this.video = document.createElement('video');      // the camera picture, shown by the session page
     this.video.className = 'cam-video';
     this.video.muted = true; this.video.playsInline = true;
+    if (!fake) warmModels();                           // the next lesson starts without waiting for the models
     this.recoverDraft();
     setInterval(() => this.watchdog(), 5000);
     setInterval(() => this.saveDraft(), DRAFT_EVERY_MS);

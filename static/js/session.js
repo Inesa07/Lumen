@@ -7,6 +7,7 @@ function chime() {
   if (COMFORT.quiet) return;                      // quiet mode: no sounds
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();      // Safari pauses sound in a background tab
     [660, 880].forEach((f, i) => {
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.type = 'sine'; o.frequency.value = f;

@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <!-- fonts load in the background: a slow internet connection never blocks the app -->
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="static/style.css?v=202611101458">
+<link rel="stylesheet" href="static/style.css?v=202611191203">
 </head>
 <body>
 <div class="boot" id="boot"><div><b><span>◎</span> Lumen</b>Loading…</div></div>
@@ -28,7 +28,43 @@
   <div class="page" id="app"></div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
+<!-- download everything at once instead of one file after another (faster start on a slow connection) -->
+<link rel="modulepreload" href="src/data/db.js">
+<link rel="modulepreload" href="src/data/cloud.js">
+<link rel="modulepreload" href="src/server/local-server.js">
+<link rel="modulepreload" href="src/core/tracker.js">
+<link rel="modulepreload" href="src/core/util.js">
+<link rel="modulepreload" href="src/core/stats.js">
+<link rel="modulepreload" href="src/core/friend.js">
+<link rel="modulepreload" href="src/core/coach.js">
+<link rel="modulepreload" href="src/core/advice.js">
+<link rel="modulepreload" href="src/core/safety.js">
+<link rel="modulepreload" href="src/core/plan.js">
+<link rel="modulepreload" href="src/core/dream.js">
+<link rel="modulepreload" href="src/core/validate.js">
+<link rel="modulepreload" href="src/vision/fake.js">
+<link rel="modulepreload" href="src/core/ai.js">
+<link rel="modulepreload" href="src/data/stores.js">
+<link rel="modulepreload" href="src/vision/camera.js">
+<link rel="modulepreload" href="src/vision/features.js">
+<link rel="modulepreload" href="src/config.js">
+<link rel="preload" as="script" href="static/js/i18n.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/places.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/core.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/friend.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/dream.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/parent.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/mini.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/widget.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/extras.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/ai.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/session.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/check.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/pages.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/insights.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/account.js?v=202611191203">
+<link rel="preload" as="script" href="static/js/router.js?v=202611191203">
 <!-- src/main.js opens your data, starts the in-browser server, then loads the page scripts -->
-<script type="module" src="src/main.js?v=202611101458"></script>
+<script type="module" src="src/main.js?v=202611191203"></script>
 </body>
 </html>

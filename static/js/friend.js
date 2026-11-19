@@ -185,8 +185,17 @@ function greetLine(f) {
 let lumiAudio = null;
 function lumiSound(kind, f = lumiLive.info) {
   if (!f || f.sound === false || COMFORT.quiet) return;
+  // Browsers keep sound off until the first click or key on the page. A celebration that opens
+  // with the page would be silent, so it waits for that first touch and plays then.
+  const ua = navigator.userActivation;
+  if (ua && !ua.hasBeenActive) {
+    const later = () => { removeEventListener('pointerdown', later, true); removeEventListener('keydown', later, true); lumiSound(kind, f); };
+    addEventListener('pointerdown', later, true); addEventListener('keydown', later, true);
+    return;
+  }
   try {
     lumiAudio = lumiAudio || new (window.AudioContext || window.webkitAudioContext)();
+    if (lumiAudio.state === 'suspended') lumiAudio.resume();
     const notes = { medal: [523, 659, 784, 1047], grow: [392, 523, 659, 784, 1047, 1319], quest: [659, 988], light: [1568] }[kind] || [880];
     const vol = kind === 'light' ? 0.035 : 0.12, step = kind === 'grow' ? 0.11 : 0.13;
     notes.forEach((fr, i) => {

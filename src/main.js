@@ -20,6 +20,7 @@ function loadScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
+    s.async = false;            // download all at once, but run them in this order
     s.onload = resolve;
     s.onerror = () => reject(new Error(`Could not load ${src}`));
     document.body.appendChild(s);
@@ -142,7 +143,8 @@ async function boot() {
     });
   }
 
-  for (const name of PAGE_SCRIPTS) await loadScript(`static/js/${name}.js?v=${new URL(import.meta.url).searchParams.get('v') || ''}`);
+  const v = new URL(import.meta.url).searchParams.get('v') || '';
+  await Promise.all(PAGE_SCRIPTS.map((name) => loadScript(`static/js/${name}.js?v=${v}`)));
   document.getElementById('boot').remove();
   startServiceWorker();
 }

@@ -768,7 +768,21 @@ html.ai-mode .ai-layout { height: 100vh; height: 100dvh; overflow: hidden; }
 .ai-main, .ai-chat { overflow: hidden; }
 .ai-scroll { overscroll-behavior: contain; }
 .composer-wrap { flex: none; }
-@media (max-width: 900px) { html.ai-mode, html.ai-mode body { overflow: auto; height: auto; } }
+/* the "💬 Chats" title is a button only on a phone, where the list folds up */
+.ai-side-toggle { all: unset; display: flex; align-items: center; gap: 8px; cursor: default; }
+.ai-side-toggle .chev { display: none; }
+@media (max-width: 900px) {
+  html.ai-mode .ai-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+  .ai-side { max-height: none; min-height: auto; padding: 0 12px 10px; gap: 8px; overflow: visible; }
+  .ai-side-top { min-height: 56px; padding-left: 68px; }
+  .ai-side-toggle { cursor: pointer; flex: 1; }
+  .ai-side-toggle .chev { display: inline; margin-left: auto; color: var(--muted); transition: transform .2s; }
+  .ai-side.open .ai-side-toggle .chev { transform: rotate(180deg); }
+  .ai-side:not(.open) .ai-search, .ai-side:not(.open) .ai-groups { display: none; }
+  .ai-side.open .ai-groups { max-height: 45dvh; overflow: auto; }
+  .ai-side-tools { padding-top: 6px; }
+  .ai-main { height: auto; min-height: 0; }
+}
 
 /* ---------- sticky notes: small wall + one open note ---------- */
 .notewall { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 12px; padding: 4px 2px; }

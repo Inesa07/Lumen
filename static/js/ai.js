@@ -421,7 +421,7 @@ async function viewAI(chatId = null) {
   app.innerHTML = shell('ai', `
   <main class="ai-layout">
     <aside class="ai-side" aria-label="Your chats">
-      <div class="ai-side-top"><b>💬 Chats</b></div>
+      <div class="ai-side-top"><button type="button" class="ai-side-toggle" id="chatsToggle" aria-expanded="false" aria-controls="chatGroups"><b>💬 Chats</b><span class="chev" aria-hidden="true">▾</span></button></div>
       <div class="ai-side-tools"><button class="newchat" type="button" id="newChat">＋ New chat</button></div>
       <input class="field ai-search" id="chatSearch" placeholder="Search chats" aria-label="Search chats" autocomplete="off">
       <nav class="ai-groups" id="chatGroups"></nav>
@@ -434,6 +434,12 @@ async function viewAI(chatId = null) {
       <div class="ai-chat" id="chatBox"></div>
     </section>
   </main>`);
+
+  // on a phone the chat list folds up, so the conversation gets the whole screen
+  $('#chatsToggle').onclick = () => {
+    const side = $('.ai-side'), open = side.classList.toggle('open');
+    $('#chatsToggle').setAttribute('aria-expanded', String(open));
+  };
 
   // ---- sidebar: chats grouped by class, most recent group first
   const openFolders = new Set(current && current.class ? [current.class] : []);
@@ -515,7 +521,7 @@ async function viewAI(chatId = null) {
       drawGroups(chats, $('#chatSearch').value);
     } });
   $('#newChat').onclick = () => { newChatClass = null; if (location.hash === '#/ai') viewAI(); else location.hash = '#/ai'; };
-  box.focus();
+  autoFocus(box);
 }
 
 // open the AI page with a question already typed (e.g. from Review)
